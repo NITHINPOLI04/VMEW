@@ -4,7 +4,7 @@ A complete invoice generation system for Venkateswara Marine Electrical Works bu
 
 ## Features
 
-- User authentication with Firebase
+- User authentication with MongoDb Cloud
 - Custom letterhead design
 - Invoice generation with dynamic data
 - Flexible tax options (SGST/CGST or IGST)
@@ -17,24 +17,23 @@ A complete invoice generation system for Venkateswara Marine Electrical Works bu
 
 - **Frontend:** React, Tailwind CSS, TypeScript
 - **State Management:** Zustand
-- **Authentication:** Firebase Authentication
-- **Data Storage:** Firebase Firestore (inventory, default info), MongoDB Cloud (invoices)
+- **Authentication:** MongoDB Cloud
+- **Data Storage:** MongoDB Cloud (inventory, default info, invoices)
 - **PDF Generation:** jsPDF
 
 ## Setup Instructions
 
 ### Prerequisites
 
-- Node.js and npm installed
-- Firebase account
+- Node.js and npm installed  
 - MongoDB Atlas account (for production deployment)
 
 ### Installation
 
 1. Clone the repository
    ```
-   git clone https://github.com/yourusername/vmew-invoice-generator.git
-   cd vmew-invoice-generator
+   git clone https://github.com/NITHINPOLI04/VMEW.git
+   cd VMEW
    ```
 
 2. Install dependencies
@@ -54,17 +53,10 @@ A complete invoice generation system for Venkateswara Marine Electrical Works bu
    npm run dev:all
    ```
 
-### Firebase Setup
-
-1. Create a new Firebase project
-2. Enable Authentication (Email/Password)
-3. Create Firestore Database
-4. Add the Firebase config to your `.env` file
-
 ### MongoDB Setup
 
 1. Create a MongoDB Atlas cluster
-2. Create a database named `invoice-generator`
+2. Create a database named `vmew`
 3. Add the MongoDB connection string to your `.env` file
 
 ## Deployment
