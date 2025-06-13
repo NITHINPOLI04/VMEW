@@ -18,7 +18,7 @@ app.use(express.json());
 app.use(express.static(join(__dirname, '../dist')));
 
 // MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://vmew-user:vmew%401234@cluster0.rpjwlwj.mongodb.net/invoices_db?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI
 
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
