@@ -4,7 +4,10 @@ import { dirname, join } from 'path';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv'; 
 import { convertToWords } from './utils/numberToWords.js';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
