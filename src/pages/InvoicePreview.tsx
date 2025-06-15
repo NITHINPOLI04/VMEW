@@ -112,7 +112,7 @@ const InvoicePreview: React.FC = () => {
       pdf.text(companyName, companyNameX, yPos + 5);
 
       yPos += 10;
-      pdf.setFontSize(8);
+      pdf.setFontSize(10);
       pdf.setTextColor(0, 0, 0);
 
       // GST Number
@@ -257,12 +257,12 @@ const InvoicePreview: React.FC = () => {
       const rightBoxWidth = contentWidth * 0.45;
 
       pdf.rect(margin, yPos, leftBoxWidth, buyerBoxHeight);
-      pdf.setFontSize(9);
+      pdf.setFontSize(11);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Buyer Details', margin + 2, yPos + 5);
 
       let buyerY = yPos + 10;
-      pdf.setFontSize(8);
+      pdf.setFontSize(10);
 
       buyerLines.forEach(({ label, value }) => {
         if (buyerY < yPos + buyerBoxHeight - 2) {
@@ -419,7 +419,7 @@ const InvoicePreview: React.FC = () => {
         startY: yPos,
         margin: { left: margin, right: margin },
         styles: {
-          fontSize: 7,
+          fontSize: 10,
           cellPadding: 1.5,
           lineColor: [0, 0, 0],
           lineWidth: 0.1,
@@ -454,7 +454,7 @@ const InvoicePreview: React.FC = () => {
       pdf.setLineWidth(0.2);
       pdf.rect(totalsBoxX, totalsY, totalsBoxWidth, totalsBoxHeight);
       
-      pdf.setFontSize(8);
+      pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       
       let lineY = totalsY + 5;
@@ -486,7 +486,7 @@ const InvoicePreview: React.FC = () => {
       
       pdf.setTextColor(255, 255, 255);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(9);
+      pdf.setFontSize(10);
       pdf.text('Grand Total:', labelX, grandTotalY + 3);
       pdf.text(`${invoice.grandTotal.toFixed(2)}/-`, valueX, grandTotalY + 3, { align: 'right' });
       
@@ -505,7 +505,7 @@ const InvoicePreview: React.FC = () => {
       pdf.setLineWidth(0.2);
       pdf.rect(margin, amountWordsY, contentWidth, amountWordsBoxHeight);
 
-      pdf.setFontSize(8);
+      pdf.setFontSize(10);
 
       let wordsY = amountWordsY + 5;
 
@@ -556,11 +556,11 @@ const InvoicePreview: React.FC = () => {
       pdf.setLineWidth(0.2);
       pdf.rect(margin, bottomY, leftBoxBottomWidth, maxBoxHeight);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(9);
+      pdf.setFontSize(11);
       pdf.text('Bank Details', margin + 3, bottomY + 6);
       
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7);
+      pdf.setFontSize(10);
       let bankY = bottomY + 11;
       bankDetails.forEach(({ label, value }) => {
         if (bankY < bottomY + maxBoxHeight - 2) {
@@ -580,11 +580,11 @@ const InvoicePreview: React.FC = () => {
       const rightBoxBottomX = margin + leftBoxBottomWidth + boxGap;
       pdf.rect(rightBoxBottomX, bottomY, rightBoxBottomWidth, maxBoxHeight);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(9);
+      pdf.setFontSize(11);
       pdf.text('Terms & Conditions', rightBoxBottomX + 3, bottomY + 6);
       
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7);
+      pdf.setFontSize(10);
       let termY = bottomY + 11;
       terms.forEach((term, index) => {
         if (termY < bottomY + maxBoxHeight - 2) {

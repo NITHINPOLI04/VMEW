@@ -139,7 +139,7 @@ const Login: React.FC = () => {
 
         <div className="w-1/2 p-4 flex items-center justify-center">
           <img
-            src="VMEW.jpg"
+            src="/VMEW.jpg"
             alt="Venkateswara Marine Electrical Works"
             className="object-contain w-full h-[600px] rounded-r-2xl"
           />
