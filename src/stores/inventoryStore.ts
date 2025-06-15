@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import { getInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem } from '../utils/api';
 import { useAuthStore } from './authStore';
-import { InventoryItem } from '../types';
+import { InventoryItem } from '../types/index';
 
 interface InventoryState {
   inventory: InventoryItem[];
@@ -25,23 +25,14 @@ export const useInventoryStore = create<InventoryState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      const response = await axios.get(`/api/inventory/${financialYear}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('Inventory API response:', response.data);
-      
-      const inventory: InventoryItem[] = Array.isArray(response.data)
-        ? response.data.map((item: any) => ({
-            ...item,
-            id: item._id
-          }))
-        : [];
+      const inventory = await getInventory(financialYear, token);
       
       set({ inventory, loading: false });
       return inventory;
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to fetch inventory';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
@@ -51,10 +42,7 @@ export const useInventoryStore = create<InventoryState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      const response = await axios.post('/api/inventory', item, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const newItem = { ...response.data, id: response.data._id } as InventoryItem;
+      const newItem = await createInventoryItem(item, token);
       
       set((state) => ({
         inventory: [...state.inventory, newItem],
@@ -63,8 +51,9 @@ export const useInventoryStore = create<InventoryState>((set) => ({
       
       return newItem;
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to add inventory item';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
@@ -74,19 +63,18 @@ export const useInventoryStore = create<InventoryState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      await axios.put(`/api/inventory/${id}`, item, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const updatedItem = await updateInventoryItem(id, item, token);
       
       set((state) => ({
         inventory: state.inventory.map((invItem) => 
-          invItem.id === id ? { ...invItem, ...item } : invItem
+          invItem.id === id ? updatedItem : invItem
         ),
         loading: false,
       }));
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to update inventory item';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
@@ -96,17 +84,16 @@ export const useInventoryStore = create<InventoryState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      await axios.delete(`/api/inventory/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await deleteInventoryItem(id, token);
       
       set((state) => ({
         inventory: state.inventory.filter((item) => item.id !== id),
         loading: false,
       }));
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to delete inventory item';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   

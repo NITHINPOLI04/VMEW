@@ -1,7 +1,10 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { useAuthStore } from './stores/authStore';
+import { useTemplateStore } from './stores/templateStore';
+import { useInvoiceStore } from './stores/invoiceStore';
+import { useInventoryStore } from './stores/inventoryStore';
 
 // Pages
 import Login from './pages/Login';
@@ -18,6 +21,26 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   const { isAuthenticated, loading } = useAuthStore();
+  const { fetchTemplateData } = useTemplateStore();
+  const { clearInvoices } = useInvoiceStore();
+  const { clearInventory } = useInventoryStore();
+  const { clearTemplates } = useTemplateStore();
+
+  // Fetch templates when the user is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchTemplateData();
+    }
+  }, [isAuthenticated, fetchTemplateData]);
+
+  // Clear stores when the user logs out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      clearInvoices();
+      clearInventory();
+      clearTemplates();
+    }
+  }, [isAuthenticated, clearInvoices, clearInventory, clearTemplates]);
 
   // Network status detection
   useEffect(() => {

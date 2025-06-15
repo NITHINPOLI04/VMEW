@@ -22,4 +22,4 @@ function convertToWords(number) {
   return 'Number too large'; // Placeholder for numbers >= 1000
 }
 
-export { convertToWords };
+module.exports = { convertToWords };

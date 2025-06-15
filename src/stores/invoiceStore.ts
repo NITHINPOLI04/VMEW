@@ -1,14 +1,14 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import { getInvoices, getInvoiceById, createInvoice, updateInvoice, deleteInvoice, updatePaymentStatus } from '../utils/api';
 import { useAuthStore } from './authStore';
-import { InvoiceFormData, Invoice } from '../types';
+import { InvoiceFormData, Invoice } from '../types/index';
 
 interface InvoiceState {
   invoices: Invoice[];
   loading: boolean;
   error: string | null;
   fetchInvoices: (year: string) => Promise<Invoice[]>;
-  fetchInvoice: (id: string) => Promise<InvoiceFormData>;
+  fetchInvoice: (id: string) => Promise<Invoice>;
   createInvoice: (invoice: InvoiceFormData) => Promise<Invoice>;
   updateInvoice: (id: string, invoice: InvoiceFormData) => Promise<void>;
   deleteInvoice: (id: string) => Promise<void>;
@@ -27,18 +27,14 @@ export const useInvoiceStore = create<InvoiceState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      const response = await axios.get(`/api/invoices/${year}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('Invoices API response:', response.data);
-      
-      const invoices: Invoice[] = Array.isArray(response.data) ? response.data : [];
+      const invoices = await getInvoices(year, token);
       
       set({ invoices, loading: false });
       return invoices;
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to fetch invoices';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
@@ -48,16 +44,14 @@ export const useInvoiceStore = create<InvoiceState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      const response = await axios.get(`/api/invoices/id/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const invoice = response.data as InvoiceFormData;
+      const invoice = await getInvoiceById(id, token);
       
       set({ loading: false });
       return invoice;
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to fetch invoice';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
@@ -67,16 +61,17 @@ export const useInvoiceStore = create<InvoiceState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      const response = await axios.post('/api/invoices', invoice, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const newInvoice = response.data as Invoice;
+      const newInvoice = await createInvoice(invoice, token);
       
-      set({ loading: false });
+      set((state) => ({
+        invoices: [...state.invoices, newInvoice],
+        loading: false,
+      }));
       return newInvoice;
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to create invoice';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
@@ -86,14 +81,16 @@ export const useInvoiceStore = create<InvoiceState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      await axios.put(`/api/invoices/${id}`, invoice, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const updatedInvoice = await updateInvoice(id, invoice, token);
       
-      set({ loading: false });
+      set((state) => ({
+        invoices: state.invoices.map((inv) => (inv._id === id ? updatedInvoice : inv)),
+        loading: false,
+      }));
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to update invoice';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
@@ -103,17 +100,16 @@ export const useInvoiceStore = create<InvoiceState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      await axios.delete(`/api/invoices/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await deleteInvoice(id, token);
       
       set((state) => ({
         invoices: state.invoices.filter((invoice) => invoice._id !== id),
         loading: false,
       }));
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to delete invoice';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
@@ -123,19 +119,18 @@ export const useInvoiceStore = create<InvoiceState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      await axios.patch(`/api/invoices/${id}/payment-status`, { status }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const updatedInvoice = await updatePaymentStatus(id, status, token);
       
       set((state) => ({
         invoices: state.invoices.map((invoice) => 
-          invoice._id === id ? { ...invoice, paymentStatus: status } : invoice
+          invoice._id === id ? updatedInvoice : invoice
         ),
         loading: false,
       }));
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to update payment status';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   

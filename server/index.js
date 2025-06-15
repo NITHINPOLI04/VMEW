@@ -1,27 +1,23 @@
-import express from 'express';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import mongoose from 'mongoose';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv'; 
-import { convertToWords } from './utils/numberToWords.js';
+const express = require('express');
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const { convertToWords } = require('./utils/numberToWords.js');
 
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
 // Middleware
+app.use(cors({ origin: '*' })); // Update to frontend URL in production
 app.use(express.json());
-app.use(express.static(join(__dirname, '../dist')));
 
 // MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI
+const MONGODB_URI = process.env.MONGODB_URI;
 
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
@@ -35,7 +31,7 @@ const userSchema = new mongoose.Schema({
 
 // Invoice Schema
 const invoiceSchema = new mongoose.Schema({
-  userId: { type: String, required: true }, // Associate with user
+  userId: { type: String, required: true },
   invoiceNumber: { type: String, required: true },
   date: { type: Date, required: true },
   buyerName: { type: String, required: true },
@@ -46,6 +42,7 @@ const invoiceSchema = new mongoose.Schema({
   vessel: { type: String },
   poNumber: { type: String },
   dcNumber: { type: String },
+  ewayBillNo: { type: String },
   items: [{
     description: { type: String, required: true },
     hsnSacCode: { type: String, required: true },
@@ -63,8 +60,8 @@ const invoiceSchema = new mongoose.Schema({
   taxType: { type: String, required: true },
   grandTotal: { type: Number, required: true },
   totalInWords: { type: String, required: true },
-  paymentStatus: { 
-    type: String, 
+  paymentStatus: {
+    type: String,
     required: true,
     enum: ['Payment Complete', 'Partially Paid', 'Unpaid'],
     default: 'Unpaid'
@@ -74,14 +71,14 @@ const invoiceSchema = new mongoose.Schema({
 
 // Template Schema
 const templateSchema = new mongoose.Schema({
-  userId: { type: String, required: true }, // Associate with user
+  userId: { type: String, required: true },
   type: { type: String, required: true, enum: ['letterhead', 'defaultInfo'] },
   data: { type: Object, required: true }
 }, { timestamps: true });
 
 // Inventory Schema
 const inventorySchema = new mongoose.Schema({
-  userId: { type: String, required: true }, // Associate with user
+  userId: { type: String, required: true },
   description: { type: String, required: true },
   hsnSacCode: { type: String, required: true },
   quantity: { type: Number, required: true },
@@ -115,7 +112,7 @@ const authenticate = async (req, res, next) => {
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // { userId }
+    req.user = decoded;
     next();
   } catch (error) {
     res.status(401).json({ message: 'Invalid token' });
@@ -385,10 +382,6 @@ app.post('/api/utils/number-to-words', (req, res) => {
     console.error('Error converting number to words:', error.message, error.stack);
     res.status(500).json({ message: 'Error converting number to words', error: error.message });
   }
-});
-
-app.get('*', (req, res) => {
-  res.sendFile(join(__dirname, '../dist/index.html'));
 });
 
 app.listen(PORT, () => {

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import { getTemplate, updateTemplate } from '../utils/api';
 import { useAuthStore } from './authStore';
-import { Letterhead, DefaultInfo } from '../types';
+import { Letterhead, DefaultInfo } from '../types/index';
 
 interface TemplateState {
   letterhead: Letterhead | null;
@@ -26,19 +26,14 @@ export const useTemplateStore = create<TemplateState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      const letterheadResponse = await axios.get('/api/templates/letterhead', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const letterhead = letterheadResponse.data;
-      
-      const defaultInfoResponse = await axios.get('/api/templates/defaultInfo', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const defaultInfo = defaultInfoResponse.data;
+      const letterhead = await getTemplate('letterhead', token) as Letterhead | null;
+      const defaultInfo = await getTemplate('defaultInfo', token) as DefaultInfo | null;
       
       set({ letterhead, defaultInfo, loading: false });
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
+      const errorMessage = error.message || 'Failed to fetch templates';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
@@ -48,14 +43,13 @@ export const useTemplateStore = create<TemplateState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      await axios.put('/api/templates/letterhead', letterhead, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const updatedLetterhead = await updateTemplate('letterhead', letterhead, token) as Letterhead;
       
-      set({ letterhead, loading: false });
+      set({ letterhead: updatedLetterhead, loading: false });
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to update letterhead';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
@@ -65,14 +59,13 @@ export const useTemplateStore = create<TemplateState>((set) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       
-      await axios.put('/api/templates/defaultInfo', defaultInfo, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const updatedDefaultInfo = await updateTemplate('defaultInfo', defaultInfo, token) as DefaultInfo;
       
-      set({ defaultInfo, loading: false });
+      set({ defaultInfo: updatedDefaultInfo, loading: false });
     } catch (error: any) {
-      set({ error: error.response?.data?.message || error.message, loading: false });
-      throw error;
+      const errorMessage = error.message || 'Failed to update default info';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
@@ -80,6 +73,3 @@ export const useTemplateStore = create<TemplateState>((set) => ({
     set({ letterhead: null, defaultInfo: null, error: null });
   },
 }));
-
-// Initialize template data
-useTemplateStore.getState().fetchTemplateData();

@@ -1,8 +1,5 @@
 import { create } from 'zustand';
-import axios from 'axios';
-import { useInvoiceStore } from './invoiceStore';
-import { useInventoryStore } from './inventoryStore';
-import { useTemplateStore } from './templateStore';
+import { signup, login } from '../utils/api';
 
 interface AuthState {
   user: { userId: string; email: string } | null;
@@ -25,8 +22,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signup: async (email, password) => {
     try {
       set({ loading: true, error: null });
-      const response = await axios.post('/api/auth/signup', { email, password });
-      const { token, userId, email: userEmail } = response.data;
+      const { token, userId, email: userEmail } = await signup(email, password);
       localStorage.setItem('token', token);
       set({ 
         user: { userId, email: userEmail }, 
@@ -35,19 +31,16 @@ export const useAuthStore = create<AuthState>((set) => ({
         loading: false 
       });
     } catch (error: any) {
-      set({ 
-        error: error.response?.data?.message || error.message, 
-        loading: false 
-      });
-      throw error;
+      const errorMessage = error.message || 'Failed to sign up';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
   login: async (email, password) => {
     try {
       set({ loading: true, error: null });
-      const response = await axios.post('/api/auth/login', { email, password });
-      const { token, userId, email: userEmail } = response.data;
+      const { token, userId, email: userEmail } = await login(email, password);
       localStorage.setItem('token', token);
       set({ 
         user: { userId, email: userEmail }, 
@@ -56,21 +49,16 @@ export const useAuthStore = create<AuthState>((set) => ({
         loading: false 
       });
     } catch (error: any) {
-      set({ 
-        error: error.response?.data?.message || error.message, 
-        loading: false 
-      });
-      throw error;
+      const errorMessage = error.message || 'Failed to log in';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
   logout: async () => {
     try {
-      set({ loading: true });
+      set({ loading: true, error: null });
       localStorage.removeItem('token');
-      useInvoiceStore.getState().clearInvoices();
-      useInventoryStore.getState().clearInventory();
-      useTemplateStore.getState().clearTemplates();
       set({ 
         user: null, 
         token: null,
@@ -78,11 +66,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         loading: false 
       });
     } catch (error: any) {
-      set({ 
-        error: error.message, 
-        loading: false 
-      });
-      throw error;
+      const errorMessage = error.message || 'Failed to log out';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   }
 }));
