@@ -390,22 +390,22 @@ const InvoicePreview: React.FC = () => {
         columnStyles = {
           0: { halign: 'center', cellWidth: 10 },
           1: { halign: 'left', cellWidth: 75 },
-          2: { halign: 'center', cellWidth: 15 },
+          2: { halign: 'center', cellWidth: 17 },
           3: { halign: 'center', cellWidth: 10 },
           4: { halign: 'center', cellWidth: 10 },
-          5: { halign: 'right', cellWidth: 15 },
+          5: { halign: 'right', cellWidth: 17 },
           6: { halign: 'right', cellWidth: 18 },
           7: { halign: 'center', cellWidth: 12 },
-          8: { halign: 'right', cellWidth: 15 }
+          8: { halign: 'right', cellWidth: 17 }
         };
       } else {
         columnStyles = {
           0: { halign: 'center', cellWidth: 7 },
           1: { halign: 'left', cellWidth: 55 },
           2: { halign: 'center', cellWidth: 15 },
-          3: { halign: 'center', cellWidth: 8 },
-          4: { halign: 'center', cellWidth: 8 },
-          5: { halign: 'right', cellWidth: 15 },
+          3: { halign: 'center', cellWidth: 9 },
+          4: { halign: 'center', cellWidth: 9 },
+          5: { halign: 'right', cellWidth: 17 },
           6: { halign: 'right', cellWidth: 18 },
           7: { halign: 'center', cellWidth: 12 },
           8: { halign: 'right', cellWidth: 15 },
@@ -446,7 +446,7 @@ const InvoicePreview: React.FC = () => {
       
       const finalY = (pdf as any).lastAutoTable.finalY + 5;
       
-      const totalsBoxWidth = 55;
+      const totalsBoxWidth = 65; // Width of the totals box
       const totalsBoxX = pageWidth - margin - totalsBoxWidth;
       let totalsY = finalY;
       
@@ -459,8 +459,8 @@ const InvoicePreview: React.FC = () => {
       pdf.setFont('helvetica', 'normal');
       
       let lineY = totalsY + 5;
-      const labelX = totalsBoxX + 5;
-      const valueX = totalsBoxX + totalsBoxWidth - 5;
+      const labelX = totalsBoxX + 3;
+      const valueX = totalsBoxX + totalsBoxWidth - 3;
 
       pdf.text('Total Taxable Amount:', labelX, lineY);
       pdf.text(`${totalTaxableAmount.toFixed(2)}/-`, valueX, lineY, { align: 'right' });
