@@ -221,7 +221,7 @@ const InvoicePreview: React.FC = () => {
       
       pdf.setLineWidth(0.2);
       pdf.setDrawColor(0, 0, 0); 
-      pdf.setFontSize(9);
+      pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
       
@@ -263,7 +263,7 @@ const InvoicePreview: React.FC = () => {
       pdf.text('Buyer Details', margin + 2, yPos + 5);
 
       let buyerY = yPos + 10;
-      pdf.setFontSize(10);
+      pdf.setFontSize(9);
 
       buyerLines.forEach(({ label, value }) => {
         if (buyerY < yPos + buyerBoxHeight - 2) {
