@@ -130,7 +130,7 @@ const InvoicePreview: React.FC = () => {
 
       pdf.setFontSize(9);
       // Address Section
-      const addressLabel = 'Address:  ';
+      const addressLabel = 'Address: ';
       const addressValue = letterhead?.address || ' D.No.9-23-3/6, CBM Compound, Flat No. 203, Kamal Enclaves, Visakhapatnam - 03';
       const addressText = `${addressLabel} ${addressValue}`;
       const addressLines = pdf.splitTextToSize(addressText, textWidth);
@@ -147,7 +147,7 @@ const InvoicePreview: React.FC = () => {
       yPos += addressValueLines.length * 4;
 
       // Workshop Section
-      const workshopLabel = 'Workshop:  ';
+      const workshopLabel = 'Workshop: ';
       const workshopValue = letterhead?.workshop || ' Plot No.2E, Industrial Cluster, Pudi, Rambilli (M), Visakhapatnam - 11';
       const workshopText = `${workshopLabel} ${workshopValue}`;
       const workshopLines = pdf.splitTextToSize(workshopText, textWidth);
@@ -585,7 +585,7 @@ const InvoicePreview: React.FC = () => {
       pdf.text('Terms & Conditions', rightBoxBottomX + 3, bottomY + 6);
       
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
+      pdf.setFontSize(9);
       let termY = bottomY + 11;
       terms.forEach((term, index) => {
         if (termY < bottomY + maxBoxHeight - 2) {
