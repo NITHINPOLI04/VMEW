@@ -130,8 +130,8 @@ const InvoicePreview: React.FC = () => {
 
       pdf.setFontSize(9);
       // Address Section
-      const addressLabel = 'Address:';
-      const addressValue = letterhead?.address || 'D.No.9-23-3/6, CBM Compound, Flat No. 203, Kamal Enclaves, Visakhapatnam - 03';
+      const addressLabel = 'Address:  ';
+      const addressValue = letterhead?.address || ' D.No.9-23-3/6, CBM Compound, Flat No. 203, Kamal Enclaves, Visakhapatnam - 03';
       const addressText = `${addressLabel} ${addressValue}`;
       const addressLines = pdf.splitTextToSize(addressText, textWidth);
       const addressTextWidth = pdf.getTextWidth(addressLines[0]);
@@ -147,8 +147,8 @@ const InvoicePreview: React.FC = () => {
       yPos += addressValueLines.length * 4;
 
       // Workshop Section
-      const workshopLabel = 'Workshop:';
-      const workshopValue = letterhead?.workshop || 'Plot No.2E, Industrial Cluster, Pudi, Rambilli (M), Visakhapatnam - 11';
+      const workshopLabel = 'Workshop:  ';
+      const workshopValue = letterhead?.workshop || ' Plot No.2E, Industrial Cluster, Pudi, Rambilli (M), Visakhapatnam - 11';
       const workshopText = `${workshopLabel} ${workshopValue}`;
       const workshopLines = pdf.splitTextToSize(workshopText, textWidth);
       const workshopTextWidth = pdf.getTextWidth(workshopLines[0]);
@@ -221,7 +221,7 @@ const InvoicePreview: React.FC = () => {
       
       pdf.setLineWidth(0.2);
       pdf.setDrawColor(0, 0, 0); 
-      pdf.setFontSize(10);
+      pdf.setFontSize(9);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(0, 0, 0);
       
