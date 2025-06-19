@@ -13,18 +13,6 @@ const InvoiceLibrary: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
-  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
-  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  const { styles, attributes } = usePopper(referenceElement, popperElement, {
-    placement: 'bottom-start',
-    modifiers: [
-      { name: 'offset', options: { offset: [0, 4] } },
-      { name: 'preventOverflow', options: { padding: 8 } },
-      { name: 'flip', options: { fallbackPlacements: ['top-start'] } },
-    ],
-  });
 
   useEffect(() => {
     const today = new Date();
@@ -47,19 +35,6 @@ const InvoiceLibrary: React.FC = () => {
       loadInvoices();
     }
   }, [selectedYear]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   const loadInvoices = async () => {
     setLoading(true);
@@ -101,14 +76,9 @@ const InvoiceLibrary: React.FC = () => {
         invoice._id === id ? { ...invoice, paymentStatus: status } : invoice
       ));
       toast.success('Payment status updated');
-      setDropdownOpen(null);
     } catch (error) {
       toast.error('Failed to update payment status');
     }
-  };
-
-  const toggleDropdown = (invoiceId: string) => {
-    setDropdownOpen(dropdownOpen === invoiceId ? null : invoiceId);
   };
 
   const filteredInvoices = invoices.filter(invoice => 
@@ -162,7 +132,7 @@ const InvoiceLibrary: React.FC = () => {
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-900"></div>
           </div>
         ) : sortedInvoices.length > 0 ? (
-          <div className="overflow-visible">
+          <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
@@ -187,95 +157,109 @@ const InvoiceLibrary: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {sortedInvoices.map((invoice) => (
-                  <tr key={invoice._id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-blue-900 mr-2" />
-                        {invoice.invoiceNumber}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                      {new Date(invoice.date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                      {invoice.buyerName}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                      ₹{invoice.grandTotal.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="relative" ref={dropdownRef}>
-                        <button
-                          ref={setReferenceElement}
-                          onClick={() => toggleDropdown(invoice._id)}
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${
-                            invoice.paymentStatus === 'Payment Complete'
-                              ? 'bg-green-100 text-green-800'
-                              : invoice.paymentStatus === 'Partially Paid'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {invoice.paymentStatus === 'Payment Complete' && <FileCheck className="h-3 w-3 mr-1" />}
-                          {invoice.paymentStatus === 'Partially Paid' && <Clock className="h-3 w-3 mr-1" />}
-                          {invoice.paymentStatus === 'Unpaid' && <AlertTriangle className="h-3 w-3 mr-1" />}
-                          {invoice.paymentStatus}
-                          <ChevronDown className="h-3 w-3 ml-1" />
-                        </button>
-                        
-                        {dropdownOpen === invoice._id && (
-                          <div
-                            ref={setPopperElement}
-                            style={styles.popper}
-                            {...attributes.popper}
-                            className="z-20 w-48 bg-white rounded-md shadow-lg py-1 border border-slate-200"
+                {sortedInvoices.map((invoice) => {
+                  const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
+                  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
+                  const [dropdownOpen, setDropdownOpen] = useState(false);
+                  const { styles, attributes } = usePopper(referenceElement, popperElement, {
+                    placement: 'bottom-start',
+                    modifiers: [
+                      { name: 'offset', options: { offset: [0, 4] } },
+                      { name: 'preventOverflow', options: { padding: 8 } },
+                      { name: 'flip', options: { fallbackPlacements: ['top-start'] } },
+                    ],
+                  });
+
+                  return (
+                    <tr key={invoice._id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">
+                        <div className="flex items-center">
+                          <FileText className="h-5 w-5 text-blue-900 mr-2" />
+                          {invoice.invoiceNumber}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                        {new Date(invoice.date).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                        {invoice.buyerName}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                        ₹{invoice.grandTotal.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <button
+                            ref={setReferenceElement}
+                            onClick={() => setDropdownOpen(!dropdownOpen)}
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${
+                              invoice.paymentStatus === 'Payment Complete'
+                                ? 'bg-green-100 text-green-800'
+                                : invoice.paymentStatus === 'Partially Paid'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
                           >
-                            <button
-                              onClick={() => handlePaymentStatusChange(invoice._id, 'Payment Complete')}
-                              className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            {invoice.paymentStatus === 'Payment Complete' && <FileCheck className="h-3 w-3 mr-1" />}
+                            {invoice.paymentStatus === 'Partially Paid' && <Clock className="h-3 w-3 mr-1" />}
+                            {invoice.paymentStatus === 'Unpaid' && <AlertTriangle className="h-3 w-3 mr-1" />}
+                            {invoice.paymentStatus}
+                            <ChevronDown className="h-3 w-3 ml-1" />
+                          </button>
+                          
+                          {dropdownOpen && (
+                            <div
+                              ref={setPopperElement}
+                              style={styles.popper}
+                              {...attributes.popper}
+                              className="z-20 w-48 bg-white rounded-md shadow-lg py-1 border border-slate-200"
                             >
-                              <FileCheck className="h-4 w-4 mr-2 text-green-600" />
-                              Payment Complete
-                            </button>
-                            <button
-                              onClick={() => handlePaymentStatusChange(invoice._id, 'Partially Paid')}
-                              className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              <Clock className="h-4 w-4 mr-2 text-yellow-600" />
-                              Partially Paid
-                            </button>
-                            <button
-                              onClick={() => handlePaymentStatusChange(invoice._id, 'Unpaid')}
-                              className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
-                              Unpaid
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Link
-                          to={`/invoice-preview/${invoice._id}`}
-                          className="text-blue-900 hover:bg-blue-100 p-1 rounded"
-                          title="View Invoice"
-                        >
-                          <Eye className="h-5 w-5" />
-                        </Link>
-                        <button
-                          onClick={() => handleDeleteInvoice(invoice._id)}
-                          className="text-red-600 hover:bg-red-100 p-1 rounded"
-                          title="Delete Invoice"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                              <button
+                                onClick={() => handlePaymentStatusChange(invoice._id, 'Payment Complete')}
+                                className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              >
+                                <FileCheck className="h-4 w-4 mr-2 text-green-600" />
+                                Payment Complete
+                              </button>
+                              <button
+                                onClick={() => handlePaymentStatusChange(invoice._id, 'Partially Paid')}
+                                className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              >
+                                <Clock className="h-4 w-4 mr-2 text-yellow-600" />
+                                Partially Paid
+                              </button>
+                              <button
+                                onClick={() => handlePaymentStatusChange(invoice._id, 'Unpaid')}
+                                className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              >
+                                <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
+                                Unpaid
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <Link
+                            to={`/invoice-preview/${invoice._id}`}
+                            className="text-blue-900 hover:bg-blue-100 p-1 rounded"
+                            title="View Invoice"
+                          >
+                            <Eye className="h-5 w-5" />
+                          </Link>
+                          <button
+                            onClick={() => handleDeleteInvoice(invoice._id)}
+                            className="text-red-600 hover:bg-red-100 p-1 rounded"
+                            title="Delete Invoice"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -297,13 +281,6 @@ const InvoiceLibrary: React.FC = () => {
           </div>
         )}
       </div>
-      
-      {dropdownOpen && (
-        <div 
-          className="fixed inset-0 z-10" 
-          onClick={() => setDropdownOpen(null)}
-        />
-      )}
     </div>
   );
 };
