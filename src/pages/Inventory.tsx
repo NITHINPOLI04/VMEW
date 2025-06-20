@@ -17,6 +17,7 @@ const Inventory: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentItem, setCurrentItem] = useState<InventoryItem | null>(null);
   const [modalTransactionType, setModalTransactionType] = useState<'Sales' | 'Purchase'>('Sales');
+  const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null); // State for delete confirmation modal
 
   const [formData, setFormData] = useState({
     description: '',
@@ -204,14 +205,14 @@ const Inventory: React.FC = () => {
   };
 
   const handleDeleteItem = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
-      try {
-        await deleteInventoryItem(id);
-        setInventory(inventory.filter(item => item.id !== id));
-        toast.success('Item deleted successfully');
-      } catch (error) {
-        toast.error('Failed to delete item');
-      }
+    try {
+      await deleteInventoryItem(id);
+      setInventory(inventory.filter(item => item.id !== id));
+      toast.success('Item deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete item');
+    } finally {
+      setDeleteModalOpen(null); // Close modal after action
     }
   };
 
@@ -309,7 +310,7 @@ const Inventory: React.FC = () => {
                     <Pencil className="h-5 w-5" />
                   </button>
                   <button
-                    onClick={() => handleDeleteItem(item.id)}
+                    onClick={() => setDeleteModalOpen(item.id)} // Open modal instead of confirm
                     className="text-red-600 hover:bg-red-100 p-1 rounded"
                     title="Delete Item"
                   >
@@ -366,14 +367,14 @@ const Inventory: React.FC = () => {
                     className="inline-flex items-center px-3 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
                     title="Export to Excel"
                   >
-                    <Download className="h-5 w-5" />
+                    <Download className="h-6 w-6" />
                   </button>
                   <button
                     onClick={() => openAddModal('Sales')}
                     className="inline-flex items-center px-3 py-3 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
                     title="Add Sales Item"
                   >
-                    <PlusCircle className="h-5 w-5" />
+                    <PlusCircle className="h-6 w-6" />
                   </button>
                 </div>
               </div>
@@ -427,14 +428,14 @@ const Inventory: React.FC = () => {
                     className="inline-flex items-center px-3 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
                     title="Export to Excel"
                   >
-                    <Download className="h-5 w-5" />
+                    <Download className="h-6 w-6" />
                   </button>
                   <button
                     onClick={() => openAddModal('Purchase')}
                     className="inline-flex items-center px-3 py-3 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
                     title="Add Purchase Item"
                   >
-                    <PlusCircle className="h-5 w-5" />
+                    <PlusCircle className="h-6 w-6" />
                   </button>
                 </div>
               </div>
@@ -793,6 +794,35 @@ const Inventory: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-red-100 rounded-full p-2">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            <h2 className="text-lg font-medium text-slate-800 mb-2">Delete Item</h2>
+            <p className="text-sm text-slate-600 mb-6">Are you sure you would like to do this?</p>
+            <div className="flex justify-between">
+              <button
+                onClick={() => setDeleteModalOpen(null)}
+                className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteItem(deleteModalOpen)}
+                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
+              >
+                Confirm
+              </button>
+            </div>
           </div>
         </div>
       )}
