@@ -14,6 +14,7 @@ const InvoiceLibrary: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null); // State for delete confirmation modal
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
@@ -83,14 +84,14 @@ const InvoiceLibrary: React.FC = () => {
   };
 
   const handleDeleteInvoice = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
-      try {
-        await deleteInvoice(id);
-        setInvoices(invoices.filter(invoice => invoice._id !== id));
-        toast.success('Invoice deleted successfully');
-      } catch (error) {
-        toast.error('Failed to delete invoice');
-      }
+    try {
+      await deleteInvoice(id);
+      setInvoices(invoices.filter(invoice => invoice._id !== id));
+      toast.success('Invoice deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete invoice');
+    } finally {
+      setDeleteModalOpen(null); // Close modal after action
     }
   };
 
@@ -268,7 +269,7 @@ const InvoiceLibrary: React.FC = () => {
                           <Eye className="h-5 w-5" />
                         </Link>
                         <button
-                          onClick={() => handleDeleteInvoice(invoice._id)}
+                          onClick={() => setDeleteModalOpen(invoice._id)} // Open modal instead of confirm
                           className="text-red-600 hover:bg-red-100 p-1 rounded"
                           title="Delete Invoice"
                         >
@@ -299,6 +300,35 @@ const InvoiceLibrary: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-red-100 rounded-full p-2">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            <h2 className="text-lg font-medium text-slate-800 mb-2">Delete Invoice</h2>
+            <p className="text-sm text-slate-600 mb-6">Are you sure you would like to do this?</p>
+            <div className="flex justify-between">
+              <button
+                onClick={() => setDeleteModalOpen(null)}
+                className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteInvoice(deleteModalOpen)}
+                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {dropdownOpen && (
         <div 
