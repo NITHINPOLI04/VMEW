@@ -15,7 +15,10 @@ const InvoiceLibrary: React.FC = () => {
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null); // State for delete confirmation modal
+  const [tooltipOpen, setTooltipOpen] = useState<string | null>(null); // State for tooltip
+  const [receivedAmount, setReceivedAmount] = useState<{ [key: string]: number }>({}); // Store received amount per invoice
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const tooltipRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
   const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -54,13 +57,16 @@ const InvoiceLibrary: React.FC = () => {
       if (dropdownOpen && dropdownRefs.current[dropdownOpen] && !dropdownRefs.current[dropdownOpen].contains(event.target as Node)) {
         setDropdownOpen(null);
       }
+      if (tooltipOpen && tooltipRefs.current[tooltipOpen] && !tooltipRefs.current[tooltipOpen].contains(event.target as Node)) {
+        setTooltipOpen(null);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [dropdownOpen]);
+  }, [dropdownOpen, tooltipOpen]);
 
   const loadInvoices = async () => {
     setLoading(true);
@@ -103,6 +109,10 @@ const InvoiceLibrary: React.FC = () => {
       ));
       toast.success('Payment status updated');
       setDropdownOpen(null);
+      if (status !== 'Partially Paid') {
+        setReceivedAmount(prev => ({ ...prev, [id]: 0 }));
+        setTooltipOpen(null);
+      }
     } catch (error) {
       toast.error('Failed to update payment status');
     }
@@ -112,6 +122,29 @@ const InvoiceLibrary: React.FC = () => {
     setDropdownOpen(dropdownOpen === invoiceId ? null : invoiceId);
     setReferenceElement(dropdownRefs.current[invoiceId]?.querySelector('button') || null);
     setPopperElement(dropdownRefs.current[invoiceId]?.querySelector('div') || null);
+  };
+
+  const toggleTooltip = (invoiceId: string) => {
+    if (invoices.find(invoice => invoice._id === invoiceId)?.paymentStatus === 'Partially Paid') {
+      setTooltipOpen(tooltipOpen === invoiceId ? null : invoiceId);
+    }
+  };
+
+  const handleReceivedAmountChange = (id: string, value: string) => {
+    const amount = Math.max(0, Math.min(Number(value) || 0, invoices.find(invoice => invoice._id === id)?.grandTotal || 0));
+    setReceivedAmount(prev => ({ ...prev, [id]: amount }));
+  };
+
+  const getBalanceAmount = (id: string) => {
+    const invoice = invoices.find(invoice => invoice._id === id);
+    if (!invoice) return 0;
+    const received = receivedAmount[id] || 0;
+    let balance = invoice.grandTotal - received;
+    const decimalPart = balance % 1;
+    if (decimalPart >= 0.50) {
+      balance = Math.ceil(balance);
+    }
+    return balance;
   };
 
   const filteredInvoices = invoices.filter(invoice => 
@@ -221,7 +254,19 @@ const InvoiceLibrary: React.FC = () => {
                           }`}
                         >
                           {invoice.paymentStatus === 'Payment Complete' && <FileCheck className="h-3 w-3 mr-1" />}
-                          {invoice.paymentStatus === 'Partially Paid' && <Clock className="h-3 w-3 mr-1" />}
+                          {invoice.paymentStatus === 'Partially Paid' && (
+                            <div className="relative flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              <div
+                                ref={el => tooltipRefs.current[invoice._id] = el}
+                                onMouseEnter={() => toggleTooltip(invoice._id)}
+                                onMouseLeave={() => setTooltipOpen(null)}
+                                className="ml-1"
+                              >
+                                <Clock className="h-3 w-3 text-yellow-800 hover:text-yellow-600 cursor-pointer" />
+                              </div>
+                            </div>
+                          )}
                           {invoice.paymentStatus === 'Unpaid' && <AlertTriangle className="h-3 w-3 mr-1" />}
                           {invoice.paymentStatus}
                           <ChevronDown className="h-3 w-3 ml-1" />
@@ -255,6 +300,31 @@ const InvoiceLibrary: React.FC = () => {
                               <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
                               Unpaid
                             </button>
+                          </div>
+                        )}
+
+                        {tooltipOpen === invoice._id && invoice.paymentStatus === 'Partially Paid' && (
+                          <div
+                            ref={setPopperElement}
+                            style={styles.popper}
+                            {...attributes.popper}
+                            className="z-30 w-64 bg-white rounded-md shadow-lg p-4 border border-slate-200"
+                          >
+                            <div className="text-sm text-slate-700 mb-2">Pending Payment Details</div>
+                            <div className="mb-2">
+                              <label className="block text-xs font-medium text-slate-600 mb-1">Amount Received (₹)</label>
+                              <input
+                                type="number"
+                                value={receivedAmount[invoice._id] || ''}
+                                onChange={(e) => handleReceivedAmountChange(invoice._id, e.target.value)}
+                                min="0"
+                                max={invoice.grandTotal}
+                                className="w-full px-2 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div className="text-sm text-slate-800">
+                              Balance Amount: ₹{getBalanceAmount(invoice._id).toFixed(2)}
+                            </div>
                           </div>
                         )}
                       </div>
