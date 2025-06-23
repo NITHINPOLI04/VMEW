@@ -18,10 +18,11 @@ const InvoiceLibrary: React.FC = () => {
   const [tooltipOpen, setTooltipOpen] = useState<string | null>(null); // State for tooltip
   const [receivedAmount, setReceivedAmount] = useState<{ [key: string]: number }>({}); // Store received amount per invoice
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-  const tooltipRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-  const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
+  const tooltipRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+  const [dropdownReferenceElement, setDropdownReferenceElement] = useState<HTMLButtonElement | null>(null);
+  const [tooltipReferenceElement, setTooltipReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  const { styles, attributes } = usePopper(referenceElement, popperElement, {
+  const { styles, attributes } = usePopper(tooltipReferenceElement || dropdownReferenceElement, popperElement, {
     placement: 'bottom-start',
     modifiers: [
       { name: 'offset', options: { offset: [0, 4] } },
@@ -120,7 +121,7 @@ const InvoiceLibrary: React.FC = () => {
 
   const toggleDropdown = (invoiceId: string) => {
     setDropdownOpen(dropdownOpen === invoiceId ? null : invoiceId);
-    setReferenceElement(dropdownRefs.current[invoiceId]?.querySelector('button') || null);
+    setDropdownReferenceElement(dropdownRefs.current[invoiceId]?.querySelector('button') || null);
     setPopperElement(dropdownRefs.current[invoiceId]?.querySelector('div') || null);
   };
 
@@ -220,9 +221,6 @@ const InvoiceLibrary: React.FC = () => {
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Actions
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Pending Details
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
@@ -243,10 +241,10 @@ const InvoiceLibrary: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                       ₹{invoice.grandTotal.toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="relative" ref={el => dropdownRefs.current[invoice._id] = el}>
+                    <td className="px-6 py-4 whitespace-nowrap relative">
+                      <div className="relative inline-flex items-center" ref={el => dropdownRefs.current[invoice._id] = el}>
                         <button
-                          ref={setReferenceElement}
+                          ref={setDropdownReferenceElement}
                           onClick={() => toggleDropdown(invoice._id)}
                           className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${
                             invoice.paymentStatus === 'Payment Complete'
@@ -262,7 +260,6 @@ const InvoiceLibrary: React.FC = () => {
                           {invoice.paymentStatus}
                           <ChevronDown className="h-3 w-3 ml-1" />
                         </button>
-                        
                         {dropdownOpen === invoice._id && (
                           <div
                             ref={setPopperElement}
@@ -293,6 +290,41 @@ const InvoiceLibrary: React.FC = () => {
                             </button>
                           </div>
                         )}
+                        {invoice.paymentStatus === 'Partially Paid' && (
+                          <div className="relative ml-2">
+                            <button
+                              ref={el => tooltipRefs.current[invoice._id] = el}
+                              onClick={() => toggleTooltip(invoice._id)}
+                              className="text-yellow-800 hover:text-yellow-600 p-1 rounded"
+                            >
+                              <Clock className="h-5 w-5" />
+                            </button>
+                            {tooltipOpen === invoice._id && (
+                              <div
+                                ref={setPopperElement}
+                                style={styles.popper}
+                                {...attributes.popper}
+                                className="z-30 w-64 bg-white rounded-md shadow-lg p-4 border border-slate-200"
+                              >
+                                <div className="text-sm text-slate-700 mb-2">Pending Payment Details</div>
+                                <div className="mb-2">
+                                  <label className="block text-xs font-medium text-slate-600 mb-1">Amount Received (₹)</label>
+                                  <input
+                                    type="number"
+                                    value={receivedAmount[invoice._id] || ''}
+                                    onChange={(e) => handleReceivedAmountChange(invoice._id, e.target.value)}
+                                    min="0"
+                                    max={invoice.grandTotal}
+                                    className="w-full px-2 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </div>
+                                <div className="text-sm text-slate-800">
+                                  Balance Amount: ₹{getBalanceAmount(invoice._id).toFixed(2)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -312,43 +344,6 @@ const InvoiceLibrary: React.FC = () => {
                           <Trash2 className="h-5 w-5" />
                         </button>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      {invoice.paymentStatus === 'Partially Paid' && (
-                        <div className="relative" ref={el => tooltipRefs.current[invoice._id] = el}>
-                          <button
-                            ref={setReferenceElement}
-                            onClick={() => toggleTooltip(invoice._id)}
-                            className="text-yellow-800 hover:text-yellow-600 p-1 rounded"
-                          >
-                            <Clock className="h-5 w-5" />
-                          </button>
-                          {tooltipOpen === invoice._id && (
-                            <div
-                              ref={setPopperElement}
-                              style={styles.popper}
-                              {...attributes.popper}
-                              className="z-30 w-64 bg-white rounded-md shadow-lg p-4 border border-slate-200"
-                            >
-                              <div className="text-sm text-slate-700 mb-2">Pending Payment Details</div>
-                              <div className="mb-2">
-                                <label className="block text-xs font-medium text-slate-600 mb-1">Amount Received (₹)</label>
-                                <input
-                                  type="number"
-                                  value={receivedAmount[invoice._id] || ''}
-                                  onChange={(e) => handleReceivedAmountChange(invoice._id, e.target.value)}
-                                  min="0"
-                                  max={invoice.grandTotal}
-                                  className="w-full px-2 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                              <div className="text-sm text-slate-800">
-                                Balance Amount: ₹{getBalanceAmount(invoice._id).toFixed(2)}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </td>
                   </tr>
                 ))}
