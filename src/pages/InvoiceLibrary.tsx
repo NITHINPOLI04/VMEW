@@ -220,6 +220,9 @@ const InvoiceLibrary: React.FC = () => {
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Actions
                   </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    Pending Details
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
@@ -254,19 +257,7 @@ const InvoiceLibrary: React.FC = () => {
                           }`}
                         >
                           {invoice.paymentStatus === 'Payment Complete' && <FileCheck className="h-3 w-3 mr-1" />}
-                          {invoice.paymentStatus === 'Partially Paid' && (
-                            <div className="relative flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              <div
-                                ref={el => tooltipRefs.current[invoice._id] = el}
-                                onMouseEnter={() => toggleTooltip(invoice._id)}
-                                onMouseLeave={() => setTooltipOpen(null)}
-                                className="ml-1"
-                              >
-                                <Clock className="h-3 w-3 text-yellow-800 hover:text-yellow-600 cursor-pointer" />
-                              </div>
-                            </div>
-                          )}
+                          {invoice.paymentStatus === 'Partially Paid' && <Clock className="h-3 w-3 mr-1" />}
                           {invoice.paymentStatus === 'Unpaid' && <AlertTriangle className="h-3 w-3 mr-1" />}
                           {invoice.paymentStatus}
                           <ChevronDown className="h-3 w-3 ml-1" />
@@ -302,31 +293,6 @@ const InvoiceLibrary: React.FC = () => {
                             </button>
                           </div>
                         )}
-
-                        {tooltipOpen === invoice._id && invoice.paymentStatus === 'Partially Paid' && (
-                          <div
-                            ref={setPopperElement}
-                            style={styles.popper}
-                            {...attributes.popper}
-                            className="z-30 w-64 bg-white rounded-md shadow-lg p-4 border border-slate-200"
-                          >
-                            <div className="text-sm text-slate-700 mb-2">Pending Payment Details</div>
-                            <div className="mb-2">
-                              <label className="block text-xs font-medium text-slate-600 mb-1">Amount Received (₹)</label>
-                              <input
-                                type="number"
-                                value={receivedAmount[invoice._id] || ''}
-                                onChange={(e) => handleReceivedAmountChange(invoice._id, e.target.value)}
-                                min="0"
-                                max={invoice.grandTotal}
-                                className="w-full px-2 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                            <div className="text-sm text-slate-800">
-                              Balance Amount: ₹{getBalanceAmount(invoice._id).toFixed(2)}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -346,6 +312,43 @@ const InvoiceLibrary: React.FC = () => {
                           <Trash2 className="h-5 w-5" />
                         </button>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      {invoice.paymentStatus === 'Partially Paid' && (
+                        <div className="relative" ref={el => tooltipRefs.current[invoice._id] = el}>
+                          <button
+                            ref={setReferenceElement}
+                            onClick={() => toggleTooltip(invoice._id)}
+                            className="text-yellow-800 hover:text-yellow-600 p-1 rounded"
+                          >
+                            <Clock className="h-5 w-5" />
+                          </button>
+                          {tooltipOpen === invoice._id && (
+                            <div
+                              ref={setPopperElement}
+                              style={styles.popper}
+                              {...attributes.popper}
+                              className="z-30 w-64 bg-white rounded-md shadow-lg p-4 border border-slate-200"
+                            >
+                              <div className="text-sm text-slate-700 mb-2">Pending Payment Details</div>
+                              <div className="mb-2">
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Amount Received (₹)</label>
+                                <input
+                                  type="number"
+                                  value={receivedAmount[invoice._id] || ''}
+                                  onChange={(e) => handleReceivedAmountChange(invoice._id, e.target.value)}
+                                  min="0"
+                                  max={invoice.grandTotal}
+                                  className="w-full px-2 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div className="text-sm text-slate-800">
+                                Balance Amount: ₹{getBalanceAmount(invoice._id).toFixed(2)}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
