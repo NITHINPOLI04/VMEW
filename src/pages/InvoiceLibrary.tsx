@@ -4,7 +4,6 @@ import { FileText, Search, ChevronDown, Trash2, Eye, FileCheck, Clock, AlertTria
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { Invoice } from '../types';
 import { toast } from 'react-hot-toast';
-import { usePopper } from 'react-popper';
 
 const InvoiceLibrary: React.FC = () => {
   const { fetchInvoices, deleteInvoice, updateInvoicePaymentStatus } = useInvoiceStore();
@@ -15,21 +14,10 @@ const InvoiceLibrary: React.FC = () => {
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null); // State for delete confirmation modal
-  const [tooltipOpen, setTooltipOpen] = useState<string | null>(null); // State for tooltip
+  const [dialogOpen, setDialogOpen] = useState<string | null>(null); // State for dialog box
   const [receivedAmount, setReceivedAmount] = useState<{ [key: string]: number }>({}); // Store received amount per invoice
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-  const tooltipRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
-  const [dropdownReferenceElement, setDropdownReferenceElement] = useState<HTMLButtonElement | null>(null);
-  const [tooltipReferenceElement, setTooltipReferenceElement] = useState<HTMLButtonElement | null>(null);
-  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  const { styles, attributes } = usePopper(tooltipReferenceElement || dropdownReferenceElement, popperElement, {
-    placement: 'bottom-start',
-    modifiers: [
-      { name: 'offset', options: { offset: [0, 4] } },
-      { name: 'preventOverflow', options: { padding: 8 } },
-      { name: 'flip', options: { fallbackPlacements: ['top-start'] } },
-    ],
-  });
+  const dialogRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 
   useEffect(() => {
     const today = new Date();
@@ -58,8 +46,8 @@ const InvoiceLibrary: React.FC = () => {
       if (dropdownOpen && dropdownRefs.current[dropdownOpen] && !dropdownRefs.current[dropdownOpen].contains(event.target as Node)) {
         setDropdownOpen(null);
       }
-      if (tooltipOpen && tooltipRefs.current[tooltipOpen] && !tooltipRefs.current[tooltipOpen].contains(event.target as Node)) {
-        setTooltipOpen(null);
+      if (dialogOpen && dialogRefs.current[dialogOpen] && !dialogRefs.current[dialogOpen].contains(event.target as Node)) {
+        setDialogOpen(null);
       }
     };
 
@@ -67,7 +55,7 @@ const InvoiceLibrary: React.FC = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [dropdownOpen, tooltipOpen]);
+  }, [dropdownOpen, dialogOpen]);
 
   const loadInvoices = async () => {
     setLoading(true);
@@ -112,7 +100,7 @@ const InvoiceLibrary: React.FC = () => {
       setDropdownOpen(null);
       if (status !== 'Partially Paid') {
         setReceivedAmount(prev => ({ ...prev, [id]: 0 }));
-        setTooltipOpen(null);
+        setDialogOpen(null);
       }
     } catch (error) {
       toast.error('Failed to update payment status');
@@ -121,12 +109,10 @@ const InvoiceLibrary: React.FC = () => {
 
   const toggleDropdown = (invoiceId: string) => {
     setDropdownOpen(dropdownOpen === invoiceId ? null : invoiceId);
-    setDropdownReferenceElement(dropdownRefs.current[invoiceId]?.querySelector('button') || null);
-    setPopperElement(dropdownRefs.current[invoiceId]?.querySelector('div') || null);
   };
 
-  const toggleTooltip = (invoiceId: string) => {
-    setTooltipOpen(tooltipOpen === invoiceId ? null : invoiceId); // Simplified to always toggle
+  const toggleDialog = (invoiceId: string) => {
+    setDialogOpen(dialogOpen === invoiceId ? null : invoiceId);
   };
 
   const handleReceivedAmountChange = (id: string, value: string) => {
@@ -242,7 +228,6 @@ const InvoiceLibrary: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap relative">
                       <div className="relative inline-flex items-center" ref={el => dropdownRefs.current[invoice._id] = el}>
                         <button
-                          ref={setDropdownReferenceElement}
                           onClick={() => toggleDropdown(invoice._id)}
                           className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${
                             invoice.paymentStatus === 'Payment Complete'
@@ -260,10 +245,7 @@ const InvoiceLibrary: React.FC = () => {
                         </button>
                         {dropdownOpen === invoice._id && (
                           <div
-                            ref={setPopperElement}
-                            style={styles.popper}
-                            {...attributes.popper}
-                            className="z-20 w-48 bg-white rounded-md shadow-lg py-1 border border-slate-200"
+                            className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-slate-200 z-20"
                           >
                             <button
                               onClick={() => handlePaymentStatusChange(invoice._id, 'Payment Complete')}
@@ -291,18 +273,16 @@ const InvoiceLibrary: React.FC = () => {
                         {invoice.paymentStatus === 'Partially Paid' && (
                           <div className="relative ml-2">
                             <button
-                              ref={el => tooltipRefs.current[invoice._id] = el}
-                              onClick={() => toggleTooltip(invoice._id)}
+                              ref={el => dialogRefs.current[invoice._id] = el}
+                              onClick={() => toggleDialog(invoice._id)}
                               className="text-yellow-800 hover:text-yellow-600 p-1 rounded"
                             >
                               <Clock className="h-5 w-5" />
                             </button>
-                            {tooltipOpen === invoice._id && (
+                            {dialogOpen === invoice._id && (
                               <div
-                                ref={setPopperElement}
-                                style={{ ...styles.popper, zIndex: 40 }} // Increased z-index
-                                {...attributes.popper}
-                                className="z-40 w-64 bg-white rounded-md shadow-lg p-4 border border-slate-200"
+                                className="absolute left-0 mt-2 w-64 bg-white rounded-md shadow-lg p-4 border border-slate-200 z-30"
+                                style={{ top: '100%', transform: 'translateX(-50%)' }}
                               >
                                 <div className="text-sm text-slate-700 mb-2">Pending Payment Details</div>
                                 <div className="mb-2">
