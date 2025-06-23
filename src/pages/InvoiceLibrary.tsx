@@ -4,6 +4,7 @@ import { FileText, Search, ChevronDown, Trash2, Eye, FileCheck, Clock, AlertTria
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { Invoice } from '../types';
 import { toast } from 'react-hot-toast';
+import { usePopper } from 'react-popper'; // Re-added for dropdown
 
 const InvoiceLibrary: React.FC = () => {
   const { fetchInvoices, deleteInvoice, updateInvoicePaymentStatus } = useInvoiceStore();
@@ -19,6 +20,16 @@ const InvoiceLibrary: React.FC = () => {
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const dialogRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
   const dialogContentRefs = useRef<{ [key: string]: HTMLDivElement | null }>({}); // Ref for dialog content
+  const [dropdownReferenceElement, setDropdownReferenceElement] = useState<HTMLButtonElement | null>(null);
+  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
+  const { styles, attributes } = usePopper(dropdownReferenceElement, popperElement, {
+    placement: 'bottom-start',
+    modifiers: [
+      { name: 'offset', options: { offset: [0, 4] } },
+      { name: 'preventOverflow', options: { padding: 8 } },
+      { name: 'flip', options: { fallbackPlacements: ['top-start'] } },
+    ],
+  });
 
   useEffect(() => {
     const today = new Date();
@@ -114,6 +125,8 @@ const InvoiceLibrary: React.FC = () => {
 
   const toggleDropdown = (invoiceId: string) => {
     setDropdownOpen(dropdownOpen === invoiceId ? null : invoiceId);
+    setDropdownReferenceElement(dropdownRefs.current[invoiceId]?.querySelector('button') || null);
+    setPopperElement(dropdownRefs.current[invoiceId]?.querySelector('div') || null);
   };
 
   const toggleDialog = (invoiceId: string) => {
@@ -235,6 +248,7 @@ const InvoiceLibrary: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap relative">
                       <div className="relative inline-flex items-center" ref={el => dropdownRefs.current[invoice._id] = el}>
                         <button
+                          ref={setDropdownReferenceElement}
                           onClick={() => toggleDropdown(invoice._id)}
                           className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${
                             invoice.paymentStatus === 'Payment Complete'
@@ -252,7 +266,10 @@ const InvoiceLibrary: React.FC = () => {
                         </button>
                         {dropdownOpen === invoice._id && (
                           <div
-                            className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-slate-200 z-20"
+                            ref={setPopperElement}
+                            style={styles.popper}
+                            {...attributes.popper}
+                            className="z-20 w-48 bg-white rounded-md shadow-lg py-1 border border-slate-200"
                           >
                             <button
                               onClick={() => handlePaymentStatusChange(invoice._id, 'Payment Complete')}
