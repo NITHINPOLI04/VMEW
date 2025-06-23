@@ -18,6 +18,7 @@ const InvoiceLibrary: React.FC = () => {
   const [receivedAmount, setReceivedAmount] = useState<{ [key: string]: number }>({}); // Store received amount per invoice
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const dialogRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+  const dialogContentRefs = useRef<{ [key: string]: HTMLDivElement | null }>({}); // Ref for dialog content
 
   useEffect(() => {
     const today = new Date();
@@ -46,8 +47,12 @@ const InvoiceLibrary: React.FC = () => {
       if (dropdownOpen && dropdownRefs.current[dropdownOpen] && !dropdownRefs.current[dropdownOpen].contains(event.target as Node)) {
         setDropdownOpen(null);
       }
-      if (dialogOpen && dialogRefs.current[dialogOpen] && !dialogRefs.current[dialogOpen].contains(event.target as Node)) {
-        setDialogOpen(null);
+      if (dialogOpen) {
+        const dialogButton = dialogRefs.current[dialogOpen];
+        const dialogContent = dialogContentRefs.current[dialogOpen];
+        if (dialogButton && !dialogButton.contains(event.target as Node) && dialogContent && !dialogContent.contains(event.target as Node)) {
+          setDialogOpen(null);
+        }
       }
     };
 
@@ -116,8 +121,10 @@ const InvoiceLibrary: React.FC = () => {
   };
 
   const handleReceivedAmountChange = (id: string, value: string) => {
-    const amount = Math.max(0, Math.min(Number(value) || 0, invoices.find(invoice => invoice._id === id)?.grandTotal || 0));
-    setReceivedAmount(prev => ({ ...prev, [id]: amount }));
+    const invoice = invoices.find(invoice => invoice._id === id);
+    if (!invoice) return;
+    const newAmount = Math.max(0, Math.min(Number(value) || 0, invoice.grandTotal));
+    setReceivedAmount(prev => ({ ...prev, [id]: newAmount }));
   };
 
   const getBalanceAmount = (id: string) => {
@@ -281,6 +288,7 @@ const InvoiceLibrary: React.FC = () => {
                             </button>
                             {dialogOpen === invoice._id && (
                               <div
+                                ref={el => dialogContentRefs.current[invoice._id] = el}
                                 className="absolute left-0 mt-2 w-64 bg-white rounded-md shadow-lg p-4 border border-slate-200 z-30"
                                 style={{ top: '100%', transform: 'translateX(-50%)' }}
                               >
@@ -294,6 +302,7 @@ const InvoiceLibrary: React.FC = () => {
                                     min="0"
                                     max={invoice.grandTotal}
                                     className="w-full px-2 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    autoFocus
                                   />
                                 </div>
                                 <div className="text-sm text-slate-800">
