@@ -126,9 +126,7 @@ const InvoiceLibrary: React.FC = () => {
   };
 
   const toggleTooltip = (invoiceId: string) => {
-    if (invoices.find(invoice => invoice._id === invoiceId)?.paymentStatus === 'Partially Paid') {
-      setTooltipOpen(tooltipOpen === invoiceId ? null : invoiceId);
-    }
+    setTooltipOpen(tooltipOpen === invoiceId ? null : invoiceId); // Simplified to always toggle
   };
 
   const handleReceivedAmountChange = (id: string, value: string) => {
@@ -302,9 +300,9 @@ const InvoiceLibrary: React.FC = () => {
                             {tooltipOpen === invoice._id && (
                               <div
                                 ref={setPopperElement}
-                                style={styles.popper}
+                                style={{ ...styles.popper, zIndex: 40 }} // Increased z-index
                                 {...attributes.popper}
-                                className="z-30 w-64 bg-white rounded-md shadow-lg p-4 border border-slate-200"
+                                className="z-40 w-64 bg-white rounded-md shadow-lg p-4 border border-slate-200"
                               >
                                 <div className="text-sm text-slate-700 mb-2">Pending Payment Details</div>
                                 <div className="mb-2">
