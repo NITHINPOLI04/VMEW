@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, CreditCard, TrendingUp, PlusCircle, Package } from 'lucide-react';
+import { FileText, CreditCard, TrendingUp, PlusCircle, Package, Eye } from 'lucide-react';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useInventoryStore } from '../stores/inventoryStore';
 
@@ -12,6 +12,7 @@ const Dashboard: React.FC = () => {
   const { inventory, loading: inventoryLoading, error: inventoryError, fetchInventory } = useInventoryStore();
 
   const loading = invoicesLoading || inventoryLoading;
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -39,12 +40,86 @@ const Dashboard: React.FC = () => {
     loadData();
   }, [fetchInvoices, fetchInventory]);
 
-  // Ensure recentInvoices is always an array
-  const recentInvoices = Array.isArray(invoices) ? invoices.slice(0, 5) : [];
+  // Calculate monthly revenue from paid invoices
+  useEffect(() => {
+    if (canvasRef.current && Array.isArray(invoices)) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+        // Get last 12 months (June 2024 - May 2025)
+        const months = [];
+        const today = new Date();
+        for (let i = 11; i >= 0; i--) {
+          const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+          months.push(d.toLocaleString('default', { month: 'short', year: '2-digit' }));
+        }
+
+        // Calculate revenue per month (only paid invoices)
+        const monthlyRevenue = Array(12).fill(0);
+        invoices.forEach(invoice => {
+          if (invoice.paymentStatus === 'Payment Complete') {
+            const invoiceDate = new Date(invoice.date);
+            const monthIndex = (today.getMonth() - invoiceDate.getMonth() + 12) % 12;
+            if (monthIndex >= 0 && monthIndex < 12) {
+              monthlyRevenue[monthIndex] += invoice.grandTotal;
+            }
+          }
+        });
+
+        // Draw line plot
+        ctx.beginPath();
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 2;
+        const maxRevenue = Math.max(...monthlyRevenue, 1000); // Minimum 1000 for scale
+        const xStep = canvasRef.current.width / (months.length - 1);
+        const yScale = 200 / maxRevenue;
+
+        monthlyRevenue.forEach((revenue, index) => {
+          const x = index * xStep;
+          const y = 250 - (revenue * yScale);
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // Add data points
+        ctx.fillStyle = '#3b82f6';
+        monthlyRevenue.forEach((revenue, index) => {
+          const x = index * xStep;
+          const y = 250 - (revenue * yScale);
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Add month labels
+        ctx.fillStyle = '#1e293b';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        months.forEach((month, index) => {
+          const x = index * xStep;
+          ctx.fillText(month, x, 270);
+        });
+
+        // Add y-axis label (revenue)
+        ctx.save();
+        ctx.translate(10, 130);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText('Revenue (₹)', 0, 0);
+        ctx.restore();
+      }
+    }
+  }, [invoices]);
 
   // Calculate number of Sales and Purchases
   const salesCount = Array.isArray(inventory) ? inventory.filter(item => item.transactionType === 'Sales').length : 0;
   const purchasesCount = Array.isArray(inventory) ? inventory.filter(item => item.transactionType === 'Purchase').length : 0;
+
+  // Calculate total amounts
+  const totalPaid = Array.isArray(invoices) ? invoices.filter(invoice => invoice.paymentStatus === 'Payment Complete').reduce((sum, invoice) => sum + invoice.grandTotal, 0) : 0;
+  const totalUnpaid = Array.isArray(invoices) ? invoices.filter(invoice => invoice.paymentStatus === 'Unpaid').reduce((sum, invoice) => sum + invoice.grandTotal, 0) : 0;
+  const totalPartiallyPaid = Array.isArray(invoices) ? invoices.filter(invoice => invoice.paymentStatus === 'Partially Paid').reduce((sum, invoice) => sum + invoice.grandTotal, 0) : 0;
 
   return (
     <div className="space-y-6">
@@ -92,64 +167,47 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 flex justify-between items-center border-b border-slate-200">
-          <h2 className="text-xl font-bold text-slate-800">Recent Invoices</h2>
-          <Link to="/invoice-library" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-            View All
-          </Link>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-xl font-semibold text-slate-800 mb-4">Revenue Overview (Last 12 Months)</h2>
+          <canvas ref={canvasRef} width="400" height="300"></canvas>
         </div>
-
-        {loading ? (
-          <div className="p-6 flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-900"></div>
+        <div className="grid grid-rows-2 gap-6">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">Invoice Summary</h2>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-slate-600">Paid Amount:</span>
+                <span className="text-slate-800 font-medium">₹{totalPaid.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Unpaid Amount:</span>
+                <span className="text-slate-800 font-medium">₹{totalUnpaid.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Partially Paid Amount:</span>
+                <span className="text-slate-800 font-medium">₹{totalPartiallyPaid.toFixed(2)}</span>
+              </div>
+            </div>
           </div>
-        ) : recentInvoices.length > 0 ? (
-          <div className="divide-y divide-slate-200">
-            {recentInvoices.map((invoice) => (
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">Quick Actions</h2>
+            <div className="space-x-4">
               <Link
-                key={invoice._id}
-                to={`/invoice-preview/${invoice._id}`}
-                className="p-6 flex items-center hover:bg-slate-50 transition-colors duration-200"
+                to="/generate-invoice"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
-                <div className="flex-1">
-                  <p className="font-medium text-slate-800">Invoice #{invoice.invoiceNumber}</p>
-                  <p className="text-sm text-slate-500">{invoice.buyerName}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-slate-800">₹{invoice.grandTotal.toFixed(2)}</p>
-                  <p className="text-sm text-slate-500">{new Date(invoice.date).toLocaleDateString()}</p>
-                </div>
-                <div className="ml-4">
-                  <span
-                    className={`px-3 py-1 text-xs font-medium rounded-full ${
-                      invoice.paymentStatus === 'Payment Complete'
-                        ? 'bg-green-100 text-green-800'
-                        : invoice.paymentStatus === 'Partially Paid'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {invoice.paymentStatus}
-                  </span>
-                </div>
+                <PlusCircle className="h-4 w-4 mr-2" /> Generate Invoice
               </Link>
-            ))}
+              <Link
+                to="/invoice-library"
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                <Eye className="h-4 w-4 mr-2" /> View Invoice Library
+              </Link>
+            </div>
           </div>
-        ) : (
-          <div className="p-12 text-center">
-            <TrendingUp className="h-12 w-12 mx-auto text-slate-400 mb-4" />
-            <h3 className="text-xl font-medium text-slate-700 mb-2">No invoices created yet</h3>
-            <p className="text-slate-500 mb-6">Get started by creating your first invoice</p>
-            <Link
-              to="/generate-invoice"
-              className="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition-colors duration-200"
-            >
-              <PlusCircle className="h-5 w-5 mr-2" />
-              Create your first invoice
-            </Link>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
