@@ -117,9 +117,21 @@ const Dashboard: React.FC = () => {
   const salesCount = Array.isArray(inventory) ? inventory.filter(item => item.transactionType === 'Sales').length : 0;
   const purchasesCount = Array.isArray(inventory) ? inventory.filter(item => item.transactionType === 'Purchase').length : 0;
 
-  // Calculate total amounts
-  const totalPaid = Array.isArray(invoices) ? invoices.filter(invoice => invoice.paymentStatus === 'Payment Complete').reduce((sum, invoice) => sum + invoice.grandTotal, 0) : 0;
-  const totalUnpaid = Array.isArray(invoices) ? invoices.filter(invoice => invoice.paymentStatus === 'Unpaid').reduce((sum, invoice) => sum + invoice.grandTotal, 0) : 0;
+  const totalPaid = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
+    if (invoice.paymentStatus === 'Payment Complete') return sum + invoice.grandTotal;
+    if (invoice.paymentStatus === 'Partially Paid') return sum + (getReceivedAmount(invoice._id) || 0);
+    return sum;
+  }, 0) : 0;
+
+  const totalUnpaid = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
+    if (invoice.paymentStatus === 'Unpaid') return sum + invoice.grandTotal;
+    if (invoice.paymentStatus === 'Partially Paid') {
+      const received = getReceivedAmount(invoice._id) || 0;
+      return sum + (invoice.grandTotal - received);
+    }
+    return sum;
+  }, 0) : 0;
+
   const totalPartiallyPaid = Array.isArray(invoices) ? invoices.filter(invoice => invoice.paymentStatus === 'Partially Paid').reduce((sum, invoice) => sum + (getReceivedAmount(invoice._id) || 0), 0) : 0;
 
   return (
