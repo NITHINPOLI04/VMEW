@@ -8,7 +8,7 @@ const Dashboard: React.FC = () => {
   const [currentYear, setCurrentYear] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const { invoices, loading: invoicesLoading, error: invoicesError, fetchInvoices } = useInvoiceStore();
+  const { invoices, loading: invoicesLoading, error: invoicesError, fetchInvoices, getReceivedAmount } = useInvoiceStore();
   const { inventory, loading: inventoryLoading, error: inventoryError, fetchInventory } = useInventoryStore();
 
   const loading = invoicesLoading || inventoryLoading;
@@ -40,14 +40,13 @@ const Dashboard: React.FC = () => {
     loadData();
   }, [fetchInvoices, fetchInventory]);
 
-  // Calculate monthly revenue from paid invoices
+  // Calculate monthly revenue from paid and partially paid invoices
   useEffect(() => {
     if (canvasRef.current && Array.isArray(invoices)) {
       const ctx = canvasRef.current.getContext('2d');
       if (ctx) {
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
-        // Get last 12 months (June 2024 - May 2025)
         const months = [];
         const today = new Date();
         for (let i = 11; i >= 0; i--) {
@@ -55,14 +54,16 @@ const Dashboard: React.FC = () => {
           months.push(d.toLocaleString('default', { month: 'short', year: '2-digit' }));
         }
 
-        // Calculate revenue per month (only paid invoices)
         const monthlyRevenue = Array(12).fill(0);
         invoices.forEach(invoice => {
-          if (invoice.paymentStatus === 'Payment Complete') {
-            const invoiceDate = new Date(invoice.date);
-            const monthIndex = (today.getMonth() - invoiceDate.getMonth() + 12) % 12;
-            if (monthIndex >= 0 && monthIndex < 12) {
+          const invoiceDate = new Date(invoice.date);
+          const monthIndex = (today.getMonth() - invoiceDate.getMonth() + 12) % 12;
+          if (monthIndex >= 0 && monthIndex < 12) {
+            if (invoice.paymentStatus === 'Payment Complete') {
               monthlyRevenue[monthIndex] += invoice.grandTotal;
+            } else if (invoice.paymentStatus === 'Partially Paid') {
+              const received = getReceivedAmount(invoice._id) || 0;
+              monthlyRevenue[monthIndex] += received;
             }
           }
         });
@@ -71,7 +72,7 @@ const Dashboard: React.FC = () => {
         ctx.beginPath();
         ctx.strokeStyle = '#3b82f6';
         ctx.lineWidth = 2;
-        const maxRevenue = Math.max(...monthlyRevenue, 1000); // Minimum 1000 for scale
+        const maxRevenue = Math.max(...monthlyRevenue, 1000);
         const xStep = canvasRef.current.width / (months.length - 1);
         const yScale = 200 / maxRevenue;
 
@@ -110,7 +111,7 @@ const Dashboard: React.FC = () => {
         ctx.restore();
       }
     }
-  }, [invoices]);
+  }, [invoices, getReceivedAmount]);
 
   // Calculate number of Sales and Purchases
   const salesCount = Array.isArray(inventory) ? inventory.filter(item => item.transactionType === 'Sales').length : 0;
@@ -119,7 +120,7 @@ const Dashboard: React.FC = () => {
   // Calculate total amounts
   const totalPaid = Array.isArray(invoices) ? invoices.filter(invoice => invoice.paymentStatus === 'Payment Complete').reduce((sum, invoice) => sum + invoice.grandTotal, 0) : 0;
   const totalUnpaid = Array.isArray(invoices) ? invoices.filter(invoice => invoice.paymentStatus === 'Unpaid').reduce((sum, invoice) => sum + invoice.grandTotal, 0) : 0;
-  const totalPartiallyPaid = Array.isArray(invoices) ? invoices.filter(invoice => invoice.paymentStatus === 'Partially Paid').reduce((sum, invoice) => sum + invoice.grandTotal, 0) : 0;
+  const totalPartiallyPaid = Array.isArray(invoices) ? invoices.filter(invoice => invoice.paymentStatus === 'Partially Paid').reduce((sum, invoice) => sum + (getReceivedAmount(invoice._id) || 0), 0) : 0;
 
   return (
     <div className="space-y-6">

@@ -5,6 +5,7 @@ import { InvoiceFormData, Invoice } from '../types/index';
 
 interface InvoiceState {
   invoices: Invoice[];
+  receivedAmounts: { [key: string]: number };
   loading: boolean;
   error: string | null;
   fetchInvoices: (year: string) => Promise<Invoice[]>;
@@ -13,11 +14,14 @@ interface InvoiceState {
   updateInvoice: (id: string, invoice: InvoiceFormData) => Promise<void>;
   deleteInvoice: (id: string) => Promise<void>;
   updateInvoicePaymentStatus: (id: string, status: string) => Promise<void>;
+  setReceivedAmount: (id: string, amount: number) => void;
+  getReceivedAmount: (id: string) => number | undefined;
   clearInvoices: () => void;
 }
 
-export const useInvoiceStore = create<InvoiceState>((set) => ({
+export const useInvoiceStore = create<InvoiceState>((set, get) => ({
   invoices: [],
+  receivedAmounts: {},
   loading: false,
   error: null,
   
@@ -104,6 +108,7 @@ export const useInvoiceStore = create<InvoiceState>((set) => ({
       
       set((state) => ({
         invoices: state.invoices.filter((invoice) => invoice._id !== id),
+        receivedAmounts: Object.fromEntries(Object.entries(state.receivedAmounts).filter(([key]) => key !== id)),
         loading: false,
       }));
     } catch (error: any) {
@@ -127,6 +132,11 @@ export const useInvoiceStore = create<InvoiceState>((set) => ({
         ),
         loading: false,
       }));
+      if (status !== 'Partially Paid') {
+        set((state) => ({
+          receivedAmounts: { ...state.receivedAmounts, [id]: 0 },
+        }));
+      }
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to update payment status';
       set({ error: errorMessage, loading: false });
@@ -134,7 +144,17 @@ export const useInvoiceStore = create<InvoiceState>((set) => ({
     }
   },
   
+  setReceivedAmount: (id: string, amount: number) => {
+    set((state) => ({
+      receivedAmounts: { ...state.receivedAmounts, [id]: amount },
+    }));
+  },
+  
+  getReceivedAmount: (id: string) => {
+    return get().receivedAmounts[id];
+  },
+  
   clearInvoices: () => {
-    set({ invoices: [], error: null });
+    set({ invoices: [], receivedAmounts: {}, error: null });
   },
 }));

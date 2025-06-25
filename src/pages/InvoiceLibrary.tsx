@@ -4,22 +4,21 @@ import { FileText, Search, ChevronDown, Trash2, Eye, FileCheck, Clock, AlertTria
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { Invoice } from '../types';
 import { toast } from 'react-hot-toast';
-import { usePopper } from 'react-popper'; // Re-added for dropdown
+import { usePopper } from 'react-popper';
 
 const InvoiceLibrary: React.FC = () => {
-  const { fetchInvoices, deleteInvoice, updateInvoicePaymentStatus } = useInvoiceStore();
+  const { fetchInvoices, deleteInvoice, updateInvoicePaymentStatus, setReceivedAmount, getReceivedAmount } = useInvoiceStore();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
-  const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null); // State for delete confirmation modal
-  const [dialogOpen, setDialogOpen] = useState<string | null>(null); // State for dialog box
-  const [receivedAmount, setReceivedAmount] = useState<{ [key: string]: number }>({}); // Store received amount per invoice
+  const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState<string | null>(null);
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const dialogRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
-  const dialogContentRefs = useRef<{ [key: string]: HTMLDivElement | null }>({}); // Ref for dialog content
+  const dialogContentRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [dropdownReferenceElement, setDropdownReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
   const { styles, attributes } = usePopper(dropdownReferenceElement, popperElement, {
@@ -102,7 +101,7 @@ const InvoiceLibrary: React.FC = () => {
     } catch (error) {
       toast.error('Failed to delete invoice');
     } finally {
-      setDeleteModalOpen(null); // Close modal after action
+      setDeleteModalOpen(null);
     }
   };
 
@@ -115,7 +114,7 @@ const InvoiceLibrary: React.FC = () => {
       toast.success('Payment status updated');
       setDropdownOpen(null);
       if (status !== 'Partially Paid') {
-        setReceivedAmount(prev => ({ ...prev, [id]: 0 }));
+        setReceivedAmount(id, 0);
         setDialogOpen(null);
       }
     } catch (error) {
@@ -137,13 +136,13 @@ const InvoiceLibrary: React.FC = () => {
     const invoice = invoices.find(invoice => invoice._id === id);
     if (!invoice) return;
     const newAmount = Math.max(0, Math.min(Number(value) || 0, invoice.grandTotal));
-    setReceivedAmount(prev => ({ ...prev, [id]: newAmount }));
+    setReceivedAmount(id, newAmount);
   };
 
   const getBalanceAmount = (id: string) => {
     const invoice = invoices.find(invoice => invoice._id === id);
     if (!invoice) return 0;
-    const received = receivedAmount[id] || 0;
+    const received = getReceivedAmount(id) || 0;
     let balance = invoice.grandTotal - received;
     const decimalPart = balance % 1;
     if (decimalPart >= 0.50) {
@@ -314,7 +313,7 @@ const InvoiceLibrary: React.FC = () => {
                                   <label className="block text-xs font-medium text-slate-600 mb-1">Amount Received (₹)</label>
                                   <input
                                     type="number"
-                                    value={receivedAmount[invoice._id] || ''}
+                                    value={getReceivedAmount(invoice._id) || ''}
                                     onChange={(e) => handleReceivedAmountChange(invoice._id, e.target.value)}
                                     min="0"
                                     max={invoice.grandTotal}
@@ -341,7 +340,7 @@ const InvoiceLibrary: React.FC = () => {
                           <Eye className="h-5 w-5" />
                         </Link>
                         <button
-                          onClick={() => setDeleteModalOpen(invoice._id)} // Open modal instead of confirm
+                          onClick={() => setDeleteModalOpen(invoice._id)}
                           className="text-red-600 hover:bg-red-100 p-1 rounded"
                           title="Delete Invoice"
                         >
@@ -373,7 +372,6 @@ const InvoiceLibrary: React.FC = () => {
         )}
       </div>
       
-      {/* Delete Confirmation Modal */}
       {deleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
