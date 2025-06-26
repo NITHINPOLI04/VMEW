@@ -124,13 +124,11 @@ const Dashboard: React.FC = () => {
     return sum;
   }, 0) : 0;
 
-  // Calculate Total Basic Amount (sum of taxable amounts from all invoice items)
   const totalBasicAmount = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
     const itemBasicAmount = invoice.items.reduce((itemSum, item) => itemSum + item.taxableAmount, 0);
     return sum + itemBasicAmount;
   }, 0) : 0;
 
-  // Calculate Total Tax Amount (sum of SGST, CGST, and IGST from all invoice items)
   const totalTaxAmount = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
     const itemTaxAmount = invoice.items.reduce((itemSum, item) => {
       return itemSum + item.sgstAmount + item.cgstAmount + item.igstAmount;
@@ -194,11 +192,11 @@ const Dashboard: React.FC = () => {
                 <span className="text-slate-600">Paid Amount:</span>
                 <span className="text-slate-800 font-medium">₹{totalPaid.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between">
                 <span className="text-slate-600">Unpaid Amount:</span>
                 <span className="text-slate-800 font-medium">₹{totalUnpaid.toFixed(2)}</span>
-                <div className="w-16 h-0.5 bg-gray-300 ml-2"></div>
               </div>
+              <div className="w-full h-0.5 bg-gray-300 my-2"></div> {/* Grey line below Unpaid Amount */}
               <div className="flex justify-between">
                 <span className="text-slate-600">Total Basic Amount:</span>
                 <span className="text-slate-800 font-medium">₹{totalBasicAmount.toFixed(2)}</span>
