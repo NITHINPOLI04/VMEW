@@ -129,7 +129,6 @@ const Dashboard: React.FC = () => {
     return sum + itemBasicAmount;
   }, 0) : 0;
 
-  // Calculate Total Tax Amount as GrandTotal - Total Basic Amount for each invoice
   const totalTaxAmount = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
     const invoiceTotalBasic = invoice.items.reduce((itemSum, item) => itemSum + item.taxableAmount, 0);
     return sum + (invoice.grandTotal - invoiceTotalBasic);
@@ -145,48 +144,48 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 flex items-center h-32 border-2 border-blue-500">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow p-6 flex items-center h-36 border-2 border-blue-500">
           <div className="flex-1">
-            <p className="text-slate-500 font-medium mb-1">Total Invoices</p>
-            <h2 className="text-2xl font-bold text-slate-800">{Array.isArray(invoices) ? invoices.length : 0}</h2>
+            <p className="text-slate-500 font-medium mb-2">Total Invoices</p>
+            <h2 className="text-3xl font-bold text-slate-800">{Array.isArray(invoices) ? invoices.length : 0}</h2>
           </div>
-          <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-900">
-            <FileText className="h-4 w-4" />
+          <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-900">
+            <FileText className="h-5 w-5" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 flex items-center h-32 border-2 border-emerald-500">
+        <div className="bg-white rounded-lg shadow p-6 flex items-center h-36 border-2 border-emerald-500">
           <div className="flex-1">
-            <p className="text-slate-500 font-medium mb-1">Current Year</p>
-            <h2 className="text-2xl font-bold text-slate-800">{currentYear || 'N/A'}</h2>
+            <p className="text-slate-500 font-medium mb-2">Current Year</p>
+            <h2 className="text-3xl font-bold text-slate-800">{currentYear || 'N/A'}</h2>
           </div>
-          <div className="h-8 w-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-900">
-            <CreditCard className="h-4 w-4" />
+          <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-900">
+            <CreditCard className="h-5 w-5" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 flex items-center h-32 border-2 border-purple-500">
+        <div className="bg-white rounded-lg shadow p-6 flex items-center h-36 border-2 border-purple-500">
           <div className="flex-1">
-            <p className="text-slate-500 font-medium mb-1">Inventory</p>
-            <p className="text-base font-medium text-slate-800">Sales: {salesCount}</p>
-            <p className="text-base font-medium text-slate-800">Purchases: {purchasesCount}</p>
+            <p className="text-slate-500 font-medium mb-2">Inventory</p>
+            <p className="text-lg font-medium text-slate-800">Sales: {salesCount}</p>
+            <p className="text-lg font-medium text-slate-800">Purchases: {purchasesCount}</p>
           </div>
-          <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-900">
-            <Package className="h-4 w-4" />
+          <div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-900">
+            <Package className="h-5 w-5" />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white p-2 rounded-lg shadow">
-          <h2 className="text-lg font-semibold text-slate-800 mb-2">Revenue Overview (Last 12 Months)</h2>
-          <canvas ref={canvasRef} width="300" height="200"></canvas>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-xl font-semibold text-slate-800 mb-4">Revenue Overview (Last 12 Months)</h2>
+          <canvas ref={canvasRef} width="400" height="300"></canvas>
         </div>
-        <div className="grid grid-rows-2 gap-4">
-          <div className="bg-white p-2 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-slate-800 mb-2">Invoice Summary</h2>
-            <div className="space-y-1">
+        <div className="grid grid-rows-2 gap-6">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">Invoice Summary</h2>
+            <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-slate-600">Paid Amount:</span>
                 <span className="text-slate-800 font-medium">₹{totalPaid.toFixed(2)}</span>
@@ -195,7 +194,7 @@ const Dashboard: React.FC = () => {
                 <span className="text-slate-600">Unpaid Amount:</span>
                 <span className="text-slate-800 font-medium">₹{totalUnpaid.toFixed(2)}</span>
               </div>
-              <div className="w-full h-0.5 bg-gray-300 my-1"></div>
+              <div className="w-full h-0.5 bg-gray-300 my-2"></div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Total Basic Amount:</span>
                 <span className="text-slate-800 font-medium">₹{totalBasicAmount.toFixed(2)}</span>
@@ -206,20 +205,20 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="bg-white p-2 rounded-lg shadow">
-            <h2 className="text-lg font-semibold text-slate-800 mb-2">Quick Actions</h2>
-            <div className="space-x-2">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">Quick Actions</h2>
+            <div className="space-x-4">
               <Link
                 to="/generate-invoice"
-                className="inline-flex items-center px-2 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
-                <PlusCircle className="h-3 w-3 mr-1" /> Generate Invoice
+                <PlusCircle className="h-4 w-4 mr-2" /> Generate Invoice
               </Link>
               <Link
                 to="/invoice-library"
-                className="inline-flex items-center px-2 py-1 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
               >
-                <Eye className="h-3 w-3 mr-1" /> View Invoice Library
+                <Eye className="h-4 w-4 mr-2" /> View Invoice Library
               </Link>
             </div>
           </div>
