@@ -17,7 +17,7 @@ const Inventory: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentItem, setCurrentItem] = useState<InventoryItem | null>(null);
   const [modalTransactionType, setModalTransactionType] = useState<'Sales' | 'Purchase'>('Sales');
-  const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null); // State for delete confirmation modal
+  const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     description: '',
@@ -36,17 +36,12 @@ const Inventory: React.FC = () => {
     total: 0,
     transport: 0,
     gstPercentage: 0,
-    paymentDetails: '',
-    paymentDate: '',
     taxType: 'sgstcgst' as 'sgstcgst' | 'igst',
   });
 
-  // Calculate basic amount and taxes whenever relevant fields change
   useEffect(() => {
-    // Calculate basic amount
     const basicAmt = formData.quantity * formData.rate;
 
-    // Calculate taxes based on taxType
     let igst = 0;
     let cgst = 0;
     let sgst = 0;
@@ -57,10 +52,8 @@ const Inventory: React.FC = () => {
       sgst = (basicAmt * (formData.gstPercentage / 2)) / 100;
     }
 
-    // Calculate total (excluding transport)
     const total = basicAmt + igst + cgst + sgst;
 
-    // Update formData with calculated values
     setFormData(prev => ({
       ...prev,
       basicAmt,
@@ -137,8 +130,6 @@ const Inventory: React.FC = () => {
       total: 0,
       transport: 0,
       gstPercentage: 0,
-      paymentDetails: '',
-      paymentDate: '',
       taxType: 'sgstcgst',
     });
     setIsModalOpen(true);
@@ -165,8 +156,6 @@ const Inventory: React.FC = () => {
       total: item.total,
       transport: item.transport,
       gstPercentage: item.gstPercentage,
-      paymentDetails: item.paymentDetails,
-      paymentDate: item.paymentDate,
       taxType: item.taxType,
     });
     setIsModalOpen(true);
@@ -212,7 +201,7 @@ const Inventory: React.FC = () => {
     } catch (error) {
       toast.error('Failed to delete item');
     } finally {
-      setDeleteModalOpen(null); // Close modal after action
+      setDeleteModalOpen(null);
     }
   };
 
@@ -235,8 +224,6 @@ const Inventory: React.FC = () => {
         Total: item.total,
         Transport: item.transport,
         'GST %': item.gstPercentage,
-        'Payment Details': item.paymentDetails,
-        'Payment Date': item.paymentDate,
       }));
 
     const worksheet = XLSX.utils.json_to_sheet(filteredData);
@@ -272,8 +259,6 @@ const Inventory: React.FC = () => {
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Total</th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Transport</th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">GST %</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Payment Details</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Payment Date</th>
             <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
@@ -298,8 +283,6 @@ const Inventory: React.FC = () => {
               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.total.toFixed(2)}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.transport.toFixed(2)}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.gstPercentage}%</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.paymentDetails}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.paymentDate}</td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center justify-end space-x-2">
                   <button
@@ -310,7 +293,7 @@ const Inventory: React.FC = () => {
                     <Pencil className="h-5 w-5" />
                   </button>
                   <button
-                    onClick={() => setDeleteModalOpen(item.id)} // Open modal instead of confirm
+                    onClick={() => setDeleteModalOpen(item.id)}
                     className="text-red-600 hover:bg-red-100 p-1 rounded"
                     title="Delete Item"
                   >
@@ -343,7 +326,6 @@ const Inventory: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Sales Inventory */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-6 border-b border-slate-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -404,7 +386,6 @@ const Inventory: React.FC = () => {
           )}
         </div>
 
-        {/* Purchase Inventory */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-6 border-b border-slate-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -466,7 +447,6 @@ const Inventory: React.FC = () => {
         </div>
       </div>
 
-      {/* Add/Edit Item Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl h-fit max-h-[80vh] flex flex-col">
@@ -477,7 +457,6 @@ const Inventory: React.FC = () => {
             </div>
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
               <div className="p-6 space-y-6">
-                {/* Section: Party Details */}
                 <div>
                   <h4 className="text-md font-semibold text-slate-700 mb-3">Party Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -529,7 +508,6 @@ const Inventory: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Section: Item Details */}
                 <div>
                   <h4 className="text-md font-semibold text-slate-700 mb-3">Item Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -617,7 +595,6 @@ const Inventory: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Section: Tax Details */}
                 <div>
                   <h4 className="text-md font-semibold text-slate-700 mb-3">Tax Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -742,41 +719,6 @@ const Inventory: React.FC = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Section: Payment Details */}
-                <div>
-                  <h4 className="text-md font-semibold text-slate-700 mb-3">Payment Details</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="paymentDetails" className="block text-sm font-medium text-slate-700 mb-1">
-                        Payment Details
-                      </label>
-                      <input
-                        type="text"
-                        id="paymentDetails"
-                        name="paymentDetails"
-                        value={formData.paymentDetails}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="paymentDate" className="block text-sm font-medium text-slate-700 mb-1">
-                        Payment Date
-                      </label>
-                      <input
-                        type="date"
-                        id="paymentDate"
-                        name="paymentDate"
-                        value={formData.paymentDate}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
               <div className="px-6 py-4 border-t border-slate-200 flex justify-end space-x-3 sticky bottom-0 bg-white">
                 <button
@@ -798,7 +740,6 @@ const Inventory: React.FC = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">

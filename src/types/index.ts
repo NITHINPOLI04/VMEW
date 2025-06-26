@@ -64,8 +64,6 @@ export interface InventoryItem {
   total: number;
   transport: number;
   gstPercentage: number;
-  paymentDetails: string;
-  paymentDate: string; // e.g., '2025-06-11'
   taxType: 'sgstcgst' | 'igst';
 }
 
