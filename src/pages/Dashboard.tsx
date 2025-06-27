@@ -65,40 +65,27 @@ const Dashboard: React.FC = () => {
           }
         });
 
-        ctx.beginPath();
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 2;
+        ctx.fillStyle = '#3b82f6'; // Bar color
         const maxRevenue = Math.max(...monthlyRevenue, 1000);
-        const xStep = canvasRef.current.width / (months.length - 1);
-        const yScale = 200 / maxRevenue;
+        const barWidth = canvasRef.current.width / (months.length * 1.5); // Adjusted for spacing
+        const xStep = (canvasRef.current.width - barWidth * months.length) / (months.length + 1);
 
         monthlyRevenue.forEach((revenue, index) => {
-          const x = index * xStep;
-          const y = 250 - (revenue * yScale);
-          if (index === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
-
-        ctx.fillStyle = '#3b82f6';
-        monthlyRevenue.forEach((revenue, index) => {
-          const x = index * xStep;
-          const y = 250 - (revenue * yScale);
-          ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI * 2);
-          ctx.fill();
+          const x = xStep * (index + 1) + barWidth * index;
+          const height = (revenue / maxRevenue) * 250; // Scale height to fit within 250px
+          ctx.fillRect(x, 300 - height, barWidth, height); // Draw bar from bottom up
         });
 
         ctx.fillStyle = '#1e293b';
         ctx.font = '12px Arial';
         ctx.textAlign = 'center';
         months.forEach((month, index) => {
-          const x = index * xStep;
-          ctx.fillText(month, x, 270);
+          const x = xStep * (index + 1) + barWidth * index + barWidth / 2;
+          ctx.fillText(month, x, 310); // Labels below bars
         });
 
         ctx.save();
-        ctx.translate(10, 130);
+        ctx.translate(10, 150);
         ctx.rotate(-Math.PI / 2);
         ctx.fillText('Revenue (₹)', 0, 0);
         ctx.restore();
