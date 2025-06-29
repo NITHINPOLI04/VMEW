@@ -3,16 +3,18 @@ import { Link } from 'react-router-dom';
 import { FileText, CreditCard, TrendingUp, PlusCircle, Package, Eye } from 'lucide-react';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useInventoryStore } from '../stores/inventoryStore';
+import Chart from 'chart.js/auto';
 
 const Dashboard: React.FC = () => {
   const [currentYear, setCurrentYear] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const chartRef = useRef<Chart | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const { invoices, loading: invoicesLoading, error: invoicesError, fetchInvoices, getReceivedAmount } = useInvoiceStore();
   const { inventory, loading: inventoryLoading, error: inventoryError, fetchInventory } = useInventoryStore();
 
   const loading = invoicesLoading || inventoryLoading;
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -41,9 +43,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     if (canvasRef.current && Array.isArray(invoices)) {
       const ctx = canvasRef.current.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-
+      if (ctx && !chartRef.current) {
         const months = [];
         const today = new Date();
         for (let i = 11; i >= 0; i--) {
@@ -65,32 +65,55 @@ const Dashboard: React.FC = () => {
           }
         });
 
-        ctx.fillStyle = '#3b82f6'; // Bar color
-        const maxRevenue = Math.max(...monthlyRevenue, 1000);
-        const barWidth = canvasRef.current.width / (months.length * 1.5); // Adjusted for spacing
-        const xStep = (canvasRef.current.width - barWidth * months.length) / (months.length + 1);
-
-        monthlyRevenue.forEach((revenue, index) => {
-          const x = xStep * (index + 1) + barWidth * index;
-          const height = (revenue / maxRevenue) * 250; // Scale height to fit within 250px
-          ctx.fillRect(x, 300 - height, barWidth, height); // Draw bar from bottom up
+        chartRef.current = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: months,
+            datasets: [{
+              label: 'Revenue (₹)',
+              data: monthlyRevenue,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              pointBackgroundColor: '#ef4444', // Red points
+              pointBorderColor: '#fff', // White border for points
+              pointBorderWidth: 2,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              tension: 0.4, // Smooth curve
+            }],
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Amount (₹)',
+                },
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Months',
+                },
+              },
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+              },
+            },
+          },
         });
-
-        ctx.fillStyle = '#1e293b';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        months.forEach((month, index) => {
-          const x = xStep * (index + 1) + barWidth * index + barWidth / 2;
-          ctx.fillText(month, x, 310); // Labels below bars
-        });
-
-        ctx.save();
-        ctx.translate(10, 150);
-        ctx.rotate(-Math.PI / 2);
-        ctx.fillText('Revenue (₹)', 0, 0);
-        ctx.restore();
       }
     }
+    return () => {
+      if (chartRef.current) {
+        chartRef.current.destroy();
+        chartRef.current = null;
+      }
+    };
   }, [invoices, getReceivedAmount]);
 
   const salesCount = Array.isArray(inventory) ? inventory.filter(item => item.transactionType === 'Sales').length : 0;
