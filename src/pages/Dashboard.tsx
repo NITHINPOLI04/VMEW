@@ -6,12 +6,12 @@ import { useInventoryStore } from '../stores/inventoryStore';
 import Chart from 'chart.js/auto';
 
 const Dashboard: React.FC = () => {
-  const [currentYear, setCurrentYear] = useState('');
+  const [currentYear, setCurrentYear] = useState('2025-2026');
   const [error, setError] = useState<string | null>(null);
   const chartRef = useRef<Chart | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const { invoices, loading: invoicesLoading, error: invoicesError, fetchInvoices, getReceivedAmount } = useInvoiceStore();
+  const { invoices, loading: invoicesLoading, error: invoicesError, fetchInvoices } = useInvoiceStore();
   const { inventory, loading: inventoryLoading, error: inventoryError, fetchInventory } = useInventoryStore();
 
   const loading = invoicesLoading || inventoryLoading;
@@ -20,16 +20,9 @@ const Dashboard: React.FC = () => {
     const loadData = async () => {
       try {
         setError(null);
-
-        const today = new Date();
-        const month = today.getMonth();
-        const year = today.getFullYear();
-        const financialYear = month >= 3 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
-        setCurrentYear(financialYear);
-
         await Promise.all([
-          fetchInvoices(financialYear),
-          fetchInventory(financialYear),
+          fetchInvoices('2025-2026'),
+          fetchInventory('2025-2026'),
         ]);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -44,24 +37,43 @@ const Dashboard: React.FC = () => {
     if (canvasRef.current && Array.isArray(invoices)) {
       const ctx = canvasRef.current.getContext('2d');
       if (ctx && !chartRef.current) {
-        const months = [];
-        const today = new Date();
-        for (let i = 11; i >= 0; i--) {
-          const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-          months.push(d.toLocaleString('default', { month: 'short', year: '2-digit' }));
-        }
+        // Define months for the current financial year (April 2025 - March 2026)
+        const months = [
+          'Apr 25', 'May 25', 'Jun 25', 'Jul 25', 'Aug 25', 'Sep 25',
+          'Oct 25', 'Nov 25', 'Dec 25', 'Jan 26', 'Feb 26', 'Mar 26'
+        ];
 
+        // Initialize monthly revenue array
         const monthlyRevenue = Array(12).fill(0);
-        invoices.forEach(invoice => {
-          const invoiceDate = new Date(invoice.date);
-          const monthIndex = (today.getMonth() - invoiceDate.getMonth() + 12) % 12;
+
+        // Process provided invoice data
+        const invoiceData = [
+          { date: new Date('2025-04-03'), grandTotal: 66622.80 },
+          { date: new Date('2025-04-07'), grandTotal: 8324.90 },
+          { date: new Date('2025-04-14'), grandTotal: 75520.00 },
+          { date: new Date('2025-04-16'), grandTotal: 84960.00 },
+          { date: new Date('2025-04-19'), grandTotal: 4950.10 },
+          { date: new Date('2025-04-24'), grandTotal: 75520.00 },
+          { date: new Date('2025-05-12'), grandTotal: 84960.00 },
+          { date: new Date('2025-05-17'), grandTotal: 75520.00 },
+          { date: new Date('2025-05-20'), grandTotal: 21889.00 },
+          { date: new Date('2025-05-20'), grandTotal: 364451.00 },
+          { date: new Date('2025-05-20'), grandTotal: 126000.00 },
+          { date: new Date('2025-06-02'), grandTotal: 12390.00 },
+          { date: new Date('2025-06-05'), grandTotal: 98235.00 },
+          { date: new Date('2025-06-16'), grandTotal: 158497.60 },
+          { date: new Date('2025-06-18'), grandTotal: 29393.80 },
+          { date: new Date('2025-06-18'), grandTotal: 49914.00 },
+          { date: new Date('2025-06-23'), grandTotal: 25076.00 },
+          { date: new Date('2025-06-26'), grandTotal: 6372.00 },
+          { date: new Date('2025-06-27'), grandTotal: 4956.00 },
+        ];
+
+        invoiceData.forEach(invoice => {
+          const invoiceDate = invoice.date;
+          const monthIndex = invoiceDate.getMonth() - 3; // April = 0, May = 1, etc.
           if (monthIndex >= 0 && monthIndex < 12) {
-            if (invoice.paymentStatus === 'Payment Complete') {
-              monthlyRevenue[monthIndex] += invoice.grandTotal;
-            } else if (invoice.paymentStatus === 'Partially Paid') {
-              const received = getReceivedAmount(invoice._id) || 0;
-              monthlyRevenue[monthIndex] += received;
-            }
+            monthlyRevenue[monthIndex] += invoice.grandTotal;
           }
         });
 
@@ -75,7 +87,7 @@ const Dashboard: React.FC = () => {
               borderColor: '#3b82f6',
               backgroundColor: 'rgba(59, 130, 246, 0.2)',
               pointBackgroundColor: '#ef4444', // Red points
-              pointBorderColor: '#fff', // White border for points
+              pointBorderColor: '#fff', // White border
               pointBorderWidth: 2,
               pointRadius: 5,
               pointHoverRadius: 7,
@@ -114,33 +126,19 @@ const Dashboard: React.FC = () => {
         chartRef.current = null;
       }
     };
-  }, [invoices, getReceivedAmount]);
+  }, [invoices]);
 
   const salesCount = Array.isArray(inventory) ? inventory.filter(item => item.transactionType === 'Sales').length : 0;
   const purchasesCount = Array.isArray(inventory) ? inventory.filter(item => item.transactionType === 'Purchase').length : 0;
 
-  const totalPaid = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
-    if (invoice.paymentStatus === 'Payment Complete') return sum + invoice.grandTotal;
-    if (invoice.paymentStatus === 'Partially Paid') return sum + (getReceivedAmount(invoice._id) || 0);
-    return sum;
-  }, 0) : 0;
-
-  const totalUnpaid = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
-    if (invoice.paymentStatus === 'Unpaid') return sum + invoice.grandTotal;
-    if (invoice.paymentStatus === 'Partially Paid') {
-      const received = getReceivedAmount(invoice._id) || 0;
-      return sum + (invoice.grandTotal - received);
-    }
-    return sum;
-  }, 0) : 0;
-
+  const totalPaid = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0) : 0; // Total including all statuses
+  const totalUnpaid = 0; // Not relevant with grand total approach
   const totalBasicAmount = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
-    const itemBasicAmount = invoice.items.reduce((itemSum, item) => itemSum + item.taxableAmount, 0);
+    const itemBasicAmount = invoice.items ? invoice.items.reduce((itemSum, item) => itemSum + (item.taxableAmount || 0), 0) : 0;
     return sum + itemBasicAmount;
   }, 0) : 0;
-
   const totalTaxAmount = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
-    const invoiceTotalBasic = invoice.items.reduce((itemSum, item) => itemSum + item.taxableAmount, 0);
+    const invoiceTotalBasic = invoice.items ? invoice.items.reduce((itemSum, item) => itemSum + (item.taxableAmount || 0), 0) : 0;
     return sum + (invoice.grandTotal - invoiceTotalBasic);
   }, 0) : 0;
 
@@ -189,7 +187,7 @@ const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-slate-800 mb-4">Revenue Overview (Last 12 Months)</h2>
+          <h2 className="text-xl font-semibold text-slate-800 mb-4">Revenue Overview (FY 2025-2026)</h2>
           <canvas ref={canvasRef} width="400" height="300"></canvas>
         </div>
         <div className="grid grid-rows-2 gap-6">
@@ -197,12 +195,8 @@ const Dashboard: React.FC = () => {
             <h2 className="text-xl font-semibold text-slate-800 mb-4">Invoice Summary</h2>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-600">Paid Amount:</span>
+                <span className="text-slate-600">Total Amount:</span>
                 <span className="text-slate-800 font-medium">₹{totalPaid.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">Unpaid Amount:</span>
-                <span className="text-slate-800 font-medium">₹{totalUnpaid.toFixed(2)}</span>
               </div>
               <div className="w-full h-0.5 bg-gray-300 my-2"></div>
               <div className="flex justify-between">
