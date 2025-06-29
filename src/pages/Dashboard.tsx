@@ -11,7 +11,7 @@ const Dashboard: React.FC = () => {
   const chartRef = useRef<Chart | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const { invoices, loading: invoicesLoading, error: invoicesError, fetchInvoices } = useInvoiceStore();
+  const { invoices, loading: invoicesLoading, error: invoicesError, fetchInvoices, getReceivedAmount } = useInvoiceStore();
   const { inventory, loading: inventoryLoading, error: inventoryError, fetchInventory } = useInventoryStore();
 
   const loading = invoicesLoading || inventoryLoading;
@@ -48,25 +48,25 @@ const Dashboard: React.FC = () => {
 
         // Process provided invoice data
         const invoiceData = [
-          { date: new Date('2025-04-03'), grandTotal: 66622.80 },
-          { date: new Date('2025-04-07'), grandTotal: 8324.90 },
-          { date: new Date('2025-04-14'), grandTotal: 75520.00 },
-          { date: new Date('2025-04-16'), grandTotal: 84960.00 },
-          { date: new Date('2025-04-19'), grandTotal: 4950.10 },
-          { date: new Date('2025-04-24'), grandTotal: 75520.00 },
-          { date: new Date('2025-05-12'), grandTotal: 84960.00 },
-          { date: new Date('2025-05-17'), grandTotal: 75520.00 },
-          { date: new Date('2025-05-20'), grandTotal: 21889.00 },
-          { date: new Date('2025-05-20'), grandTotal: 364451.00 },
-          { date: new Date('2025-05-20'), grandTotal: 126000.00 },
-          { date: new Date('2025-06-02'), grandTotal: 12390.00 },
-          { date: new Date('2025-06-05'), grandTotal: 98235.00 },
-          { date: new Date('2025-06-16'), grandTotal: 158497.60 },
-          { date: new Date('2025-06-18'), grandTotal: 29393.80 },
-          { date: new Date('2025-06-18'), grandTotal: 49914.00 },
-          { date: new Date('2025-06-23'), grandTotal: 25076.00 },
-          { date: new Date('2025-06-26'), grandTotal: 6372.00 },
-          { date: new Date('2025-06-27'), grandTotal: 4956.00 },
+          { _id: '1', date: new Date('2025-04-03'), grandTotal: 66622.80, paymentStatus: 'Partially Paid' },
+          { _id: '2', date: new Date('2025-04-07'), grandTotal: 8324.90, paymentStatus: 'Payment Complete' },
+          { _id: '3', date: new Date('2025-04-14'), grandTotal: 75520.00, paymentStatus: 'Unpaid' },
+          { _id: '4', date: new Date('2025-04-16'), grandTotal: 84960.00, paymentStatus: 'Unpaid' },
+          { _id: '5', date: new Date('2025-04-19'), grandTotal: 4950.10, paymentStatus: 'Payment Complete' },
+          { _id: '6', date: new Date('2025-04-24'), grandTotal: 75520.00, paymentStatus: 'Unpaid' },
+          { _id: '7', date: new Date('2025-05-12'), grandTotal: 84960.00, paymentStatus: 'Unpaid' },
+          { _id: '8', date: new Date('2025-05-17'), grandTotal: 75520.00, paymentStatus: 'Unpaid' },
+          { _id: '9', date: new Date('2025-05-20'), grandTotal: 21889.00, paymentStatus: 'Unpaid' },
+          { _id: '10', date: new Date('2025-05-20'), grandTotal: 364451.00, paymentStatus: 'Unpaid' },
+          { _id: '11', date: new Date('2025-05-20'), grandTotal: 126000.00, paymentStatus: 'Payment Complete' },
+          { _id: '12', date: new Date('2025-06-02'), grandTotal: 12390.00, paymentStatus: 'Unpaid' },
+          { _id: '13', date: new Date('2025-06-05'), grandTotal: 98235.00, paymentStatus: 'Payment Complete' },
+          { _id: '14', date: new Date('2025-06-16'), grandTotal: 158497.60, paymentStatus: 'Unpaid' },
+          { _id: '15', date: new Date('2025-06-18'), grandTotal: 29393.80, paymentStatus: 'Unpaid' },
+          { _id: '16', date: new Date('2025-06-18'), grandTotal: 49914.00, paymentStatus: 'Unpaid' },
+          { _id: '17', date: new Date('2025-06-23'), grandTotal: 25076.00, paymentStatus: 'Unpaid' },
+          { _id: '18', date: new Date('2025-06-26'), grandTotal: 6372.00, paymentStatus: 'Unpaid' },
+          { _id: '19', date: new Date('2025-06-27'), grandTotal: 4956.00, paymentStatus: 'Unpaid' },
         ];
 
         invoiceData.forEach(invoice => {
@@ -131,12 +131,31 @@ const Dashboard: React.FC = () => {
   const salesCount = Array.isArray(inventory) ? inventory.filter(item => item.transactionType === 'Sales').length : 0;
   const purchasesCount = Array.isArray(inventory) ? inventory.filter(item => item.transactionType === 'Purchase').length : 0;
 
-  const totalPaid = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0) : 0; // Total including all statuses
-  const totalUnpaid = 0; // Not relevant with grand total approach
+  const totalPaid = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
+    if (invoice.paymentStatus === 'Payment Complete') return sum + invoice.grandTotal;
+    if (invoice.paymentStatus === 'Partially Paid') {
+      const received = getReceivedAmount(invoice._id) || 0;
+      if (received >= invoice.grandTotal) return sum + invoice.grandTotal; // Treat as fully paid if received >= grandTotal
+      return sum + received; // Otherwise, add only the received amount
+    }
+    return sum;
+  }, 0) : 0;
+
+  const totalUnpaid = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
+    if (invoice.paymentStatus === 'Unpaid') return sum + invoice.grandTotal;
+    if (invoice.paymentStatus === 'Partially Paid') {
+      const received = getReceivedAmount(invoice._id) || 0;
+      if (received >= invoice.grandTotal) return sum + 0; // Fully paid, no unpaid amount
+      return sum + (invoice.grandTotal - received); // Add unpaid portion
+    }
+    return sum;
+  }, 0) : 0;
+
   const totalBasicAmount = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
     const itemBasicAmount = invoice.items ? invoice.items.reduce((itemSum, item) => itemSum + (item.taxableAmount || 0), 0) : 0;
     return sum + itemBasicAmount;
   }, 0) : 0;
+
   const totalTaxAmount = Array.isArray(invoices) ? invoices.reduce((sum, invoice) => {
     const invoiceTotalBasic = invoice.items ? invoice.items.reduce((itemSum, item) => itemSum + (item.taxableAmount || 0), 0) : 0;
     return sum + (invoice.grandTotal - invoiceTotalBasic);
@@ -195,8 +214,12 @@ const Dashboard: React.FC = () => {
             <h2 className="text-xl font-semibold text-slate-800 mb-4">Invoice Summary</h2>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-600">Total Amount:</span>
+                <span className="text-slate-600">Total Paid Amount:</span>
                 <span className="text-slate-800 font-medium">₹{totalPaid.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Total Unpaid Amount:</span>
+                <span className="text-slate-800 font-medium">₹{totalUnpaid.toFixed(2)}</span>
               </div>
               <div className="w-full h-0.5 bg-gray-300 my-2"></div>
               <div className="flex justify-between">
