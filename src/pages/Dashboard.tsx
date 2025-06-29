@@ -46,31 +46,9 @@ const Dashboard: React.FC = () => {
         // Initialize monthly revenue array
         const monthlyRevenue = Array(12).fill(0);
 
-        // Process provided invoice data
-        const invoiceData = [
-          { _id: '1', date: new Date('2025-04-03'), grandTotal: 66622.80, paymentStatus: 'Partially Paid' },
-          { _id: '2', date: new Date('2025-04-07'), grandTotal: 8324.90, paymentStatus: 'Payment Complete' },
-          { _id: '3', date: new Date('2025-04-14'), grandTotal: 75520.00, paymentStatus: 'Unpaid' },
-          { _id: '4', date: new Date('2025-04-16'), grandTotal: 84960.00, paymentStatus: 'Unpaid' },
-          { _id: '5', date: new Date('2025-04-19'), grandTotal: 4950.10, paymentStatus: 'Payment Complete' },
-          { _id: '6', date: new Date('2025-04-24'), grandTotal: 75520.00, paymentStatus: 'Unpaid' },
-          { _id: '7', date: new Date('2025-05-12'), grandTotal: 84960.00, paymentStatus: 'Unpaid' },
-          { _id: '8', date: new Date('2025-05-17'), grandTotal: 75520.00, paymentStatus: 'Unpaid' },
-          { _id: '9', date: new Date('2025-05-20'), grandTotal: 21889.00, paymentStatus: 'Unpaid' },
-          { _id: '10', date: new Date('2025-05-20'), grandTotal: 364451.00, paymentStatus: 'Unpaid' },
-          { _id: '11', date: new Date('2025-05-20'), grandTotal: 126000.00, paymentStatus: 'Payment Complete' },
-          { _id: '12', date: new Date('2025-06-02'), grandTotal: 12390.00, paymentStatus: 'Unpaid' },
-          { _id: '13', date: new Date('2025-06-05'), grandTotal: 98235.00, paymentStatus: 'Payment Complete' },
-          { _id: '14', date: new Date('2025-06-16'), grandTotal: 158497.60, paymentStatus: 'Unpaid' },
-          { _id: '15', date: new Date('2025-06-18'), grandTotal: 29393.80, paymentStatus: 'Unpaid' },
-          { _id: '16', date: new Date('2025-06-18'), grandTotal: 49914.00, paymentStatus: 'Unpaid' },
-          { _id: '17', date: new Date('2025-06-23'), grandTotal: 25076.00, paymentStatus: 'Unpaid' },
-          { _id: '18', date: new Date('2025-06-26'), grandTotal: 6372.00, paymentStatus: 'Unpaid' },
-          { _id: '19', date: new Date('2025-06-27'), grandTotal: 4956.00, paymentStatus: 'Unpaid' },
-        ];
-
-        invoiceData.forEach(invoice => {
-          const invoiceDate = invoice.date;
+        // Process invoices from store
+        invoices.forEach(invoice => {
+          const invoiceDate = new Date(invoice.date);
           const monthIndex = invoiceDate.getMonth() - 3; // April = 0, May = 1, etc.
           if (monthIndex >= 0 && monthIndex < 12) {
             monthlyRevenue[monthIndex] += invoice.grandTotal;
@@ -161,6 +139,8 @@ const Dashboard: React.FC = () => {
     return sum + (invoice.grandTotal - invoiceTotalBasic);
   }, 0) : 0;
 
+  const totalRevenue = totalBasicAmount + totalTaxAmount;
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
@@ -229,6 +209,10 @@ const Dashboard: React.FC = () => {
               <div className="flex justify-between">
                 <span className="text-slate-600">Total Tax Amount:</span>
                 <span className="text-slate-800 font-medium">₹{totalTaxAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Total Revenue:</span>
+                <span className="text-slate-800 font-medium">₹{totalRevenue.toFixed(2)}</span>
               </div>
             </div>
           </div>
