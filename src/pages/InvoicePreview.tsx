@@ -5,7 +5,7 @@ import { Download, Printer, Save, Edit, ArrowLeft } from 'lucide-react';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useTemplateStore } from '../stores/templateStore';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable'; // Explicitly import autoTable
 import { InvoiceFormData } from '../types';
 import { toast } from 'react-hot-toast';
 
@@ -414,7 +414,8 @@ const InvoicePreview: React.FC = () => {
         };
       }
       
-      (pdf as any).autoTable({
+      // Use autoTable directly with the pdf instance
+      autoTable(pdf, {
         head: [tableHeaders],
         body: tableData,
         startY: yPos,
@@ -444,7 +445,7 @@ const InvoicePreview: React.FC = () => {
         theme: 'grid'
       });
       
-      const finalY = (pdf as any).lastAutoTable.finalY + 5;
+      const finalY = (pdf as any).lastAutoTable.finalY + 5; // Type assertion to access lastAutoTable
       
       const totalsBoxWidth = 65; // Width of the totals box
       const totalsBoxX = pageWidth - margin - totalsBoxWidth;
