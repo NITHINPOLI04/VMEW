@@ -33,7 +33,7 @@ export const convertToWords = (amount: number): string => {
           else if (remainder < 20) chunkWords += teens[remainder - 10];
           else {
             chunkWords += tens[ten];
-            if (unit > 0) chunkWords += `-${units[unit]}`.replace('-', ' '); // Replace hyphen with space
+            if (unit > 0) chunkWords += `-${units[unit]}`.replace('-', ' ');
           }
         }
         if (chunkWords && i > 0) chunkWords += ` ${scales[chunks.length - i - 1]}`;
