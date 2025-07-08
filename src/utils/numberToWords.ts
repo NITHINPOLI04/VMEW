@@ -8,21 +8,20 @@ export const convertToWords = (amount: number): string => {
     // Split the amount into whole number and decimal parts
     const [wholeNumber, decimal] = roundedAmount.toFixed(2).split('.');
     
-    // Convert the whole number to words
+    // Convert the whole number to words (default English)
     let words = toWords(parseInt(wholeNumber, 10));
     
     // Capitalize the first letter
-    words = words.charAt(0).toUpperCase() + words.slice(1);
+    words = words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();
     
-    // Handle decimal part
+    // Custom Indian numbering (if needed, though number-to-words with en-IN should handle this)
+    // For now, rely on default and add currency
     const decimalValue = parseInt(decimal, 10);
-    
     if (decimalValue > 0) {
-      // Convert decimal part to words as well
       const decimalWords = toWords(decimalValue);
-      return `${words} and ${decimalWords} paise only`;
+      return `${words} Rupees and ${decimalWords} Paise only`;
     } else {
-      return `${words} only`;
+      return `${words} Rupees only`;
     }
   } catch (error) {
     console.error('Error converting number to words:', error);
