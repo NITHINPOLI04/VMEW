@@ -113,28 +113,10 @@ const GenerateInvoice: React.FC = () => {
     if (field === 'quantity' || field === 'rate') {
       const qty = field === 'quantity' ? Number(value) : updatedItems[index].quantity;
       const rate = field === 'rate' ? Number(value) : updatedItems[index].rate;
-      let taxableAmount = qty * rate;
+      const taxableAmount = qty * rate;
       let sgstAmount = (taxableAmount * updatedItems[index].sgstPercentage) / 100;
       let cgstAmount = (taxableAmount * updatedItems[index].cgstPercentage) / 100;
       let igstAmount = (taxableAmount * updatedItems[index].igstPercentage) / 100;
-
-      // Apply rounding logic: if decimal >= 0.50, round up to next whole number; otherwise, keep as is
-      const decimalPartTaxable = taxableAmount % 1;
-      if (decimalPartTaxable >= 0.50) {
-        taxableAmount = Math.ceil(taxableAmount);
-      }
-      const decimalPartSgst = sgstAmount % 1;
-      if (decimalPartSgst >= 0.50) {
-        sgstAmount = Math.ceil(sgstAmount);
-      }
-      const decimalPartCgst = cgstAmount % 1;
-      if (decimalPartCgst >= 0.50) {
-        cgstAmount = Math.ceil(cgstAmount);
-      }
-      const decimalPartIgst = igstAmount % 1;
-      if (decimalPartIgst >= 0.50) {
-        igstAmount = Math.ceil(igstAmount);
-      }
 
       updatedItems[index] = {
         ...updatedItems[index],
@@ -151,13 +133,7 @@ const GenerateInvoice: React.FC = () => {
         : field === 'cgstPercentage' 
           ? 'cgstAmount' 
           : 'igstAmount';
-      let taxAmount = (updatedItems[index].taxableAmount * percentage) / 100;
-
-      // Apply rounding logic to tax amount
-      const decimalPartTax = taxAmount % 1;
-      if (decimalPartTax >= 0.50) {
-        taxAmount = Math.ceil(taxAmount);
-      }
+      const taxAmount = (updatedItems[index].taxableAmount * percentage) / 100;
 
       updatedItems[index] = {
         ...updatedItems[index],
@@ -192,26 +168,9 @@ const GenerateInvoice: React.FC = () => {
       totalIgst += item.igstAmount;
     });
     
-    // Apply rounding logic to totals
-    const decimalPartTaxable = totalTaxableAmount % 1;
-    if (decimalPartTaxable >= 0.50) {
-      totalTaxableAmount = Math.ceil(totalTaxableAmount);
-    }
-    const decimalPartSgst = totalSgst % 1;
-    if (decimalPartSgst >= 0.50) {
-      totalSgst = Math.ceil(totalSgst);
-    }
-    const decimalPartCgst = totalCgst % 1;
-    if (decimalPartCgst >= 0.50) {
-      totalCgst = Math.ceil(totalCgst);
-    }
-    const decimalPartIgst = totalIgst % 1;
-    if (decimalPartIgst >= 0.50) {
-      totalIgst = Math.ceil(totalIgst);
-    }
-
     const totalTax = taxType === 'sgstcgst' ? (totalSgst + totalCgst) : totalIgst;
     let grandTotal = totalTaxableAmount + totalTax;
+    // Apply rounding logic only to grandTotal
     const decimalPartGrand = grandTotal % 1;
     if (decimalPartGrand >= 0.50) {
       grandTotal = Math.ceil(grandTotal);
