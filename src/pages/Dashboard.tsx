@@ -20,10 +20,18 @@ const Dashboard: React.FC = () => {
     const loadData = async () => {
       try {
         setError(null);
-        await Promise.all([
-          fetchInvoices('2025-2026'),
-          fetchInventory('2025-2026'),
-        ]);
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await Promise.all([
+              fetchInvoices('2025-2026'),
+              fetchInventory('2025-2026'),
+            ]);
+            break; // Exit loop on success
+          } catch (err) {
+            if (attempt === 2) throw err; // Throw error on last attempt
+            await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1))); // 2, 4, 6 seconds
+          }
+        }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError('Failed to load dashboard data. Please try again later.');
@@ -37,16 +45,13 @@ const Dashboard: React.FC = () => {
     if (canvasRef.current && Array.isArray(invoices)) {
       const ctx = canvasRef.current.getContext('2d');
       if (ctx && !chartRef.current) {
-        // Define months for the current financial year (April 2025 - March 2026)
         const months = [
           'Apr 25', 'May 25', 'Jun 25', 'Jul 25', 'Aug 25', 'Sep 25',
           'Oct 25', 'Nov 25', 'Dec 25', 'Jan 26', 'Feb 26', 'Mar 26'
         ];
 
-        // Initialize monthly revenue array
         const monthlyRevenue = Array(12).fill(0);
 
-        // Process invoices from store
         invoices.forEach(invoice => {
           const invoiceDate = new Date(invoice.date);
           const monthIndex = invoiceDate.getMonth() - 3; // April = 0, May = 1, etc.
@@ -64,12 +69,12 @@ const Dashboard: React.FC = () => {
               data: monthlyRevenue,
               borderColor: '#3b82f6',
               backgroundColor: 'rgba(59, 130, 246, 0.2)',
-              pointBackgroundColor: '#ef4444', // Red points
-              pointBorderColor: '#fff', // White border
+              pointBackgroundColor: '#ef4444',
+              pointBorderColor: '#fff',
               pointBorderWidth: 2,
               pointRadius: 5,
               pointHoverRadius: 7,
-              tension: 0.4, // Smooth curve
+              tension: 0.4,
             }],
           },
           options: {
@@ -113,8 +118,8 @@ const Dashboard: React.FC = () => {
     if (invoice.paymentStatus === 'Payment Complete') return sum + invoice.grandTotal;
     if (invoice.paymentStatus === 'Partially Paid') {
       const received = getReceivedAmount(invoice._id) || 0;
-      if (received >= invoice.grandTotal) return sum + invoice.grandTotal; // Treat as fully paid if received >= grandTotal
-      return sum + received; // Otherwise, add only the received amount
+      if (received >= invoice.grandTotal) return sum + invoice.grandTotal;
+      return sum + received;
     }
     return sum;
   }, 0) : 0;
@@ -123,8 +128,8 @@ const Dashboard: React.FC = () => {
     if (invoice.paymentStatus === 'Unpaid') return sum + invoice.grandTotal;
     if (invoice.paymentStatus === 'Partially Paid') {
       const received = getReceivedAmount(invoice._id) || 0;
-      if (received >= invoice.grandTotal) return sum + 0; // Fully paid, no unpaid amount
-      return sum + (invoice.grandTotal - received); // Add unpaid portion
+      if (received >= invoice.grandTotal) return sum + 0;
+      return sum + (invoice.grandTotal - received);
     }
     return sum;
   }, 0) : 0;
