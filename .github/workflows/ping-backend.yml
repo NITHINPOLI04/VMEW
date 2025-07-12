@@ -11,5 +11,14 @@ jobs:
     steps:
       - name: Ping Render backend
         run: |
-          curl -sS https://vmew-backend.onrender.com/api/healthz \
-            || echo "Backend unreachable"
+          response=$(curl -sS -o /dev/null -w "%{http_code}" https://vmew-backend.onrender.com/api/healthz)
+          if [ "$response" -ne 200 ]; then
+            echo "Health check failed with HTTP $response"
+            exit 1
+          fi
+          # Additional ping to auth endpoint (no auth required for health)
+          response_auth=$(curl -sS -o /dev/null -w "%{http_code}" -X OPTIONS https://vmew-backend.onrender.com/api/auth/login)
+          if [ "$response_auth" -ne 200 ]; then
+            echo "Auth endpoint preflight failed with HTTP $response_auth"
+            exit 1
+          fi
