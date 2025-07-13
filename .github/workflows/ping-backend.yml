@@ -2,7 +2,7 @@ name: Keep Render Backend Awake
 
 on:
   schedule:
-    - cron: '0 */10 * * *'  # Every 10 minutes
+    - cron: '0 */10 * * *'  # Every 15 minutes
   workflow_dispatch:
 
 jobs:
@@ -16,6 +16,7 @@ jobs:
             echo "Health check failed with HTTP $response"
             exit 1
           fi
+          sleep 2  # Add a 2-second delay to space out requests
           # Ping auth endpoint with OPTIONS to keep it warm
           response_auth=$(curl -sS -o /dev/null -w "%{http_code}" -X OPTIONS https://vmew-backend.onrender.com/api/auth/login)
           if [ "$response_auth" -ne 200 ]; then
