@@ -38,20 +38,26 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   
   login: async (email, password) => {
-    try {
-      set({ loading: true, error: null });
-      const { token, userId, email: userEmail } = await login(email, password);
-      localStorage.setItem('token', token);
-      set({ 
-        user: { userId, email: userEmail }, 
-        token,
-        isAuthenticated: true, 
-        loading: false 
-      });
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to log in';
-      set({ error: errorMessage, loading: false });
-      throw new Error(errorMessage);
+    for (let i = 0; i < 3; i++) {
+      try {
+        set({ loading: true, error: null });
+        const { token, userId, email: userEmail } = await login(email, password);
+        localStorage.setItem('token', token);
+        set({ 
+          user: { userId, email: userEmail }, 
+          token,
+          isAuthenticated: true, 
+          loading: false 
+        });
+        return; // Exit on success
+      } catch (error: any) {
+        if (i === 2) {
+          const errorMessage = error.message || 'Failed to log in after retries';
+          set({ error: errorMessage, loading: false });
+          throw new Error(errorMessage);
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1))); // 2, 4, 6 seconds
+      }
     }
   },
   
