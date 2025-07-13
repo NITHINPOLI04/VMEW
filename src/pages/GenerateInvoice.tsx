@@ -316,7 +316,6 @@ const GenerateInvoice: React.FC = () => {
                 name="invoiceNumber"
                 value={formData.invoiceNumber}
                 onChange={handleInputChange}
-                placeholder="e.g., 52/24-25"
                 className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -348,7 +347,6 @@ const GenerateInvoice: React.FC = () => {
                 name="buyerName"
                 value={formData.buyerName}
                 onChange={handleInputChange}
-                placeholder="e.g., M/s Hindustan Shipyard Ltd"
                 className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -362,7 +360,6 @@ const GenerateInvoice: React.FC = () => {
                 name="buyerAddress"
                 value={formData.buyerAddress}
                 onChange={handleInputChange}
-                placeholder="e.g., Gandhigram, Visakhapatnam-5"
                 className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
                 rows={3}
@@ -378,7 +375,6 @@ const GenerateInvoice: React.FC = () => {
                 name="buyerGst"
                 value={formData.buyerGst}
                 onChange={handleInputChange}
-                placeholder="e.g., 37AAACN4127P5L22"
                 className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -393,7 +389,6 @@ const GenerateInvoice: React.FC = () => {
                 name="ewayBillNo"
                 value={formData.ewayBillNo}
                 onChange={handleInputChange}
-                placeholder="e.g., 123456789012"
                 className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -407,7 +402,6 @@ const GenerateInvoice: React.FC = () => {
                 name="vessel"
                 value={formData.vessel}
                 onChange={handleInputChange}
-                placeholder="e.g., Ocean Morganite"
                 className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -421,7 +415,6 @@ const GenerateInvoice: React.FC = () => {
                 name="poNumber"
                 value={formData.poNumber}
                 onChange={handleInputChange}
-                placeholder="e.g., 480008057; Dated 04/11/2024"
                 className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -435,7 +428,6 @@ const GenerateInvoice: React.FC = () => {
                 name="dcNumber"
                 value={formData.dcNumber}
                 onChange={handleInputChange}
-                placeholder="e.g., 13/HS/LSRC/24-25 DT 11/11/2024"
                 className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -510,7 +502,6 @@ const GenerateInvoice: React.FC = () => {
                     type="text"
                     value={item.description}
                     onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                    placeholder="e.g., 314 Stainless Steel Junction Box 12*9*8*X2, STHK IP66 M32X1.5, 21MM CABLE GLANDS 8NOS (APS)"
                     className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
@@ -523,7 +514,6 @@ const GenerateInvoice: React.FC = () => {
                     type="text"
                     value={item.hsnSacCode}
                     onChange={(e) => handleItemChange(index, 'hsnSacCode', e.target.value)}
-                    placeholder="e.g., 853710"
                     className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
