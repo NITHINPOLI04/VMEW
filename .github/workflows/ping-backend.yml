@@ -2,7 +2,7 @@ name: Keep Render Backend Awake
 
 on:
   schedule:
-    - cron: '0 */10 * * *'  # Every 15 minutes
+    - cron: '*/5 * * * *'  # Every 5 minutes
   workflow_dispatch:
 
 jobs:
@@ -11,15 +11,7 @@ jobs:
     steps:
       - name: Ping Render backend
         run: |
-          response=$(curl -sS -o /dev/null -w "%{http_code}" https://vmew-backend.onrender.com/api/healthz)
-          if [ "$response" -ne 200 ]; then
-            echo "Health check failed with HTTP $response"
-            exit 1
-          fi
-          sleep 2  # Add a 2-second delay to space out requests
-          # Ping auth endpoint with OPTIONS to keep it warm
-          response_auth=$(curl -sS -o /dev/null -w "%{http_code}" -X OPTIONS https://vmew-backend.onrender.com/api/auth/login)
-          if [ "$response_auth" -ne 200 ]; then
-            echo "Auth endpoint preflight failed with HTTP $response_auth"
-            exit 1
-          fi
+          curl -sS https://vmew-backend.onrender.com/api/healthz \
+            || echo "Health check unreachable"
+          curl -sS -X OPTIONS https://vmew-backend.onrender.com/api/auth/login \
+            || echo "Auth login preflight unreachable"
