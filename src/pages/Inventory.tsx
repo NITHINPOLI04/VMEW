@@ -18,6 +18,7 @@ const Inventory: React.FC = () => {
   const [currentItem, setCurrentItem] = useState<InventoryItem | null>(null);
   const [modalTransactionType, setModalTransactionType] = useState<'Sales' | 'Purchase'>('Sales');
   const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set()); // Track selected item IDs
 
   const [formData, setFormData] = useState({
     description: '',
@@ -89,6 +90,7 @@ const Inventory: React.FC = () => {
     try {
       const data = await fetchInventory(selectedYear);
       setInventory(data);
+      setSelectedItems(new Set()); // Reset selected items when loading new data
     } catch (error) {
       console.error('Error fetching inventory:', error);
       toast.error('Failed to load inventory');
@@ -205,6 +207,48 @@ const Inventory: React.FC = () => {
     }
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedItems.size === 0) {
+      toast.error('No items selected for deletion');
+      return;
+    }
+
+    try {
+      await Promise.all([...selectedItems].map(id => deleteInventoryItem(id)));
+      setInventory(inventory.filter(item => !selectedItems.has(item.id)));
+      setSelectedItems(new Set());
+      toast.success('Selected items deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete selected items');
+    }
+  };
+
+  const handleSelectItem = (id: string) => {
+    const newSelectedItems = new Set(selectedItems);
+    if (newSelectedItems.has(id)) {
+      newSelectedItems.delete(id);
+    } else {
+      newSelectedItems.add(id);
+    }
+    setSelectedItems(newSelectedItems);
+  };
+
+  const handleSelectAll = (type: 'Sales' | 'Purchase') => {
+    const filteredItems = inventory.filter(item => item.transactionType === type && item.financialYear === selectedYear)
+      .filter(item => item.hsnSacCode.toLowerCase().includes(type === 'Sales' ? salesSearchQuery.toLowerCase() : purchaseSearchQuery.toLowerCase()));
+    const itemIds = new Set(filteredItems.map(item => item.id));
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (prev.size === itemIds.size && [...prev].every(id => itemIds.has(id))) {
+        // If all are selected, deselect all
+        return new Set();
+      } else {
+        // Select all filtered items
+        return itemIds;
+      }
+    });
+  };
+
   const exportToExcel = (type: 'Sales' | 'Purchase') => {
     const filteredData = inventory
       .filter(item => item.transactionType === type && item.financialYear === selectedYear)
@@ -245,6 +289,10 @@ const Inventory: React.FC = () => {
       <table className="min-w-full divide-y divide-slate-200">
         <thead className="bg-slate-50">
           <tr>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider cursor-pointer"
+              onClick={() => handleSelectAll(type)}>
+              Select All
+            </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Party GST No</th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Party Name</th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Description</th>
@@ -264,7 +312,13 @@ const Inventory: React.FC = () => {
         </thead>
         <tbody className="bg-white divide-y divide-slate-200">
           {items.map((item) => (
-            <tr key={item.id} className="hover:bg-slate-50">
+            <tr
+              key={item.id}
+              className={`hover:bg-slate-50 ${selectedItems.has(item.id) ? 'bg-blue-100' : ''}`}
+              onClick={() => handleSelectItem(item.id)}
+              style={{ cursor: 'pointer' }}
+            >
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600"></td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.partyGstNo}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.partyName}</td>
               <td className="px-6 py-4 text-sm text-slate-800">
@@ -286,14 +340,14 @@ const Inventory: React.FC = () => {
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center justify-end space-x-2">
                   <button
-                    onClick={() => openEditModal(item)}
+                    onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
                     className="text-blue-900 hover:bg-blue-100 p-1 rounded"
                     title="Edit Item"
                   >
                     <Pencil className="h-5 w-5" />
                   </button>
                   <button
-                    onClick={() => setDeleteModalOpen(item.id)}
+                    onClick={(e) => { e.stopPropagation(); setDeleteModalOpen(item.id); }}
                     className="text-red-600 hover:bg-red-100 p-1 rounded"
                     title="Delete Item"
                   >
@@ -358,6 +412,15 @@ const Inventory: React.FC = () => {
                   >
                     <PlusCircle className="h-6 w-6" />
                   </button>
+                  {selectedItems.size > 0 && (
+                    <button
+                      onClick={handleDeleteSelected}
+                      className="inline-flex items-center px-3 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
+                      title="Delete Selected"
+                    >
+                      <Trash2 className="h-6 w-6" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -418,6 +481,15 @@ const Inventory: React.FC = () => {
                   >
                     <PlusCircle className="h-6 w-6" />
                   </button>
+                  {selectedItems.size > 0 && (
+                    <button
+                      onClick={handleDeleteSelected}
+                      className="inline-flex items-center px-3 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
+                      title="Delete Selected"
+                    >
+                      <Trash2 className="h-6 w-6" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
