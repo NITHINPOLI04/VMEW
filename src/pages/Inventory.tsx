@@ -245,6 +245,20 @@ const Inventory: React.FC = () => {
     setSelectedItems(newSelectedItems);
   };
 
+  const handleSelectAll = (type: 'Sales' | 'Purchase') => {
+    const filteredItems = inventory.filter(item => item.transactionType === type && item.financialYear === selectedYear)
+      .filter(item => item.hsnSacCode.toLowerCase().includes(type === 'Sales' ? salesSearchQuery.toLowerCase() : purchaseSearchQuery.toLowerCase()));
+    const itemIds = new Set(filteredItems.map(item => item.id));
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (prev.size === itemIds.size && [...prev].every(id => itemIds.has(id))) {
+        return new Set();
+      } else {
+        return itemIds;
+      }
+    });
+  };
+
   const exportToExcel = (type: 'Sales' | 'Purchase') => {
     const filteredData = inventory
       .filter(item => item.transactionType === type && item.financialYear === selectedYear)
@@ -282,69 +296,77 @@ const Inventory: React.FC = () => {
 
   const renderInventoryTable = (items: InventoryItem[], type: 'Sales' | 'Purchase') => (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200">
-        <thead className="bg-slate-50">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Party GST No</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Party Name</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Description</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">HSN/SAC Code</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Quantity</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Unit</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Rate (₹)</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Basic Amt</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">IGST</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CGST</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">SGST</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Total</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Transport</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">GST %</th>
-            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <button
+                onClick={() => handleSelectAll(type)}
+                className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+              >
+                {selectedItems.size === items.length ? 'Deselect All' : 'Select All'}
+              </button>
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Party GST No</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Party Name</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HSN/SAC Code</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Amt</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IGST</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CGST</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SGST</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transport</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GST %</th>
+            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-slate-200">
+        <tbody className="bg-white divide-y divide-gray-200">
           {items.map((item) => (
             <tr
               key={item.id}
-              className={`hover:bg-slate-50 ${selectedItems.has(item.id) ? 'bg-blue-100' : ''}`}
+              className={`hover:bg-gray-50 ${selectedItems.has(item.id) ? 'bg-blue-50' : ''}`}
               onClick={(e) => {
                 if ((e.target as HTMLElement).closest('button') === null) handleSelectItem(item.id);
               }}
               style={{ cursor: 'pointer' }}
             >
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 flex items-center">
-                {selectedItems.has(item.id) && <Check className="h-4 w-4 text-blue-600 mr-2" />}
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                {selectedItems.has(item.id) && <Check className="h-5 w-5 text-blue-600" />}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.partyGstNo}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.partyName}</td>
-              <td className="px-6 py-4 text-sm text-slate-800">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.partyGstNo}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.partyName}</td>
+              <td className="px-6 py-4 text-sm text-gray-800">
                 <div className="flex items-start max-w-md">
                   <span className="truncate">{item.description}</span>
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.hsnSacCode}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.quantity}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.unit}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.rate.toFixed(2)}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.basicAmt.toFixed(2)}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.igst.toFixed(2)}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.cgst.toFixed(2)}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.sgst.toFixed(2)}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.total.toFixed(2)}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.transport.toFixed(2)}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.gstPercentage}%</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.hsnSacCode}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.quantity}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.unit}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.rate.toFixed(2)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.basicAmt.toFixed(2)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.igst.toFixed(2)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.cgst.toFixed(2)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.sgst.toFixed(2)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.total.toFixed(2)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.transport.toFixed(2)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.gstPercentage}%</td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center justify-end space-x-2">
                   <button
                     onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
-                    className="text-blue-900 hover:bg-blue-100 p-1 rounded"
+                    className="text-blue-600 hover:bg-blue-100 p-1 rounded-full"
                     title="Edit Item"
                   >
                     <Pencil className="h-5 w-5" />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setDeleteModalOpen(item.id); }}
-                    className="text-red-600 hover:bg-red-100 p-1 rounded"
+                    className="text-red-600 hover:bg-red-100 p-1 rounded-full"
                     title="Delete Item"
                   >
                     <Trash2 className="h-5 w-5" />
@@ -360,14 +382,14 @@ const Inventory: React.FC = () => {
 
   return (
     <div className="pb-12">
-      <h1 className="text-3xl font-bold text-slate-800 mb-6">Inventory Management</h1>
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">Inventory Management</h1>
 
       <div className="mb-6 flex items-center">
-        <span className="text-slate-700 mr-2">Financial Year:</span>
+        <span className="text-gray-700 mr-2">Financial Year:</span>
         <select
           value={selectedYear}
           onChange={handleYearChange}
-          className="px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           {availableYears.map(year => (
             <option key={year} value={year}>{year}</option>
@@ -377,44 +399,44 @@ const Inventory: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-6 border-b border-slate-200">
+          <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-              <h2 className="text-xl font-semibold text-slate-800">Sales</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Sales</h2>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                 <div className="relative flex-1 max-w-md">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-slate-400" />
+                    <Search className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
                     type="text"
                     placeholder="Filter by HSN/SAC Code..."
                     value={salesSearchQuery}
                     onChange={handleSearchChange('Sales')}
-                    className="pl-10 w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => exportToExcel('Sales')}
-                    className="inline-flex items-center px-3 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
+                    className="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors duration-200"
                     title="Export to Excel"
                   >
-                    <Download className="h-6 w-6" />
+                    <Download className="h-5 w-5 mr-2" /> Export
                   </button>
                   <button
                     onClick={() => openAddModal('Sales')}
-                    className="inline-flex items-center px-3 py-3 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
+                    className="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors duration-200"
                     title="Add Sales Item"
                   >
-                    <PlusCircle className="h-6 w-6" />
+                    <PlusCircle className="h-5 w-5 mr-2" /> Add
                   </button>
                   {selectedItems.size > 0 && (
                     <button
                       onClick={handleDeleteSelected}
-                      className="inline-flex items-center px-3 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
+                      className="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-medium transition-colors duration-200"
                       title="Delete Selected"
                     >
-                      <Trash2 className="h-6 w-6" />
+                      <Trash2 className="h-5 w-5 mr-2" /> Delete
                     </button>
                   )}
                 </div>
@@ -429,61 +451,60 @@ const Inventory: React.FC = () => {
             renderInventoryTable(filteredSales, 'Sales')
           ) : (
             <div className="p-8 text-center">
-              <Package className="h-12 w-12 mx-auto text-slate-400 mb-4" />
-              <h3 className="text-xl font-medium text-slate-700 mb-2">No sales items found</h3>
-              <p className="text-slate-500 mb-6">
+              <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-xl font-medium text-gray-700 mb-2">No sales items found</h3>
+              <p className="text-gray-500 mb-6">
                 {salesSearchQuery ? 'No items match your search query' : 'Start by adding your first sales item'}
               </p>
               <button
                 onClick={() => openAddModal('Sales')}
-                className="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors duration-200"
               >
-                <PlusCircle className="h-5 w-5 mr-2" />
-                Add Sales Item
+                <PlusCircle className="h-5 w-5 mr-2" /> Add Sales Item
               </button>
             </div>
           )}
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-6 border-b border-slate-200">
+          <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-              <h2 className="text-xl font-semibold text-slate-800">Purchase</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Purchase</h2>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                 <div className="relative flex-1 max-w-md">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-slate-400" />
+                    <Search className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
                     type="text"
                     placeholder="Filter by HSN/SAC Code..."
                     value={purchaseSearchQuery}
                     onChange={handleSearchChange('Purchase')}
-                    className="pl-10 w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => exportToExcel('Purchase')}
-                    className="inline-flex items-center px-3 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
+                    className="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors duration-200"
                     title="Export to Excel"
                   >
-                    <Download className="h-6 w-6" />
+                    <Download className="h-5 w-5 mr-2" /> Export
                   </button>
                   <button
                     onClick={() => openAddModal('Purchase')}
-                    className="inline-flex items-center px-3 py-3 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
+                    className="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors duration-200"
                     title="Add Purchase Item"
                   >
-                    <PlusCircle className="h-6 w-6" />
+                    <PlusCircle className="h-5 w-5 mr-2" /> Add
                   </button>
                   {selectedItems.size > 0 && (
                     <button
                       onClick={handleDeleteSelected}
-                      className="inline-flex items-center px-3 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 w-12 h-12 justify-center"
+                      className="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-medium transition-colors duration-200"
                       title="Delete Selected"
                     >
-                      <Trash2 className="h-6 w-6" />
+                      <Trash2 className="h-5 w-5 mr-2" /> Delete
                     </button>
                   )}
                 </div>
@@ -498,17 +519,16 @@ const Inventory: React.FC = () => {
             renderInventoryTable(filteredPurchase, 'Purchase')
           ) : (
             <div className="p-8 text-center">
-              <Package className="h-12 w-12 mx-auto text-slate-400 mb-4" />
-              <h3 className="text-xl font-medium text-slate-700 mb-2">No purchase items found</h3>
-              <p className="text-slate-500 mb-6">
+              <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-xl font-medium text-gray-700 mb-2">No purchase items found</h3>
+              <p className="text-gray-500 mb-6">
                 {purchaseSearchQuery ? 'No items match your search query' : 'Start by adding your first purchase item'}
               </p>
               <button
                 onClick={() => openAddModal('Purchase')}
-                className="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-lg font-medium transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors duration-200"
               >
-                <PlusCircle className="h-5 w-5 mr-2" />
-                Add Purchase Item
+                <PlusCircle className="h-5 w-5 mr-2" /> Add Purchase Item
               </button>
             </div>
           )}
@@ -518,18 +538,18 @@ const Inventory: React.FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl h-fit max-h-[80vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-slate-200">
-              <h3 className="text-xl font-bold text-slate-800">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">
                 {isEditing ? `Edit ${modalTransactionType} Item` : `Add ${modalTransactionType} Item`}
               </h3>
             </div>
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
               <div className="p-6 space-y-6">
                 <div>
-                  <h4 className="text-md font-semibold text-slate-700 mb-3">Party Details</h4>
+                  <h4 className="text-md font-semibold text-gray-700 mb-3">Party Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="partyGstNo" className="block text-sm font-medium text-slate-700 mb-1">
+                      <label htmlFor="partyGstNo" className="block text-sm font-medium text-gray-700 mb-1">
                         Party GST No
                       </label>
                       <input
@@ -538,12 +558,12 @@ const Inventory: React.FC = () => {
                         name="partyGstNo"
                         value={formData.partyGstNo}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                         required
                       />
                     </div>
                     <div>
-                      <label htmlFor="partyName" className="block text-sm font-medium text-slate-700 mb-1">
+                      <label htmlFor="partyName" className="block text-sm font-medium text-gray-700 mb-1">
                         Party Name
                       </label>
                       <input
@@ -552,12 +572,12 @@ const Inventory: React.FC = () => {
                         name="partyName"
                         value={formData.partyName}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                         required
                       />
                     </div>
                     <div>
-                      <label htmlFor="financialYear" className="block text-sm font-medium text-slate-700 mb-1">
+                      <label htmlFor="financialYear" className="block text-sm font-medium text-gray-700 mb-1">
                         Financial Year
                       </label>
                       <select
@@ -565,7 +585,7 @@ const Inventory: React.FC = () => {
                         name="financialYear"
                         value={formData.financialYear}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                         required
                       >
                         {availableYears.map(year => (
@@ -577,10 +597,10 @@ const Inventory: React.FC = () => {
                 </div>
 
                 <div>
-                  <h4 className="text-md font-semibold text-slate-700 mb-3">Item Details</h4>
+                  <h4 className="text-md font-semibold text-gray-700 mb-3">Item Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">
+                      <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                         Description of Goods
                       </label>
                       <textarea
@@ -588,14 +608,14 @@ const Inventory: React.FC = () => {
                         name="description"
                         value={formData.description}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                        className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                         rows={3}
                         required
                       />
                     </div>
                     <div className="space-y-4">
                       <div>
-                        <label htmlFor="hsnSacCode" className="block text-sm font-medium text-slate-700 mb-1">
+                        <label htmlFor="hsnSacCode" className="block text-sm font-medium text-gray-700 mb-1">
                           HSN/SAC Code
                         </label>
                         <input
@@ -604,13 +624,13 @@ const Inventory: React.FC = () => {
                           name="hsnSacCode"
                           value={formData.hsnSacCode}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                          className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                           required
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label htmlFor="quantity" className="block text-sm font-medium text-slate-700 mb-1">
+                          <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
                             Quantity
                           </label>
                           <input
@@ -620,12 +640,12 @@ const Inventory: React.FC = () => {
                             value={formData.quantity}
                             onChange={handleInputChange}
                             min="1"
-                            className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                            className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                             required
                           />
                         </div>
                         <div>
-                          <label htmlFor="unit" className="block text-sm font-medium text-slate-700 mb-1">
+                          <label htmlFor="unit" className="block text-sm font-medium text-gray-700 mb-1">
                             Unit of Measurement
                           </label>
                           <select
@@ -633,7 +653,7 @@ const Inventory: React.FC = () => {
                             name="unit"
                             value={formData.unit}
                             onChange={handleInputChange}
-                            className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                            className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                             required
                           >
                             <option value="Nos">Nos</option>
@@ -644,7 +664,7 @@ const Inventory: React.FC = () => {
                         </div>
                       </div>
                       <div>
-                        <label htmlFor="rate" className="block text-sm font-medium text-slate-700 mb-1">
+                        <label htmlFor="rate" className="block text-sm font-medium text-gray-700 mb-1">
                           Rate (₹)
                         </label>
                         <input
@@ -655,7 +675,7 @@ const Inventory: React.FC = () => {
                           onChange={handleInputChange}
                           min="0"
                           step="0.01"
-                          className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                          className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                           required
                         />
                       </div>
@@ -664,11 +684,11 @@ const Inventory: React.FC = () => {
                 </div>
 
                 <div>
-                  <h4 className="text-md font-semibold text-slate-700 mb-3">Tax Details</h4>
+                  <h4 className="text-md font-semibold text-gray-700 mb-3">Tax Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-4">
                       <div>
-                        <label htmlFor="taxType" className="block text-sm font-medium text-slate-700 mb-1">
+                        <label htmlFor="taxType" className="block text-sm font-medium text-gray-700 mb-1">
                           Tax Type
                         </label>
                         <select
@@ -676,7 +696,7 @@ const Inventory: React.FC = () => {
                           name="taxType"
                           value={formData.taxType}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                          className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                           required
                         >
                           <option value="sgstcgst">SGST + CGST</option>
@@ -684,7 +704,7 @@ const Inventory: React.FC = () => {
                         </select>
                       </div>
                       <div>
-                        <label htmlFor="gstPercentage" className="block text-sm font-medium text-slate-700 mb-1">
+                        <label htmlFor="gstPercentage" className="block text-sm font-medium text-gray-700 mb-1">
                           GST (%)
                         </label>
                         <input
@@ -695,12 +715,12 @@ const Inventory: React.FC = () => {
                           onChange={handleInputChange}
                           min="0"
                           step="0.1"
-                          className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                          className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                           required
                         />
                       </div>
                       <div>
-                        <label htmlFor="basicAmt" className="block text-sm font-medium text-slate-700 mb-1">
+                        <label htmlFor="basicAmt" className="block text-sm font-medium text-gray-700 mb-1">
                           Basic Amount (₹)
                         </label>
                         <input
@@ -708,7 +728,7 @@ const Inventory: React.FC = () => {
                           id="basicAmt"
                           name="basicAmt"
                           value={formData.basicAmt.toFixed(2)}
-                          className="w-full px-4 py-2 rounded-md border border-slate-300 bg-gray-100 cursor-not-allowed shadow-sm"
+                          className="w-full px-4 py-2 rounded-md border border-gray-300 bg-gray-100 cursor-not-allowed shadow-sm"
                           readOnly
                         />
                       </div>
@@ -716,7 +736,7 @@ const Inventory: React.FC = () => {
                     <div className="space-y-4">
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <label htmlFor="igst" className="block text-sm font-medium text-slate-700 mb-1">
+                          <label htmlFor="igst" className="block text-sm font-medium text-gray-700 mb-1">
                             IGST (₹)
                           </label>
                           <input
@@ -724,12 +744,12 @@ const Inventory: React.FC = () => {
                             id="igst"
                             name="igst"
                             value={formData.igst.toFixed(2)}
-                            className="w-full px-4 py-2 rounded-md border border-slate-300 bg-gray-100 cursor-not-allowed shadow-sm"
+                            className="w-full px-4 py-2 rounded-md border border-gray-300 bg-gray-100 cursor-not-allowed shadow-sm"
                             readOnly
                           />
                         </div>
                         <div>
-                          <label htmlFor="cgst" className="block text-sm font-medium text-slate-700 mb-1">
+                          <label htmlFor="cgst" className="block text-sm font-medium text-gray-700 mb-1">
                             CGST (₹)
                           </label>
                           <input
@@ -737,12 +757,12 @@ const Inventory: React.FC = () => {
                             id="cgst"
                             name="cgst"
                             value={formData.cgst.toFixed(2)}
-                            className="w-full px-4 py-2 rounded-md border border-slate-300 bg-gray-100 cursor-not-allowed shadow-sm"
+                            className="w-full px-4 py-2 rounded-md border border-gray-300 bg-gray-100 cursor-not-allowed shadow-sm"
                             readOnly
                           />
                         </div>
                         <div>
-                          <label htmlFor="sgst" className="block text-sm font-medium text-slate-700 mb-1">
+                          <label htmlFor="sgst" className="block text-sm font-medium text-gray-700 mb-1">
                             SGST (₹)
                           </label>
                           <input
@@ -750,13 +770,13 @@ const Inventory: React.FC = () => {
                             id="sgst"
                             name="sgst"
                             value={formData.sgst.toFixed(2)}
-                            className="w-full px-4 py-2 rounded-md border border-slate-300 bg-gray-100 cursor-not-allowed shadow-sm"
+                            className="w-full px-4 py-2 rounded-md border border-gray-300 bg-gray-100 cursor-not-allowed shadow-sm"
                             readOnly
                           />
                         </div>
                       </div>
                       <div>
-                        <label htmlFor="total" className="block text-sm font-medium text-slate-700 mb-1">
+                        <label htmlFor="total" className="block text-sm font-medium text-gray-700 mb-1">
                           Total (₹)
                         </label>
                         <input
@@ -764,12 +784,12 @@ const Inventory: React.FC = () => {
                           id="total"
                           name="total"
                           value={formData.total.toFixed(2)}
-                          className="w-full px-4 py-2 rounded-md border border-slate-300 bg-gray-100 cursor-not-allowed shadow-sm"
+                          className="w-full px-4 py-2 rounded-md border border-gray-300 bg-gray-100 cursor-not-allowed shadow-sm"
                           readOnly
                         />
                       </div>
                       <div>
-                        <label htmlFor="transport" className="block text-sm font-medium text-slate-700 mb-1">
+                        <label htmlFor="transport" className="block text-sm font-medium text-gray-700 mb-1">
                           Transport (₹)
                         </label>
                         <input
@@ -780,7 +800,7 @@ const Inventory: React.FC = () => {
                           onChange={handleInputChange}
                           min="0"
                           step="0.01"
-                          className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                          className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                           required
                         />
                       </div>
@@ -788,17 +808,17 @@ const Inventory: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-4 border-t border-slate-200 flex justify-end space-x-3 sticky bottom-0 bg-white">
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3 sticky bottom-0 bg-white">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 shadow-sm"
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 shadow-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-md shadow-sm"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm"
                 >
                   {isEditing ? 'Update Item' : 'Add Item'}
                 </button>
@@ -816,12 +836,12 @@ const Inventory: React.FC = () => {
                 <Trash2 className="h-6 w-6 text-red-600" />
               </div>
             </div>
-            <h2 className="text-lg font-medium text-slate-800 mb-2">Delete Item</h2>
-            <p className="text-sm text-slate-600 mb-6">Are you sure you would like to do this?</p>
+            <h2 className="text-lg font-medium text-gray-900 mb-2">Delete Item</h2>
+            <p className="text-sm text-gray-600 mb-6">Are you sure you would like to do this?</p>
             <div className="flex justify-between">
               <button
                 onClick={() => setDeleteModalOpen(null)}
-                className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Cancel
               </button>
@@ -844,12 +864,12 @@ const Inventory: React.FC = () => {
                 <Trash2 className="h-6 w-6 text-red-600" />
               </div>
             </div>
-            <h2 className="text-lg font-medium text-slate-800 mb-2">Delete Selected Items</h2>
-            <p className="text-sm text-slate-600 mb-6">Are you sure you want to delete {selectedItems.size} selected item(s)?</p>
+            <h2 className="text-lg font-medium text-gray-900 mb-2">Delete Selected Items</h2>
+            <p className="text-sm text-gray-600 mb-6">Are you sure you want to delete {selectedItems.size} selected item(s)?</p>
             <div className="flex justify-between">
               <button
                 onClick={cancelDeleteSelected}
-                className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Cancel
               </button>
