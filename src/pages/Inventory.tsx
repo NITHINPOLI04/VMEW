@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, PlusCircle, Search, Pencil, Trash2, Download } from 'lucide-react';
+import { Package, PlusCircle, Search, Pencil, Trash2, Download, Check } from 'lucide-react';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { InventoryItem } from '../types';
 import { toast } from 'react-hot-toast';
@@ -18,6 +18,7 @@ const Inventory: React.FC = () => {
   const [currentItem, setCurrentItem] = useState<InventoryItem | null>(null);
   const [modalTransactionType, setModalTransactionType] = useState<'Sales' | 'Purchase'>('Sales');
   const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null);
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set()); // Track selected item IDs
 
   const [formData, setFormData] = useState({
@@ -208,8 +209,13 @@ const Inventory: React.FC = () => {
   };
 
   const handleDeleteSelected = async () => {
+    setBulkDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteSelected = async () => {
     if (selectedItems.size === 0) {
       toast.error('No items selected for deletion');
+      setBulkDeleteConfirmOpen(false);
       return;
     }
 
@@ -220,7 +226,13 @@ const Inventory: React.FC = () => {
       toast.success('Selected items deleted successfully');
     } catch (error) {
       toast.error('Failed to delete selected items');
+    } finally {
+      setBulkDeleteConfirmOpen(false);
     }
+  };
+
+  const cancelDeleteSelected = () => {
+    setBulkDeleteConfirmOpen(false);
   };
 
   const handleSelectItem = (id: string) => {
@@ -231,22 +243,6 @@ const Inventory: React.FC = () => {
       newSelectedItems.add(id);
     }
     setSelectedItems(newSelectedItems);
-  };
-
-  const handleSelectAll = (type: 'Sales' | 'Purchase') => {
-    const filteredItems = inventory.filter(item => item.transactionType === type && item.financialYear === selectedYear)
-      .filter(item => item.hsnSacCode.toLowerCase().includes(type === 'Sales' ? salesSearchQuery.toLowerCase() : purchaseSearchQuery.toLowerCase()));
-    const itemIds = new Set(filteredItems.map(item => item.id));
-    setSelectedItems(prev => {
-      const newSet = new Set(prev);
-      if (prev.size === itemIds.size && [...prev].every(id => itemIds.has(id))) {
-        // If all are selected, deselect all
-        return new Set();
-      } else {
-        // Select all filtered items
-        return itemIds;
-      }
-    });
   };
 
   const exportToExcel = (type: 'Sales' | 'Purchase') => {
@@ -289,10 +285,6 @@ const Inventory: React.FC = () => {
       <table className="min-w-full divide-y divide-slate-200">
         <thead className="bg-slate-50">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider cursor-pointer"
-              onClick={() => handleSelectAll(type)}>
-              Select All
-            </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Party GST No</th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Party Name</th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Description</th>
@@ -315,10 +307,14 @@ const Inventory: React.FC = () => {
             <tr
               key={item.id}
               className={`hover:bg-slate-50 ${selectedItems.has(item.id) ? 'bg-blue-100' : ''}`}
-              onClick={() => handleSelectItem(item.id)}
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest('button') === null) handleSelectItem(item.id);
+              }}
               style={{ cursor: 'pointer' }}
             >
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600"></td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 flex items-center">
+                {selectedItems.has(item.id) && <Check className="h-4 w-4 text-blue-600 mr-2" />}
+              </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.partyGstNo}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.partyName}</td>
               <td className="px-6 py-4 text-sm text-slate-800">
@@ -831,6 +827,34 @@ const Inventory: React.FC = () => {
               </button>
               <button
                 onClick={() => handleDeleteItem(deleteModalOpen)}
+                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bulkDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-red-100 rounded-full p-2">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            <h2 className="text-lg font-medium text-slate-800 mb-2">Delete Selected Items</h2>
+            <p className="text-sm text-slate-600 mb-6">Are you sure you want to delete {selectedItems.size} selected item(s)?</p>
+            <div className="flex justify-between">
+              <button
+                onClick={cancelDeleteSelected}
+                className="px-4 py-2 bg-white border border-slate-300 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteSelected}
                 className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
               >
                 Confirm
