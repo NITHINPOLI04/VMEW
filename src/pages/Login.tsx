@@ -47,9 +47,9 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-center bg-cover" style={{ backgroundImage: "url('/Login_BG.png')" }}>
-      <div className="min-h-screen flex items-center justify-center p-4 bg-black/50">
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-5xl flex transform transition-all duration-300 hover:scale-[1.01]">
+    <div className="min-h-screen bg-center bg-cover" style={{ backgroundImage: "url('/Login_BG.jpg')" }}>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-black/60">
+        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-5xl flex transform transition-all duration-300 hover:scale-[1.01]">
           <div className="w-1/2 p-8">
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-blue-100 text-blue-900 mb-6 ring-8 ring-blue-50">
