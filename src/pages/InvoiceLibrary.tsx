@@ -30,6 +30,10 @@ const InvoiceLibrary: React.FC = () => {
     ],
   });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // Adjust this value as needed
+
   useEffect(() => {
     const today = new Date();
     const month = today.getMonth();
@@ -77,6 +81,7 @@ const InvoiceLibrary: React.FC = () => {
     try {
       const data = await fetchInvoices(selectedYear);
       setInvoices(data);
+      setCurrentPage(1); // Reset to first page when new data is loaded
     } catch (error) {
       console.error('Error fetching invoices:', error);
       toast.error('Failed to load invoices');
@@ -91,6 +96,7 @@ const InvoiceLibrary: React.FC = () => {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
+    setCurrentPage(1); // Reset to first page when search changes
   };
 
   const handleDeleteInvoice = async (id: string) => {
@@ -162,11 +168,19 @@ const InvoiceLibrary: React.FC = () => {
     return numA - numB;
   });
 
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentInvoices = sortedInvoices.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedInvoices.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
   return (
     <div className="pb-12">
       <h1 className="text-3xl font-bold text-slate-800 mb-6">Invoice Library</h1>
       
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-slate-200">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center">
@@ -201,8 +215,8 @@ const InvoiceLibrary: React.FC = () => {
           <div className="p-8 flex justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-900"></div>
           </div>
-        ) : sortedInvoices.length > 0 ? (
-          <div className="overflow-visible">
+        ) : currentInvoices.length > 0 ? (
+          <div>
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
@@ -227,7 +241,7 @@ const InvoiceLibrary: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {sortedInvoices.map((invoice) => (
+                {currentInvoices.map((invoice) => (
                   <tr key={invoice._id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">
                       <div className="flex items-center">
@@ -352,6 +366,37 @@ const InvoiceLibrary: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            {/* Pagination Controls */}
+            <div className="p-6 flex items-center justify-between">
+              <span className="text-sm text-slate-600">
+                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, sortedInvoices.length)} of {sortedInvoices.length} invoices
+              </span>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    key={i + 1}
+                    onClick={() => paginate(i + 1)}
+                    className={`px-3 py-1 rounded-md ${currentPage === i + 1 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="p-8 text-center">
