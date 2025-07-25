@@ -163,9 +163,7 @@ const InvoiceLibrary: React.FC = () => {
   );
 
   const sortedInvoices = [...filteredInvoices].sort((a, b) => {
-    const numA = parseInt(a.invoiceNumber.split('/')[0]);
-    const numB = parseInt(b.invoiceNumber.split('/')[0]);
-    return numA - numB;
+    return new Date(b.date).getTime() - new Date(a.date).getTime(); // Descending order by date
   });
 
   // Pagination logic
