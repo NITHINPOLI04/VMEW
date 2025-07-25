@@ -211,7 +211,12 @@ const InvoiceLibrary: React.FC = () => {
         
         {loading ? (
           <div className="p-8 flex justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-900"></div>
+            <div className="ship-loader">
+              <div className="wave"></div>
+              <div className="wave"></div>
+              <div className="wave"></div>
+              <div className="ship"></div>
+            </div>
           </div>
         ) : currentInvoices.length > 0 ? (
           <div>
