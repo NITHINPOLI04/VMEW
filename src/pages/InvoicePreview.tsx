@@ -536,7 +536,7 @@ const InvoicePreview: React.FC = () => {
       
       const bankDetails = [
         { label: "Bank Name:", value: defaultInfo?.bankName || 'SBI' },
-        { label: "A/C No:", value: defaultInfo?.accountNo || '30373757750' },
+        { label: "A/C No:", value: defaultInfo?.accountNo || '30379757750' },
         { label: "IFSC Code:", value: defaultInfo?.ifscCode || 'SBIN0015580' },
         { label: "Branch:", value: defaultInfo?.branch || 'ASILMETTA' }
       ];
@@ -959,7 +959,7 @@ const InvoicePreview: React.FC = () => {
             <div className="border border-slate-200 rounded-md p-4">
               <h3 className="font-bold border-b pb-2 mb-2">Bank Details</h3>
               <p className="mb-1"><span className="font-medium">Bank Name:</span> {defaultInfo?.bankName || 'SBI'}</p>
-              <p className="mb-1"><span className="font-medium">A/C No:</span> {defaultInfo?.accountNo || '30373757750'}</p>
+              <p className="mb-1"><span className="font-medium">A/C No:</span> {defaultInfo?.accountNo || '30379757750'}</p>
               <p className="mb-1"><span className="font-medium">IFSC Code:</span> {defaultInfo?.ifscCode || 'SBIN0015580'}</p>
               <p><span className="font-medium">Branch:</span> {defaultInfo?.branch || 'ASILMETTA'}</p>
             </div>
