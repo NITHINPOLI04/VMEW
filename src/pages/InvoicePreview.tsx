@@ -551,8 +551,8 @@ const InvoicePreview: React.FC = () => {
       const termsBoxHeight = terms.length * 4 + 10;
       const maxBoxHeight = Math.max(bankBoxHeight, termsBoxHeight, 25);
 
-      const leftBoxBottomWidth = contentWidth * 0.58; // modified
-      const rightBoxBottomWidth = contentWidth * 0.38; // modified
+      const leftBoxBottomWidth = contentWidth * 0.48; // modified
+      const rightBoxBottomWidth = contentWidth * 0.48; // modified
       const boxGap = contentWidth * 0.04;
       
       pdf.setLineWidth(0.2);
