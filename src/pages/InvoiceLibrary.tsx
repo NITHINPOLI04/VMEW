@@ -176,28 +176,26 @@ const InvoiceLibrary: React.FC = () => {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   // Export to Excel using only xlsx
-  const exportToExcel = () => {
-    const exportData = sortedInvoices.map(invoice => {
-      const totalTaxable = invoice.items.reduce((sum, item) => sum + item.taxableAmount, 0);
-      const totalIgst = invoice.taxType === 'igst' 
-        ? invoice.items.reduce((sum, item) => sum + item.igstAmount, 0) 
-        : 0;
-      const totalCgst = invoice.taxType === 'cgst-sgst' 
-        ? invoice.items.reduce((sum, item) => sum + item.cgstAmount, 0) 
-        : 0;
-      const totalSgst = invoice.taxType === 'cgst-sgst' 
-        ? invoice.items.reduce((sum, item) => sum + item.sgstAmount, 0) 
-        : 0;
+const exportToExcel = () => {
+    const exportData = sortedInvoices.map((invoice, index) => {
+      const totalTaxable = invoice.items.reduce((sum, item) => sum + (item.taxableAmount || 0), 0);
+      const totalIgst = invoice.items.reduce((sum, item) => sum + (item.igstAmount || 0), 0);
+      const totalCgst = invoice.items.reduce((sum, item) => sum + (item.cgstAmount || 0), 0);
+      const totalSgst = invoice.items.reduce((sum, item) => sum + (item.sgstAmount || 0), 0);
+
+      const isIgst = invoice.taxType === 'igst';
+      const isSgstCgst = invoice.taxType === 'sgstcgst';
 
       return {
+        'S.No': index + 1,
         'Date of Invoice': new Date(invoice.date).toLocaleDateString('en-IN'),
         'Invoice No': invoice.invoiceNumber,
-        'Buyer GST No': invoice.buyerGst,
+        'Buyer GST No': invoice.buyerGst || '',
         'Buyer Name': invoice.buyerName,
         'Total Taxable Amount': totalTaxable.toFixed(2),
-        'IGST Amount': totalIgst.toFixed(2),
-        'CGST Amount': totalCgst.toFixed(2),
-        'SGST Amount': totalSgst.toFixed(2),
+        'IGST Amount': isIgst ? totalIgst.toFixed(2) : '0.00',
+        'CGST Amount': isSgstCgst ? totalCgst.toFixed(2) : '0.00',
+        'SGST Amount': isSgstCgst ? totalSgst.toFixed(2) : '0.00',
         'Grand Total': invoice.grandTotal.toFixed(2),
       };
     });
@@ -206,17 +204,18 @@ const InvoiceLibrary: React.FC = () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Invoices');
 
-    // Auto-size columns
+    // Auto-size columns (now includes S.No)
     worksheet['!cols'] = [
-      { wch: 15 }, // Date
-      { wch: 15 }, // Invoice No
-      { wch: 18 }, // GST No
-      { wch: 25 }, // Buyer Name
-      { wch: 18 }, // Taxable
-      { wch: 12 }, // IGST
-      { wch: 12 }, // CGST
-      { wch: 12 }, // SGST
-      { wch: 15 }, // Grand Total
+      { wch: 6 },   // S.No
+      { wch: 15 },  // Date
+      { wch: 15 },  // Invoice No
+      { wch: 18 },  // GST No
+      { wch: 25 },  // Buyer Name
+      { wch: 18 },  // Taxable
+      { wch: 12 },  // IGST
+      { wch: 12 },  // CGST
+      { wch: 12 },  // SGST
+      { wch: 15 },  // Grand Total
     ];
 
     // Generate and download
