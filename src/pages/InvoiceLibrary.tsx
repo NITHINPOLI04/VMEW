@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Search, ChevronDown, Trash2, Eye, FileCheck, Clock, AlertTriangle } from 'lucide-react';
+import { FileText, Search, ChevronDown, Trash2, Eye, FileCheck, Clock, AlertTriangle, Download } from 'lucide-react';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { Invoice } from '../types';
 import { toast } from 'react-hot-toast';
 import { usePopper } from 'react-popper';
+import * as XLSX from 'xlsx';
 
 const InvoiceLibrary: React.FC = () => {
   const { fetchInvoices, deleteInvoice, updateInvoicePaymentStatus, setReceivedAmount, getReceivedAmount } = useInvoiceStore();
@@ -32,7 +33,7 @@ const InvoiceLibrary: React.FC = () => {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10); // Adjust this value as needed
+  const [itemsPerPage] = useState(10);
 
   useEffect(() => {
     const today = new Date();
@@ -81,7 +82,7 @@ const InvoiceLibrary: React.FC = () => {
     try {
       const data = await fetchInvoices(selectedYear);
       setInvoices(data);
-      setCurrentPage(1); // Reset to first page when new data is loaded
+      setCurrentPage(1);
     } catch (error) {
       console.error('Error fetching invoices:', error);
       toast.error('Failed to load invoices');
@@ -96,7 +97,7 @@ const InvoiceLibrary: React.FC = () => {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-    setCurrentPage(1); // Reset to first page when search changes
+    setCurrentPage(1);
   };
 
   const handleDeleteInvoice = async (id: string) => {
@@ -163,7 +164,7 @@ const InvoiceLibrary: React.FC = () => {
   );
 
   const sortedInvoices = [...filteredInvoices].sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime(); // Descending order by date
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 
   // Pagination logic
@@ -173,6 +174,65 @@ const InvoiceLibrary: React.FC = () => {
   const totalPages = Math.ceil(sortedInvoices.length / itemsPerPage);
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  // Export to Excel using only xlsx
+  const exportToExcel = () => {
+    const exportData = sortedInvoices.map(invoice => {
+      const totalTaxable = invoice.items.reduce((sum, item) => sum + item.taxableAmount, 0);
+      const totalIgst = invoice.taxType === 'igst' 
+        ? invoice.items.reduce((sum, item) => sum + item.igstAmount, 0) 
+        : 0;
+      const totalCgst = invoice.taxType === 'cgst-sgst' 
+        ? invoice.items.reduce((sum, item) => sum + item.cgstAmount, 0) 
+        : 0;
+      const totalSgst = invoice.taxType === 'cgst-sgst' 
+        ? invoice.items.reduce((sum, item) => sum + item.sgstAmount, 0) 
+        : 0;
+
+      return {
+        'Date of Invoice': new Date(invoice.date).toLocaleDateString('en-IN'),
+        'Invoice No': invoice.invoiceNumber,
+        'Buyer GST No': invoice.buyerGst,
+        'Buyer Name': invoice.buyerName,
+        'Total Taxable Amount': totalTaxable.toFixed(2),
+        'IGST Amount': totalIgst.toFixed(2),
+        'CGST Amount': totalCgst.toFixed(2),
+        'SGST Amount': totalSgst.toFixed(2),
+        'Grand Total': invoice.grandTotal.toFixed(2),
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Invoices');
+
+    // Auto-size columns
+    worksheet['!cols'] = [
+      { wch: 15 }, // Date
+      { wch: 15 }, // Invoice No
+      { wch: 18 }, // GST No
+      { wch: 25 }, // Buyer Name
+      { wch: 18 }, // Taxable
+      { wch: 12 }, // IGST
+      { wch: 12 }, // CGST
+      { wch: 12 }, // SGST
+      { wch: 15 }, // Grand Total
+    ];
+
+    // Generate and download
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    const url = window.URL.createObjectURL(data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Invoices_${selectedYear.replace('-', '_')}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    toast.success('Exported to Excel successfully!');
+  };
 
   return (
     <div className="pb-12">
@@ -194,17 +254,28 @@ const InvoiceLibrary: React.FC = () => {
               </select>
             </div>
             
-            <div className="relative flex-1 max-w-md">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-slate-400" />
+            <div className="flex items-center gap-3 flex-1 max-w-md">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search invoices..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="pl-10 w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Search invoices..."
-                value={searchQuery}
-                onChange={handleSearchChange}
-                className="pl-10 w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <button
+                onClick={exportToExcel}
+                disabled={loading || sortedInvoices.length === 0}
+                className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white rounded-md font-medium transition-colors duration-200 whitespace-nowrap"
+                title="Export to Excel"
+              >
+                <Download className="h-5 w-5 mr-1" />
+                Excel
+              </button>
             </div>
           </div>
         </div>
