@@ -12,6 +12,7 @@ const InvoiceLibrary: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState<string>(''); // NEW: Month filter
   const [searchQuery, setSearchQuery] = useState('');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
@@ -35,6 +36,23 @@ const InvoiceLibrary: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
+  // Month options
+  const months = [
+    { value: '', label: 'All Months' },
+    { value: '0', label: 'January' },
+    { value: '1', label: 'February' },
+    { value: '2', label: 'March' },
+    { value: '3', label: 'April' },
+    { value: '4', label: 'May' },
+    { value: '5', label: 'June' },
+    { value: '6', label: 'July' },
+    { value: '7', label: 'August' },
+    { value: '8', label: 'September' },
+    { value: '9', label: 'October' },
+    { value: '10', label: 'November' },
+    { value: '11', label: 'December' },
+  ];
+
   useEffect(() => {
     const today = new Date();
     const month = today.getMonth();
@@ -54,6 +72,7 @@ const InvoiceLibrary: React.FC = () => {
   useEffect(() => {
     if (selectedYear) {
       loadInvoices();
+      setSelectedMonth(''); // Reset month when year changes
     }
   }, [selectedYear]);
 
@@ -93,6 +112,11 @@ const InvoiceLibrary: React.FC = () => {
 
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedYear(e.target.value);
+  };
+
+  const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedMonth(e.target.value);
+    setCurrentPage(1);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,10 +182,17 @@ const InvoiceLibrary: React.FC = () => {
     return balance;
   };
 
-  const filteredInvoices = invoices.filter(invoice => 
-    invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    invoice.buyerName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // FILTER: Search + Month
+  const filteredInvoices = invoices.filter(invoice => {
+    const matchesSearch =
+      invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      invoice.buyerName.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const invoiceMonth = new Date(invoice.date).getMonth().toString();
+    const matchesMonth = selectedMonth === '' || invoiceMonth === selectedMonth;
+
+    return matchesSearch && matchesMonth;
+  });
 
   const sortedInvoices = [...filteredInvoices].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -175,8 +206,8 @@ const InvoiceLibrary: React.FC = () => {
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  // Export to Excel using only xlsx
-const exportToExcel = () => {
+  // Export to Excel
+  const exportToExcel = () => {
     const exportData = sortedInvoices.map((invoice, index) => {
       const totalTaxable = invoice.items.reduce((sum, item) => sum + (item.taxableAmount || 0), 0);
       const totalIgst = invoice.items.reduce((sum, item) => sum + (item.igstAmount || 0), 0);
@@ -204,7 +235,6 @@ const exportToExcel = () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Invoices');
 
-    // Auto-size columns (now includes S.No)
     worksheet['!cols'] = [
       { wch: 6 },   // S.No
       { wch: 15 },  // Date
@@ -218,13 +248,12 @@ const exportToExcel = () => {
       { wch: 15 },  // Grand Total
     ];
 
-    // Generate and download
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
     const url = window.URL.createObjectURL(data);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Invoices_${selectedYear.replace('-', '_')}.xlsx`;
+    link.download = `Invoices_${selectedYear.replace('-', '_')}${selectedMonth ? `_${months.find(m => m.value === selectedMonth)?.label}` : ''}.xlsx`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -240,17 +269,34 @@ const exportToExcel = () => {
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-slate-200">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center">
-              <span className="text-slate-700 mr-2">Financial Year:</span>
-              <select
-                value={selectedYear}
-                onChange={handleYearChange}
-                className="px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {availableYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Financial Year */}
+              <div className="flex items-center">
+                <span className="text-slate-700 mr-2">Financial Year:</span>
+                <select
+                  value={selectedYear}
+                  onChange={handleYearChange}
+                  className="px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {availableYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Month Filter */}
+              <div className="flex items-center">
+                <span className="text-slate-700 mr-2">Month:</span>
+                <select
+                  value={selectedMonth}
+                  onChange={handleMonthChange}
+                  className="px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {months.map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             
             <div className="flex items-center gap-3 flex-1 max-w-md">
@@ -434,7 +480,8 @@ const exportToExcel = () => {
                 ))}
               </tbody>
             </table>
-            {/* Pagination Controls */}
+
+            {/* Pagination */}
             <div className="p-6 flex items-center justify-between">
               <span className="text-sm text-slate-600">
                 Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, sortedInvoices.length)} of {sortedInvoices.length} invoices
@@ -473,7 +520,9 @@ const exportToExcel = () => {
             <p className="text-slate-500 mb-6">
               {searchQuery 
                 ? 'No invoices match your search query' 
-                : `There are no invoices for the financial year ${selectedYear}`}
+                : selectedMonth 
+                  ? `No invoices found for ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`
+                  : `There are no invoices for the financial year ${selectedYear}`}
             </p>
             <Link
               to="/generate-invoice"
