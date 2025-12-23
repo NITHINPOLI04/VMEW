@@ -4,7 +4,7 @@ export interface InvoiceItem {
   description: string;
   hsnSacCode: string;
   quantity: number;
-  unit: string; // 'Nos' | 'Mts' | 'Lts' | 'Pkt' | 'Kg'
+  unit: string; // 'Nos' | 'Mts' | 'Lts' | 'Pkt' | 'Kgs'
   rate: number;
   taxableAmount: number;
   sgstPercentage: number;
@@ -49,7 +49,7 @@ export interface InventoryItem {
   description: string;
   hsnSacCode: string;
   quantity: number;
-  unit: string; // 'Nos' | 'Mts' | 'Lts' | 'Pkt' | 'Kg'
+  unit: string; // 'Nos' | 'Mts' | 'Lts' | 'Pkt' | 'Kgs'
   rate: number;
   transactionType: 'Sales' | 'Purchase';
   financialYear: string; // e.g., '2024-2025'

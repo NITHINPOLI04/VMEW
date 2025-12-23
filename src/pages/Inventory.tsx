@@ -25,7 +25,7 @@ const Inventory: React.FC = () => {
     description: '',
     hsnSacCode: '',
     quantity: 1,
-    unit: 'Nos' as 'Nos' | 'Mts' | 'Lts' | 'Pkt' | 'Kg',
+    unit: 'Nos' as 'Nos' | 'Mts' | 'Lts' | 'Pkt' | 'Kgs',
     rate: 0,
     transactionType: 'Sales' as 'Sales' | 'Purchase',
     financialYear: selectedYear,
@@ -146,7 +146,7 @@ const Inventory: React.FC = () => {
       description: item.description,
       hsnSacCode: item.hsnSacCode,
       quantity: item.quantity,
-      unit: item.unit as 'Nos' | 'Mts' | 'Lts' | 'Pkt' | 'Kg',
+      unit: item.unit as 'Nos' | 'Mts' | 'Lts' | 'Pkt' | 'Kgs',
       rate: item.rate,
       transactionType: item.transactionType,
       financialYear: item.financialYear,
@@ -660,7 +660,7 @@ const Inventory: React.FC = () => {
                             <option value="Mts">Mts</option>
                             <option value="Lts">Lts</option>
                             <option value="Pkt">Pkt</option>
-                            <option value="Kg">Kg</option>
+                            <option value="Kgs">Kgs</option>
                           </select>
                         </div>
                       </div>
