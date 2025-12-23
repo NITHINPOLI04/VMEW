@@ -660,6 +660,7 @@ const Inventory: React.FC = () => {
                             <option value="Mts">Mts</option>
                             <option value="Lts">Lts</option>
                             <option value="Pkt">Pkt</option>
+                            <option value="Kg">Kg</option>
                           </select>
                         </div>
                       </div>
