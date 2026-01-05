@@ -12,7 +12,7 @@ const InvoiceLibrary: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState<string>(''); // NEW: Month filter
+  const [selectedMonth, setSelectedMonth] = useState<string>(''); // Month filter
   const [searchQuery, setSearchQuery] = useState('');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
@@ -206,7 +206,7 @@ const InvoiceLibrary: React.FC = () => {
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  // Export to Excel
+  // Existing: Export Summary (one row per invoice)
   const exportToExcel = () => {
     const exportData = sortedInvoices.map((invoice, index) => {
       const totalTaxable = invoice.items.reduce((sum, item) => sum + (item.taxableAmount || 0), 0);
@@ -259,7 +259,91 @@ const InvoiceLibrary: React.FC = () => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    toast.success('Exported to Excel successfully!');
+    toast.success('Summary exported to Excel successfully!');
+  };
+
+  // NEW: Export Detailed Items (all line items from all invoices)
+  const exportDetailedItemsToExcel = () => {
+    if (sortedInvoices.length === 0) {
+      toast.error('No invoices to export');
+      return;
+    }
+
+    const detailedRows: any[] = [];
+
+    sortedInvoices.forEach((invoice) => {
+      invoice.items.forEach((item, itemIndex) => {
+        const isIgst = invoice.taxType === 'igst';
+
+        detailedRows.push({
+          'Invoice No': invoice.invoiceNumber,
+          'Date': new Date(invoice.date).toLocaleDateString('en-IN'),
+          'Buyer Name': invoice.buyerName,
+          'Buyer GST': invoice.buyerGst || '',
+          'S.No': itemIndex + 1,
+          'Description of Goods': item.description,
+          'HSN/SAC Code': item.hsnSacCode,
+          'Qty': item.quantity,
+          'Unit': item.unit,
+          'Rate': item.rate.toFixed(2),
+          'Taxable Amount': item.taxableAmount.toFixed(2),
+          'IGST %': isIgst ? `${item.igstPercentage}%` : '',
+          'IGST Amount': isIgst ? item.igstAmount.toFixed(2) : '',
+          'SGST %': !isIgst ? `${item.sgstPercentage}%` : '',
+          'SGST Amount': !isIgst ? item.sgstAmount.toFixed(2) : '',
+          'CGST %': !isIgst ? `${item.cgstPercentage}%` : '',
+          'CGST Amount': !isIgst ? item.cgstAmount.toFixed(2) : '',
+          'Item Total (incl. tax)': (item.taxableAmount + (isIgst ? item.igstAmount : item.sgstAmount + item.cgstAmount)).toFixed(2),
+        });
+      });
+
+      // Optional: Add blank row between invoices for readability
+      detailedRows.push({});
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(detailedRows);
+
+    // Column widths
+    worksheet['!cols'] = [
+      { wch: 15 }, // Invoice No
+      { wch: 12 }, // Date
+      { wch: 25 }, // Buyer Name
+      { wch: 18 }, // Buyer GST
+      { wch: 6 },  // S.No
+      { wch: 45 }, // Description
+      { wch: 14 }, // HSN/SAC
+      { wch: 8 },  // Qty
+      { wch: 8 },  // Unit
+      { wch: 12 }, // Rate
+      { wch: 16 }, // Taxable Amount
+      { wch: 10 }, // IGST %
+      { wch: 14 }, // IGST Amount
+      { wch: 10 }, // SGST %
+      { wch: 14 }, // SGST Amount
+      { wch: 10 }, // CGST %
+      { wch: 14 }, // CGST Amount
+      { wch: 18 }, // Item Total
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Invoice Items');
+
+    const yearPart = selectedYear.replace('-', '_');
+    const monthLabel = selectedMonth ? `_${months.find(m => m.value === selectedMonth)?.label || ''}` : '';
+    const fileName = `Detailed_Items_${yearPart}${monthLabel}.xlsx`;
+
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    const url = window.URL.createObjectURL(data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    toast.success('Detailed items exported to Excel successfully!');
   };
 
   return (
@@ -299,8 +383,8 @@ const InvoiceLibrary: React.FC = () => {
               </div>
             </div>
             
-            <div className="flex items-center gap-3 flex-1 max-w-md">
-              <div className="relative flex-1">
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 max-w-md">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Search className="h-5 w-5 text-slate-400" />
                 </div>
@@ -312,19 +396,33 @@ const InvoiceLibrary: React.FC = () => {
                   className="pl-10 w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
+
+              {/* Summary Export */}
               <button
                 onClick={exportToExcel}
                 disabled={loading || sortedInvoices.length === 0}
                 className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white rounded-md font-medium transition-colors duration-200 whitespace-nowrap"
-                title="Export to Excel"
+                title="Export invoice summary (totals only)"
               >
                 <Download className="h-5 w-5 mr-1" />
-                Excel
+                Summary
+              </button>
+
+              {/* Detailed Items Export */}
+              <button
+                onClick={exportDetailedItemsToExcel}
+                disabled={loading || sortedInvoices.length === 0}
+                className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-md font-medium transition-colors duration-200 whitespace-nowrap"
+                title="Export all line items from invoices"
+              >
+                <Download className="h-5 w-5 mr-1" />
+                Items
               </button>
             </div>
           </div>
         </div>
         
+        {/* Rest of the component remains unchanged */}
         {loading ? (
           <div className="p-8 flex justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-900"></div>
