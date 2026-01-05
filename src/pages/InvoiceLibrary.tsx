@@ -5,7 +5,7 @@ import { useInvoiceStore } from '../stores/invoiceStore';
 import { Invoice } from '../types';
 import { toast } from 'react-hot-toast';
 import { usePopper } from 'react-popper';
-import * as XLSX from 'xlsx-js-style';
+import * as XLSX from 'xlsx-js-style';  // Required for bold headers and styling
 
 const InvoiceLibrary: React.FC = () => {
   const { fetchInvoices, deleteInvoice, updateInvoicePaymentStatus, setReceivedAmount, getReceivedAmount } = useInvoiceStore();
@@ -206,7 +206,7 @@ const InvoiceLibrary: React.FC = () => {
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  // Export Summary (one row per invoice)
+  // Export Summary (one row per invoice) — Numbers + Bold headers
   const exportToExcel = () => {
     const exportData = sortedInvoices.map((invoice, index) => {
       const totalTaxable = invoice.items.reduce((sum, item) => sum + (item.taxableAmount || 0), 0);
@@ -215,7 +215,6 @@ const InvoiceLibrary: React.FC = () => {
       const totalSgst = invoice.items.reduce((sum, item) => sum + (item.sgstAmount || 0), 0);
 
       const isIgst = invoice.taxType === 'igst';
-      const isSgstCgst = invoice.taxType === 'sgstcgst';
 
       return {
         'S.No': index + 1,
@@ -223,17 +222,17 @@ const InvoiceLibrary: React.FC = () => {
         'Invoice No': invoice.invoiceNumber,
         'Buyer GST No': invoice.buyerGst || '',
         'Buyer Name': invoice.buyerName,
-        'Total Taxable Amount': totalTaxable.toFixed(2),
-        'IGST Amount': isIgst ? totalIgst.toFixed(2) : '0.00',
-        'CGST Amount': isSgstCgst ? totalCgst.toFixed(2) : '0.00',
-        'SGST Amount': isSgstCgst ? totalSgst.toFixed(2) : '0.00',
-        'Grand Total': invoice.grandTotal.toFixed(2),
+        'Total Taxable Amount': totalTaxable,           // Number
+        'IGST Amount': isIgst ? totalIgst : 0,          // Number
+        'CGST Amount': isIgst ? 0 : totalCgst,         // Number
+        'SGST Amount': isIgst ? 0 : totalSgst,         // Number
+        'Grand Total': invoice.grandTotal,             // Number
       };
     });
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
 
-    // Bold headers — now works with xlsx-js-style
+    // Bold headers
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
@@ -266,7 +265,7 @@ const InvoiceLibrary: React.FC = () => {
     toast.success('Summary exported!');
   };
 
-  // Export Detailed Items (all line items)
+  // Export Detailed Items (all line items) — No blank rows + Numbers + Bold headers
   const exportDetailedItemsToExcel = () => {
     if (sortedInvoices.length === 0) {
       toast.error('No invoices to export');
@@ -289,22 +288,23 @@ const InvoiceLibrary: React.FC = () => {
           'HSN/SAC Code': item.hsnSacCode,
           'Qty': item.quantity,
           'Unit': item.unit,
-          'Rate': item.rate.toFixed(2),
-          'Taxable Amount': item.taxableAmount.toFixed(2),
+          'Rate': item.rate,                                      // Number
+          'Taxable Amount': item.taxableAmount,                   // Number
           'IGST %': isIgst ? `${item.igstPercentage}%` : '',
-          'IGST Amount': isIgst ? item.igstAmount.toFixed(2) : '',
+          'IGST Amount': isIgst ? item.igstAmount : 0,             // Number
           'SGST %': !isIgst ? `${item.sgstPercentage}%` : '',
-          'SGST Amount': !isIgst ? item.sgstAmount.toFixed(2) : '',
+          'SGST Amount': !isIgst ? item.sgstAmount : 0,            // Number
           'CGST %': !isIgst ? `${item.cgstPercentage}%` : '',
-          'CGST Amount': !isIgst ? item.cgstAmount.toFixed(2) : '',
-          'Item Total (incl. tax)': (item.taxableAmount + (isIgst ? item.igstAmount : item.sgstAmount + item.cgstAmount)).toFixed(2),
+          'CGST Amount': !isIgst ? item.cgstAmount : 0,            // Number
+          'Item Total (incl. tax)': item.taxableAmount + (isIgst ? item.igstAmount : item.sgstAmount + item.cgstAmount), // Number
         });
       });
+      // No blank row added — clean continuous data
     });
 
     const worksheet = XLSX.utils.json_to_sheet(detailedRows);
 
-    // Bold headers — now works with xlsx-js-style
+    // Bold headers
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
