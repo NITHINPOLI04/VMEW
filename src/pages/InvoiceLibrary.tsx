@@ -300,7 +300,6 @@ const InvoiceLibrary: React.FC = () => {
           'Item Total (incl. tax)': (item.taxableAmount + (isIgst ? item.igstAmount : item.sgstAmount + item.cgstAmount)).toFixed(2),
         });
       });
-      detailedRows.push({}); // Blank row between invoices
     });
 
     const worksheet = XLSX.utils.json_to_sheet(detailedRows);
