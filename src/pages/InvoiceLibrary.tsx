@@ -206,7 +206,7 @@ const InvoiceLibrary: React.FC = () => {
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  // Existing: Export Summary (one row per invoice)
+  // Export Summary (one row per invoice)
   const exportToExcel = () => {
     const exportData = sortedInvoices.map((invoice, index) => {
       const totalTaxable = invoice.items.reduce((sum, item) => sum + (item.taxableAmount || 0), 0);
@@ -232,37 +232,41 @@ const InvoiceLibrary: React.FC = () => {
     });
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    // Bold headers
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+      if (worksheet[cellAddress]) {
+        worksheet[cellAddress].s = { font: { bold: true } };
+      }
+    }
+
+    worksheet['!cols'] = [
+      { wch: 6 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 25 },
+      { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }
+    ];
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Invoices');
 
-    worksheet['!cols'] = [
-      { wch: 6 },   // S.No
-      { wch: 15 },  // Date
-      { wch: 15 },  // Invoice No
-      { wch: 18 },  // GST No
-      { wch: 25 },  // Buyer Name
-      { wch: 18 },  // Taxable
-      { wch: 12 },  // IGST
-      { wch: 12 },  // CGST
-      { wch: 12 },  // SGST
-      { wch: 15 },  // Grand Total
-    ];
+    const fileName = `Invoices_${selectedYear.replace('-', '_')}${selectedMonth ? `_${months.find(m => m.value === selectedMonth)?.label}` : ''}.xlsx`;
 
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
     const url = window.URL.createObjectURL(data);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Invoices_${selectedYear.replace('-', '_')}${selectedMonth ? `_${months.find(m => m.value === selectedMonth)?.label}` : ''}.xlsx`;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    toast.success('Summary exported to Excel successfully!');
+    toast.success('Summary exported!');
   };
 
-  // NEW: Export Detailed Items (all line items from all invoices)
+  // Export Detailed Items (all line items)
   const exportDetailedItemsToExcel = () => {
     if (sortedInvoices.length === 0) {
       toast.error('No invoices to export');
@@ -296,33 +300,25 @@ const InvoiceLibrary: React.FC = () => {
           'Item Total (incl. tax)': (item.taxableAmount + (isIgst ? item.igstAmount : item.sgstAmount + item.cgstAmount)).toFixed(2),
         });
       });
-
-      // Optional: Add blank row between invoices for readability
-      detailedRows.push({});
+      detailedRows.push({}); // Blank row between invoices
     });
 
     const worksheet = XLSX.utils.json_to_sheet(detailedRows);
 
-    // Column widths
+    // Bold headers
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+      if (worksheet[cellAddress]) {
+        worksheet[cellAddress].s = { font: { bold: true } };
+      }
+    }
+
     worksheet['!cols'] = [
-      { wch: 15 }, // Invoice No
-      { wch: 12 }, // Date
-      { wch: 25 }, // Buyer Name
-      { wch: 18 }, // Buyer GST
-      { wch: 6 },  // S.No
-      { wch: 45 }, // Description
-      { wch: 14 }, // HSN/SAC
-      { wch: 8 },  // Qty
-      { wch: 8 },  // Unit
-      { wch: 12 }, // Rate
-      { wch: 16 }, // Taxable Amount
-      { wch: 10 }, // IGST %
-      { wch: 14 }, // IGST Amount
-      { wch: 10 }, // SGST %
-      { wch: 14 }, // SGST Amount
-      { wch: 10 }, // CGST %
-      { wch: 14 }, // CGST Amount
-      { wch: 18 }, // Item Total
+      { wch: 15 }, { wch: 12 }, { wch: 25 }, { wch: 18 }, { wch: 6 },
+      { wch: 45 }, { wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 12 },
+      { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 },
+      { wch: 10 }, { wch: 14 }, { wch: 18 }
     ];
 
     const workbook = XLSX.utils.book_new();
@@ -343,7 +339,7 @@ const InvoiceLibrary: React.FC = () => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    toast.success('Detailed items exported to Excel successfully!');
+    toast.success('Items exported!');
   };
 
   return (
@@ -397,23 +393,21 @@ const InvoiceLibrary: React.FC = () => {
                 />
               </div>
 
-              {/* Summary Export */}
               <button
                 onClick={exportToExcel}
                 disabled={loading || sortedInvoices.length === 0}
                 className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white rounded-md font-medium transition-colors duration-200 whitespace-nowrap"
-                title="Export invoice summary (totals only)"
+                title="Export invoice summary"
               >
                 <Download className="h-5 w-5 mr-1" />
                 Summary
               </button>
 
-              {/* Detailed Items Export */}
               <button
                 onClick={exportDetailedItemsToExcel}
                 disabled={loading || sortedInvoices.length === 0}
                 className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-md font-medium transition-colors duration-200 whitespace-nowrap"
-                title="Export all line items from invoices"
+                title="Export all line items"
               >
                 <Download className="h-5 w-5 mr-1" />
                 Items
@@ -422,7 +416,6 @@ const InvoiceLibrary: React.FC = () => {
           </div>
         </div>
         
-        {/* Rest of the component remains unchanged */}
         {loading ? (
           <div className="p-8 flex justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-900"></div>
