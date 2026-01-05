@@ -5,7 +5,7 @@ import { useInvoiceStore } from '../stores/invoiceStore';
 import { Invoice } from '../types';
 import { toast } from 'react-hot-toast';
 import { usePopper } from 'react-popper';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 const InvoiceLibrary: React.FC = () => {
   const { fetchInvoices, deleteInvoice, updateInvoicePaymentStatus, setReceivedAmount, getReceivedAmount } = useInvoiceStore();
@@ -233,7 +233,7 @@ const InvoiceLibrary: React.FC = () => {
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
 
-    // Bold headers
+    // Bold headers — now works with xlsx-js-style
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
@@ -305,7 +305,7 @@ const InvoiceLibrary: React.FC = () => {
 
     const worksheet = XLSX.utils.json_to_sheet(detailedRows);
 
-    // Bold headers
+    // Bold headers — now works with xlsx-js-style
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
