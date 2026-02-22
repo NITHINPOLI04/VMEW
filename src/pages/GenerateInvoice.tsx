@@ -114,9 +114,9 @@ const GenerateInvoice: React.FC = () => {
       const qty = field === 'quantity' ? Number(value) : updatedItems[index].quantity;
       const rate = field === 'rate' ? Number(value) : updatedItems[index].rate;
       const taxableAmount = qty * rate;
-      let sgstAmount = (taxableAmount * updatedItems[index].sgstPercentage) / 100;
-      let cgstAmount = (taxableAmount * updatedItems[index].cgstPercentage) / 100;
-      let igstAmount = (taxableAmount * updatedItems[index].igstPercentage) / 100;
+      const sgstAmount = (taxableAmount * updatedItems[index].sgstPercentage) / 100;
+      const cgstAmount = (taxableAmount * updatedItems[index].cgstPercentage) / 100;
+      const igstAmount = (taxableAmount * updatedItems[index].igstPercentage) / 100;
 
       updatedItems[index] = {
         ...updatedItems[index],

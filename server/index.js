@@ -6,8 +6,9 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const morgan = require('morgan');
 const { convertToWords } = require('./utils/numberToWords.js');
+const path = require('path');
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -15,7 +16,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
 // Middleware
 const corsOptions = {
-  origin: 'https://vmew.onrender.com', // Frontend origin
+  origin: ['https://vmew.onrender.com', 'http://localhost:5173', 'http://localhost:5174'], // Frontend origins
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Allow all relevant methods
   allowedHeaders: ['Content-Type', 'Authorization'], // Allow common headers
   credentials: true, // Enable credentials (e.g., cookies, auth headers)
@@ -208,7 +209,7 @@ app.post('/api/invoices', authenticate, async (req, res) => {
     const month = invoiceDate.getMonth();
     const year = invoiceDate.getFullYear();
     const financialYear = month >= 3 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
-    
+
     const grandTotal = invoiceData.grandTotal || 0;
     const totalInWords = convertToWords(grandTotal);
 
@@ -218,7 +219,7 @@ app.post('/api/invoices', authenticate, async (req, res) => {
       financialYear,
       totalInWords
     });
-    
+
     await newInvoice.save();
     res.status(201).json(newInvoice);
   } catch (error) {
@@ -235,17 +236,17 @@ app.put('/api/invoices/:id', authenticate, async (req, res) => {
     const month = invoiceDate.getMonth();
     const year = invoiceDate.getFullYear();
     const financialYear = month >= 3 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
-    
+
     const updatedInvoice = await Invoice.findOneAndUpdate(
       { _id: id, userId: req.user.userId },
       { ...invoiceData, financialYear },
       { new: true, runValidators: true }
     );
-    
+
     if (!updatedInvoice) {
       return res.status(404).json({ message: 'Invoice not found' });
     }
-    
+
     res.json(updatedInvoice);
   } catch (error) {
     console.error('Error updating invoice:', error.message, error.stack);
@@ -257,21 +258,21 @@ app.patch('/api/invoices/:id/payment-status', authenticate, async (req, res) => 
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
+
     if (!['Payment Complete', 'Partially Paid', 'Unpaid'].includes(status)) {
       return res.status(400).json({ message: 'Invalid payment status' });
     }
-    
+
     const updatedInvoice = await Invoice.findOneAndUpdate(
       { _id: id, userId: req.user.userId },
       { paymentStatus: status },
       { new: true }
     );
-    
+
     if (!updatedInvoice) {
       return res.status(404).json({ message: 'Invoice not found' });
     }
-    
+
     res.json(updatedInvoice);
   } catch (error) {
     console.error('Error updating payment status:', error.message, error.stack);
@@ -283,11 +284,11 @@ app.delete('/api/invoices/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const deletedInvoice = await Invoice.findOneAndDelete({ _id: id, userId: req.user.userId });
-    
+
     if (!deletedInvoice) {
       return res.status(404).json({ message: 'Invoice not found' });
     }
-    
+
     res.json({ message: 'Invoice deleted successfully' });
   } catch (error) {
     console.error('Error deleting invoice:', error.message, error.stack);
