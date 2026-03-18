@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save } from 'lucide-react';
+import { Building2, FileText, Save, Download, Loader2 } from 'lucide-react';
 import { useTemplateStore } from '../stores/templateStore';
+import { generateLetterheadPDF, generateLetterheadPDFBlob } from '../engines/generateLetterheadPDF';
 import { toast } from 'react-hot-toast';
 
 const TemplateSetup: React.FC = () => {
   const { letterhead, defaultInfo, updateLetterhead, updateDefaultInfo } = useTemplateStore();
-  
+
   const [letterheadForm, setLetterheadForm] = useState({
     companyName: 'Venkateswara Marine Electrical Works',
     gstNo: '37AGIPP2674H2Z0',
@@ -14,7 +15,7 @@ const TemplateSetup: React.FC = () => {
     email: 'vmew10n@gmail.com',
     cell: '9848523264'
   });
-  
+
   const [defaultInfoForm, setDefaultInfoForm] = useState({
     bankName: 'SBI',
     accountNo: '30373757750',
@@ -28,321 +29,340 @@ const TemplateSetup: React.FC = () => {
       'Any dispute arising out of this transaction will be subject to Visakhapatnam jurisdiction.'
     ]
   });
-  
+
   useEffect(() => {
-    if (letterhead) {
-      setLetterheadForm(letterhead);
-    }
-    
-    if (defaultInfo) {
-      setDefaultInfoForm(defaultInfo);
-    }
+    if (letterhead) setLetterheadForm(letterhead);
+    if (defaultInfo) setDefaultInfoForm(defaultInfo);
   }, [letterhead, defaultInfo]);
-  
+
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const generatePreview = async () => {
+      try {
+        const url = await generateLetterheadPDFBlob(letterheadForm);
+        if (isMounted) {
+          setPdfPreviewUrl(prev => {
+            if (prev) URL.revokeObjectURL(prev);
+            return url;
+          });
+        } else {
+          URL.revokeObjectURL(url);
+        }
+      } catch (err) {
+        console.error('Failed to generate PDF preview', err);
+      }
+    };
+
+    const timeoutId = setTimeout(generatePreview, 500);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [letterheadForm]);
+
+  useEffect(() => {
+    return () => {
+      setPdfPreviewUrl(prev => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
+  }, []);
+
   const handleLetterheadChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setLetterheadForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setLetterheadForm(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleDefaultInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setDefaultInfoForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setDefaultInfoForm(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleTermsChange = (index: number, value: string) => {
     const updatedTerms = [...defaultInfoForm.terms];
     updatedTerms[index] = value;
-    
-    setDefaultInfoForm(prev => ({
-      ...prev,
-      terms: updatedTerms
-    }));
+    setDefaultInfoForm(prev => ({ ...prev, terms: updatedTerms }));
   };
-  
+
   const handleSaveLetterhead = async () => {
     try {
       await updateLetterhead(letterheadForm);
       toast.success('Letterhead saved successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to save letterhead');
     }
   };
-  
+
   const handleSaveDefaultInfo = async () => {
     try {
       await updateDefaultInfo(defaultInfoForm);
       toast.success('Default information saved successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to save default information');
     }
   };
-  
+
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadLetterhead = async () => {
+    try {
+      setDownloading(true);
+      await generateLetterheadPDF(letterheadForm);
+      toast.success('Letterhead PDF downloaded');
+    } catch {
+      toast.error('Failed to generate letterhead PDF');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const sectionClass = 'bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-md hover:border-slate-300';
+  const sectionHeaderClass = 'px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50';
+  const getIconBoxClass = (colorClass: string) => `w-8 h-8 rounded-lg flex items-center justify-center border ${colorClass}`;
+  const sectionBodyClass = 'p-5';
+  const inputClass = 'w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white transition-all focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 placeholder:text-slate-400';
+  const labelClass = 'block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-0.5';
+
   return (
-    <div className="pb-12">
-      <h1 className="text-3xl font-bold text-slate-800 mb-6">Template Setup</h1>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Letterhead Design */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-800">Letterhead Design</h2>
-            <p className="text-slate-500 text-sm mt-1">
-              This information will be displayed on invoice previews (not included in printing)
-            </p>
+    <div className="space-y-4 pb-12 bg-slate-50/80 min-h-[calc(100vh-theme(spacing.16))]">
+      {/* ── Page Header Matches GenerateBills but with right aligned toolbar ── */}
+      <div className="page-header flex justify-between items-center mb-6">
+        <div>
+          <h1 className="page-title">Template Settings</h1>
+        </div>
+      </div>
+
+      {/* ── Main Workspace: Layout matching GenerateBills ── */}
+      <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+
+          {/* ── Left Column: Form Sections (60%) ── */}
+          <div className="w-full lg:w-[60%] space-y-6">
+
+            {/* Section 1: Company Identity */}
+            <div className={sectionClass}>
+              <div className={sectionHeaderClass}>
+                <div className="flex items-center gap-3">
+                  <div className={getIconBoxClass('bg-blue-100/50 text-blue-600 border-blue-200/50')}>
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-[15px] font-bold text-slate-800 tracking-tight">Company Identity</h2>
+                </div>
+                <button
+                  onClick={handleSaveLetterhead}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-[8px] text-[12px] font-semibold text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all shadow-sm"
+                >
+                  <Save className="w-3.5 h-3.5" /> Save
+                </button>
+              </div>
+              <div className={sectionBodyClass}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                  <div className="md:col-span-2">
+                    <label htmlFor="companyName" className={labelClass}>Company Name</label>
+                    <input type="text" id="companyName" name="field_v_companyName" value={letterheadForm.companyName} onChange={handleLetterheadChange} autoComplete="off" className={inputClass} />
+                  </div>
+                  <div>
+                    <label htmlFor="gstNo" className={labelClass}>GSTIN</label>
+                    <input type="text" id="gstNo" name="field_v_gstNo" value={letterheadForm.gstNo} onChange={handleLetterheadChange} autoComplete="off" className={inputClass} />
+                  </div>
+                  <div>
+                    <label htmlFor="panNo" className={labelClass}>PAN Number</label>
+                    <input type="text" id="panNo" name="field_v_panNo" value={defaultInfoForm.panNo} onChange={handleDefaultInfoChange} autoComplete="off" className={inputClass} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label htmlFor="msmeNo" className={labelClass}>MSME Number</label>
+                    <input type="text" id="msmeNo" name="field_v_msmeNo" value={defaultInfoForm.msmeNo} onChange={handleDefaultInfoChange} autoComplete="off" className={inputClass} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Contact Information */}
+            <div className={sectionClass}>
+              <div className={sectionHeaderClass}>
+                <div className="flex items-center gap-3">
+                  <div className={getIconBoxClass('bg-emerald-100/50 text-emerald-600 border-emerald-200/50')}>
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-[15px] font-bold text-slate-800 tracking-tight">Contact Information</h2>
+                </div>
+                <button
+                  onClick={handleSaveLetterhead}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-[8px] text-[12px] font-semibold text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all shadow-sm"
+                >
+                  <Save className="w-3.5 h-3.5" /> Save
+                </button>
+              </div>
+              <div className={sectionBodyClass}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                  <div>
+                    <label htmlFor="email" className={labelClass}>Email Address</label>
+                    <input type="email" id="email" name="field_v_email" value={letterheadForm.email} onChange={handleLetterheadChange} autoComplete="off" className={inputClass} />
+                  </div>
+                  <div>
+                    <label htmlFor="cell" className={labelClass}>Phone Number</label>
+                    <input type="tel" id="cell" name="field_v_cell" value={letterheadForm.cell} onChange={handleLetterheadChange} autoComplete="off" className={inputClass} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Locations */}
+            <div className={sectionClass}>
+              <div className={sectionHeaderClass}>
+                <div className="flex items-center gap-3">
+                  <div className={getIconBoxClass('bg-teal-100/50 text-teal-600 border-teal-200/50')}>
+                    <svg xmlns="http://www.w3.org/0000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
+                  </div>
+                  <h2 className="text-[15px] font-bold text-slate-800 tracking-tight">Addresses</h2>
+                </div>
+                <button
+                  onClick={handleSaveLetterhead}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-[8px] text-[12px] font-semibold text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all shadow-sm"
+                >
+                  <Save className="w-3.5 h-3.5" /> Save
+                </button>
+              </div>
+              <div className={sectionBodyClass}>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label htmlFor="address" className={labelClass}>Registered Office Address</label>
+                    <textarea id="address" name="field_v_address" value={letterheadForm.address} onChange={handleLetterheadChange} rows={3} autoComplete="off" className={`${inputClass} resize-none`} />
+                  </div>
+                  <div>
+                    <label htmlFor="workshop" className={labelClass}>Workshop / Operational Address</label>
+                    <textarea id="workshop" name="field_v_workshop" value={letterheadForm.workshop} onChange={handleLetterheadChange} rows={3} autoComplete="off" className={`${inputClass} resize-none`} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 4: Bank Details */}
+            <div className={sectionClass}>
+              <div className={sectionHeaderClass}>
+                <div className="flex items-center gap-3">
+                  <div className={getIconBoxClass('bg-amber-100/50 text-amber-600 border-amber-200/50')}>
+                    <svg xmlns="http://www.w3.org/0000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
+                  </div>
+                  <h2 className="text-[15px] font-bold text-slate-800 tracking-tight">Bank Details</h2>
+                </div>
+                <button
+                  onClick={handleSaveDefaultInfo}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-[8px] text-[12px] font-semibold text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all shadow-sm"
+                >
+                  <Save className="w-3.5 h-3.5" /> Save
+                </button>
+              </div>
+              <div className={sectionBodyClass}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                  <div>
+                    <label htmlFor="bankName" className={labelClass}>Bank Name</label>
+                    <input type="text" id="bankName" name="field_v_bankName" value={defaultInfoForm.bankName} onChange={handleDefaultInfoChange} autoComplete="off" className={inputClass} />
+                  </div>
+                  <div>
+                    <label htmlFor="branch" className={labelClass}>Branch</label>
+                    <input type="text" id="branch" name="field_v_branch" value={defaultInfoForm.branch} onChange={handleDefaultInfoChange} autoComplete="off" className={inputClass} />
+                  </div>
+                  <div>
+                    <label htmlFor="accountNo" className={labelClass}>Account Number</label>
+                    <input type="text" id="accountNo" name="field_v_accountNo" value={defaultInfoForm.accountNo} onChange={handleDefaultInfoChange} autoComplete="off" className={inputClass} />
+                  </div>
+                  <div>
+                    <label htmlFor="ifscCode" className={labelClass}>IFSC Code</label>
+                    <input type="text" id="ifscCode" name="field_v_ifscCode" value={defaultInfoForm.ifscCode} onChange={handleDefaultInfoChange} autoComplete="off" className={inputClass} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 5: Terms & Conditions */}
+            <div className={sectionClass}>
+              <div className={sectionHeaderClass}>
+                <div className="flex items-center gap-3">
+                  <div className={getIconBoxClass('bg-rose-100/50 text-rose-600 border-rose-200/50')}>
+                    <svg xmlns="http://www.w3.org/0000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22h6a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v3" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 12l2 2-2-2-2-2Z" /><path d="m14 16-2 2-2-2" /></svg>
+                  </div>
+                  <h2 className="text-[15px] font-bold text-slate-800 tracking-tight">Terms & Conditions</h2>
+                </div>
+                <button
+                  onClick={handleSaveDefaultInfo}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-[8px] text-[12px] font-semibold text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all shadow-sm"
+                >
+                  <Save className="w-3.5 h-3.5" /> Save
+                </button>
+              </div>
+              <div className={sectionBodyClass}>
+                <div className="grid grid-cols-1 gap-4">
+                  {defaultInfoForm.terms.map((term, index) => (
+                    <div key={index} className="flex gap-3 items-start">
+                      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[12px] font-bold mt-0.5 border border-slate-200">
+                        {index + 1}
+                      </span>
+                      <div className="flex-1">
+                        <label htmlFor={`term_${index}`} className="sr-only">Term {index + 1}</label>
+                        <input
+                          id={`term_${index}`}
+                          type="text"
+                          value={term}
+                          autoComplete="off"
+                          name={`field_v_term_${index}`}
+                          onChange={(e) => handleTermsChange(index, e.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
           </div>
-          
-          <div className="p-6 space-y-4">
-            <div>
-              <label htmlFor="companyName" className="block text-sm font-medium text-slate-700 mb-1">
-                Company Name
-              </label>
-              <input
-                type="text"
-                id="companyName"
-                name="companyName"
-                value={letterheadForm.companyName}
-                onChange={handleLetterheadChange}
-                className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="gstNo" className="block text-sm font-medium text-slate-700 mb-1">
-                GST No.
-              </label>
-              <input
-                type="text"
-                id="gstNo"
-                name="gstNo"
-                value={letterheadForm.gstNo}
-                onChange={handleLetterheadChange}
-                className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="address" className="block text-sm font-medium text-slate-700 mb-1">
-                Address
-              </label>
-              <textarea
-                id="address"
-                name="address"
-                value={letterheadForm.address}
-                onChange={handleLetterheadChange}
-                rows={2}
-                className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="workshop" className="block text-sm font-medium text-slate-700 mb-1">
-                Workshop
-              </label>
-              <textarea
-                id="workshop"
-                name="workshop"
-                value={letterheadForm.workshop}
-                onChange={handleLetterheadChange}
-                rows={2}
-                className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-                Email
-              </label>
-              <input
-                type="text"
-                id="email"
-                name="email"
-                value={letterheadForm.email}
-                onChange={handleLetterheadChange}
-                className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="cell" className="block text-sm font-medium text-slate-700 mb-1">
-                Cell
-              </label>
-              <input
-                type="text"
-                id="cell"
-                name="cell"
-                value={letterheadForm.cell}
-                onChange={handleLetterheadChange}
-                className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            
-            <div className="pt-4">
-              <button
-                onClick={handleSaveLetterhead}
-                className="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-md font-medium transition-colors duration-200"
-              >
-                <Save className="h-5 w-5 mr-2" />
-                Save Letterhead
-              </button>
-            </div>
-          </div>
-          
-          {/* Letterhead Preview */}
-          <div className="p-6 border-t border-slate-200">
-            <h3 className="text-lg font-medium text-slate-800 mb-4">Preview</h3>
-            <div className="border border-slate-300 rounded-lg p-6">
-              <div className="text-center space-y-2">
-                <h1 className="text-2xl font-bold text-blue-900">{letterheadForm.companyName}</h1>
-                <p className="text-sm text-slate-600">GST No: {letterheadForm.gstNo}</p>
-                <p className="text-sm text-slate-600">{letterheadForm.address}</p>
-                <p className="text-sm text-slate-600">Workshop: {letterheadForm.workshop}</p>
-                <div className="flex justify-center space-x-4 pt-2">
-                  <p className="text-sm text-slate-600">Email: {letterheadForm.email}</p>
-                  <p className="text-sm text-slate-600">Cell: {letterheadForm.cell}</p>
+
+          {/* ── Right Column: Floating Live Preview Panel (40%) ── */}
+          <div className="w-full lg:w-[40%] lg:sticky lg:top-24 h-[calc(100vh-96px-32px)]">
+            <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-700 overflow-hidden flex flex-col h-full">
+                <div className="bg-slate-900 px-5 py-4 text-white flex justify-between items-center shrink-0">
+                  <div>
+                    <h3 className="text-lg font-bold">Live Output</h3>
+                    <p className="text-slate-400 text-xs mt-1">Snapshot of your letterhead</p>
+                  </div>
+                  {/* Download Button strictly matching Bill Library / Toolbar pattern colors */}
+                  <button
+                    onClick={handleDownloadLetterhead}
+                    disabled={downloading}
+                    className="flex items-center justify-center w-10 h-10 bg-slate-800 border border-slate-700 text-slate-200 rounded-full hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-all shadow-sm"
+                    title="Download Letterhead PDF"
+                  >
+                    {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* Actual PDF Output */}
+                <div className="bg-slate-50 flex-grow relative min-h-0">
+                  {pdfPreviewUrl ? (
+                    <iframe
+                      src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                      className="absolute inset-0 w-full h-full border-0"
+                      title="Letterhead Preview"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-slate-400 space-y-3 h-full">
+                      <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
+                      <span className="text-sm font-medium">Rendering PDF...</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
-        
-        {/* Default Information */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-800">Default Information</h2>
-            <p className="text-slate-500 text-sm mt-1">
-              This information will be pre-filled in all invoices
-            </p>
-          </div>
-          
-          <div className="p-6 space-y-4">
-            <h3 className="font-medium text-slate-800">Bank Details</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="bankName" className="block text-sm font-medium text-slate-700 mb-1">
-                  Bank Name
-                </label>
-                <input
-                  type="text"
-                  id="bankName"
-                  name="bankName"
-                  value={defaultInfoForm.bankName}
-                  onChange={handleDefaultInfoChange}
-                  className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="accountNo" className="block text-sm font-medium text-slate-700 mb-1">
-                  A/C No.
-                </label>
-                <input
-                  type="text"
-                  id="accountNo"
-                  name="accountNo"
-                  value={defaultInfoForm.accountNo}
-                  onChange={handleDefaultInfoChange}
-                  className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="ifscCode" className="block text-sm font-medium text-slate-700 mb-1">
-                  IFSC Code
-                </label>
-                <input
-                  type="text"
-                  id="ifscCode"
-                  name="ifscCode"
-                  value={defaultInfoForm.ifscCode}
-                  onChange={handleDefaultInfoChange}
-                  className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="branch" className="block text-sm font-medium text-slate-700 mb-1">
-                  Branch
-                </label>
-                <input
-                  type="text"
-                  id="branch"
-                  name="branch"
-                  value={defaultInfoForm.branch}
-                  onChange={handleDefaultInfoChange}
-                  className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-            
-            <h3 className="font-medium text-slate-800 pt-2">Additional Information</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="panNo" className="block text-sm font-medium text-slate-700 mb-1">
-                  PAN No.
-                </label>
-                <input
-                  type="text"
-                  id="panNo"
-                  name="panNo"
-                  value={defaultInfoForm.panNo}
-                  onChange={handleDefaultInfoChange}
-                  className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="msmeNo" className="block text-sm font-medium text-slate-700 mb-1">
-                  MSME No.
-                </label>
-                <input
-                  type="text"
-                  id="msmeNo"
-                  name="msmeNo"
-                  value={defaultInfoForm.msmeNo}
-                  onChange={handleDefaultInfoChange}
-                  className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-            
-            <h3 className="font-medium text-slate-800 pt-2">Terms and Conditions</h3>
-            
-            {defaultInfoForm.terms.map((term, index) => (
-              <div key={index}>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Term {index + 1}
-                </label>
-                <input
-                  type="text"
-                  value={term}
-                  onChange={(e) => handleTermsChange(index, e.target.value)}
-                  className="w-full px-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            ))}
-            
-            <div className="pt-4">
-              <button
-                onClick={handleSaveDefaultInfo}
-                className="inline-flex items-center px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-md font-medium transition-colors duration-200"
-              >
-                <Save className="h-5 w-5 mr-2" />
-                Save Default Information
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
-    </div>
-  );
+    );
 };
 
 export default TemplateSetup;

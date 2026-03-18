@@ -6,6 +6,7 @@ import { useInventoryStore } from '../stores/inventoryStore';
 import { useTemplateStore } from '../stores/templateStore';
 import { toast } from 'react-hot-toast';
 import { ArrowRight, ArrowLeft } from 'lucide-react';
+import { Skeleton } from '../components/Skeleton';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -49,11 +50,7 @@ const Login: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen bg-[length:50%_auto] lg:bg-contain bg-no-repeat bg-left flex items-center justify-center lg:justify-end p-4 md:p-8 lg:p-12 relative"
-      style={{
-        backgroundImage: "url('/Login_BG.jpg')",
-        backgroundColor: "#FFFFFF"
-      }}
+      className="min-h-screen bg-white bg-none lg:bg-[url('/Login_BG.jpg')] bg-[length:50%_auto] lg:bg-contain bg-no-repeat bg-left flex items-center justify-center lg:justify-end p-4 md:p-8 lg:p-12 relative"
     >
       {/* 3D Flip Card Container */}
       <div
@@ -76,7 +73,7 @@ const Login: React.FC = () => {
             {/* Top Image Placeholder (approx 50% height, slightly smaller width) */}
             <div className="w-[99%] h-[45%] bg-[#2E7D32]/5 rounded-2xl flex items-center justify-center overflow-hidden border border-[#2E7D32]/10 shadow-inner">
               <img
-                src="/logo.jpg"
+                src="/VMEW.jpg"
                 alt="Company Logo"
                 className="w-full h-full object-contain opacity-90"
                 onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -153,29 +150,54 @@ const Login: React.FC = () => {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col">
+            <form 
+              onSubmit={handleSubmit} 
+              className="space-y-4 flex-1 flex flex-col"
+              autoComplete="off"
+            >
+              {/* Hidden dummy fields to trick browser autofill */}
+              <input type="text" name="prevent_autofill" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
+              <input type="password" name="password_fake" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
               <div className="relative group">
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-5 py-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-[#111827] text-sm placeholder:text-gray-400 bg-gray-50/50 focus:bg-white"
-                  placeholder="Email"
-                />
+                {loading ? (
+                  <Skeleton className="h-12 w-full rounded-xl mb-4" />
+                ) : (
+                  <>
+                    <label htmlFor="login_email" className="sr-only">Email Address</label>
+                    <input
+                      id="login_email"
+                      name="field_v_email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      autoComplete="off"
+                      className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all duration-300 text-slate-900 text-sm placeholder:text-slate-400 bg-white"
+                      placeholder="Email"
+                    />
+                  </>
+                )}
               </div>
 
               <div className="relative">
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-5 py-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-[#111827] text-sm placeholder:text-gray-400 bg-gray-50/50 focus:bg-white"
-                  placeholder="Password"
-                />
+                {loading ? (
+                  <Skeleton className="h-12 w-full rounded-xl mb-4" />
+                ) : (
+                  <>
+                    <label htmlFor="login_password" className="sr-only">Password</label>
+                    <input
+                      id="login_password"
+                      name="field_v_password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      autoComplete="new-password"
+                      className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all duration-300 text-slate-900 text-sm placeholder:text-gray-400 bg-white"
+                      placeholder="Password"
+                    />
+                  </>
+                )}
               </div>
 
               <div className="flex justify-start pt-1 pb-4">

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { useAuthStore } from './stores/authStore';
+import AppSkeleton from './components/AppSkeleton';
 import { useTemplateStore } from './stores/templateStore';
 import { useInvoiceStore } from './stores/invoiceStore';
 import { useInventoryStore } from './stores/inventoryStore';
@@ -9,22 +10,33 @@ import { useInventoryStore } from './stores/inventoryStore';
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import GenerateInvoice from './pages/GenerateInvoice';
-import InvoiceLibrary from './pages/InvoiceLibrary';
+import GenerateBills from './pages/GenerateBills';
+import BillLibrary from './pages/BillLibrary';
 import Inventory from './pages/Inventory';
 import TemplateSetup from './pages/TemplateSetup';
 import InvoicePreview from './pages/InvoicePreview';
+import DCPreview from './pages/DCPreview';
+import QuotationPreview from './pages/QuotationPreview';
+import PurchaseOrderWorkspace from './pages/PurchaseOrderWorkspace';
+import PurchaseOrderLibrary from './pages/PurchaseOrderLibrary';
+import PurchaseOrderForm from './components/PurchaseOrderForm';
+import PurchaseOrderPreview from './pages/PurchaseOrderPreview';
 
 // Components
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
-  const { isAuthenticated, loading } = useAuthStore();
+  const { isAuthenticated, loading, isInitializing, checkAuth } = useAuthStore();
   const { fetchTemplateData } = useTemplateStore();
   const { clearInvoices } = useInvoiceStore();
   const { clearInventory } = useInventoryStore();
   const { clearTemplates } = useTemplateStore();
+
+  // Initialize auth
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   // Fetch templates when the user is authenticated
   useEffect(() => {
@@ -93,6 +105,10 @@ function App() {
     };
   }, []);
 
+  if (isInitializing) {
+    return <AppSkeleton />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -106,20 +122,27 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
-          
+
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/generate-invoice" element={<GenerateInvoice />} />
-              <Route path="/invoice-library" element={<InvoiceLibrary />} />
+              <Route path="/generate-bills" element={<GenerateBills />} />
+              <Route path="/bill-library" element={<BillLibrary />} />
+              <Route path="/purchase-order" element={<PurchaseOrderWorkspace />}>
+                <Route index element={<PurchaseOrderLibrary />} />
+                <Route path="new" element={<PurchaseOrderForm />} />
+              </Route>
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/template-setup" element={<TemplateSetup />} />
               <Route path="/invoice-preview/:id" element={<InvoicePreview />} />
+              <Route path="/dc-preview/:id" element={<DCPreview />} />
+              <Route path="/quotation-preview/:id" element={<QuotationPreview />} />
+              <Route path="/po-preview/:id" element={<PurchaseOrderPreview />} />
             </Route>
           </Route>
         </Routes>
       </Router>
-      
+
       <Toaster
         position="top-right"
         toastOptions={{

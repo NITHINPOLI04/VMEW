@@ -1,4 +1,4 @@
-import { Invoice, InvoiceFormData, InventoryItem, Letterhead, DefaultInfo } from '../types/index';
+import { Invoice, InvoiceFormData, InventoryItem, Letterhead, DefaultInfo, Supplier, Customer, PurchaseOrder, PurchaseOrderFormData } from '../types/index';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -128,3 +128,51 @@ export const deleteInventoryItem = (id: string, token: string) =>
 // Utility API
 export const convertNumberToWords = (number: number) =>
   apiRequest<{ words: string }>('/api/utils/number-to-words', 'POST', { number });
+
+// Supplier APIs
+export const getSuppliers = (token: string) =>
+  apiRequest<Supplier[]>('/api/suppliers', 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const createSupplier = (supplierData: Omit<Supplier, '_id' | 'createdAt' | 'updatedAt'>, token: string) =>
+  apiRequest<Supplier>('/api/suppliers', 'POST', supplierData, {
+    Authorization: `Bearer ${token}`,
+  });
+
+// Customer APIs
+export const getCustomers = (token: string) =>
+  apiRequest<Customer[]>('/api/customers', 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const createCustomer = (customerData: Omit<Customer, '_id' | 'createdAt' | 'updatedAt'>, token: string) =>
+  apiRequest<Customer>('/api/customers', 'POST', customerData, {
+    Authorization: `Bearer ${token}`,
+  });
+
+// Purchase Order APIs
+export const getPurchaseOrders = (year: string, token: string) =>
+  apiRequest<PurchaseOrder[]>('/api/po/' + year, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const getPurchaseOrderById = (id: string, token: string) =>
+  apiRequest<PurchaseOrder>('/api/po/id/' + id, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const createPurchaseOrder = (poData: PurchaseOrderFormData, token: string) =>
+  apiRequest<PurchaseOrder>('/api/po', 'POST', poData, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const updatePurchaseOrder = (id: string, poData: PurchaseOrderFormData, token: string) =>
+  apiRequest<PurchaseOrder>('/api/po/' + id, 'PUT', poData, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const deletePurchaseOrder = (id: string, token: string) =>
+  apiRequest<void>('/api/po/' + id, 'DELETE', undefined, {
+    Authorization: `Bearer ${token}`,
+  });

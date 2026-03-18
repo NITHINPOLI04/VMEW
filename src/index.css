@@ -1,53 +1,599 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer components {
-  .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2;
+@layer base {
+  * {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
   }
-  
-  .btn-primary {
-    @apply btn bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white shadow-lg shadow-blue-900/20 focus:ring-blue-500;
+
+  body {
+    @apply bg-slate-100 text-slate-900 antialiased;
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
-  
-  .btn-secondary {
-    @apply btn bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 focus:ring-slate-500;
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
-  
-  .btn-success {
-    @apply btn bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg shadow-emerald-600/20 focus:ring-emerald-500;
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-100;
   }
-  
-  .btn-danger {
-    @apply btn bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white shadow-lg shadow-red-600/20 focus:ring-red-500;
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
   }
-  
-  .btn-warning {
-    @apply btn bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-white shadow-lg shadow-amber-500/20 focus:ring-amber-500;
-  }
-  
-  .btn-sm {
-    @apply px-3 py-1.5 text-sm rounded-lg;
-  }
-  
-  .btn-lg {
-    @apply px-6 py-3 text-lg rounded-2xl;
-  }
-  
-  .input {
-    @apply w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
-  }
-  
-  .input-icon {
-    @apply pl-10;
-  }
-  
-  .select {
-    @apply w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
-  }
-  
-  .card {
-    @apply bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100;
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
   }
 }
+
+@layer components {
+  /* ─── Buttons ─────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm shadow-blue-600/20 focus:ring-blue-500;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 border border-slate-200 shadow-sm focus:ring-slate-400;
+  }
+
+  .btn-success {
+    @apply btn bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm shadow-emerald-600/20 focus:ring-emerald-500;
+  }
+
+  .btn-danger {
+    @apply btn bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-sm shadow-rose-600/20 focus:ring-rose-500;
+  }
+
+  .btn-warning {
+    @apply btn bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white shadow-sm focus:ring-amber-400;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent hover:bg-slate-100 text-slate-600 focus:ring-slate-300;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs rounded-md;
+  }
+
+  .btn-lg {
+    @apply px-5 py-2.5 text-base rounded-xl;
+  }
+
+  /* ─── Cards ──────────────────────────────────── */
+  .card {
+    @apply bg-white rounded-xl border border-slate-200 shadow-sm;
+  }
+
+  .card-header {
+    @apply px-6 py-4 border-b border-slate-100;
+  }
+
+  .card-body {
+    @apply p-6;
+  }
+
+  /* ─── Form Inputs ────────────────────────────── */
+  .input {
+    @apply w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400
+           focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all duration-300;
+  }
+
+  /* Autofill Overrides */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #0f172a; /* text-slate-900 */
+    -webkit-box-shadow: 0 0 0px 1000px #ffffff inset;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  .input-icon {
+    @apply pl-9;
+  }
+
+  .select {
+    @apply w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-900
+           focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all duration-300;
+  }
+
+  /* ─── Labels ─────────────────────────────────── */
+  .label {
+    @apply block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide;
+  }
+
+  /* ─── Badges ─────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .badge-success {
+    @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200;
+  }
+
+  .badge-warning {
+    @apply badge bg-amber-50 text-amber-700 border border-amber-200;
+  }
+
+  .badge-danger {
+    @apply badge bg-rose-50 text-rose-700 border border-rose-200;
+  }
+
+  .badge-info {
+    @apply badge bg-blue-50 text-blue-700 border border-blue-200;
+  }
+
+  .badge-neutral {
+    @apply badge bg-slate-100 text-slate-600 border border-slate-200;
+  }
+
+  /* ─── Table ──────────────────────────────────── */
+  .saas-table {
+    @apply w-full text-sm;
+  }
+
+  .saas-table thead {
+    @apply bg-slate-50 border-b border-slate-200;
+  }
+
+  .saas-table thead th {
+    @apply px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider;
+  }
+
+  .saas-table tbody tr {
+    @apply border-b border-slate-100 hover:bg-slate-50/70 transition-colors;
+  }
+
+  .saas-table tbody td {
+    @apply px-4 py-3.5 text-slate-700;
+  }
+
+  /* ─── Mobile Table Card View ─────────────────── */
+  @media (max-width: 768px) {
+    .saas-table thead {
+      display: none;
+    }
+    
+    .saas-table tbody tr {
+      display: block;
+      margin-bottom: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      padding: 0.5rem;
+      background-color: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .saas-table tbody td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0.5rem;
+      border-bottom: 1px solid #f1f5f9;
+      text-align: right;
+    }
+    
+    .saas-table tbody td:last-child {
+      border-bottom: none;
+    }
+    
+    .saas-table tbody td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      color: #64748b;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      text-align: left;
+      margin-right: 1rem;
+    }
+  }
+
+  /* ─── Page Header ────────────────────────────── */
+  .page-header {
+    @apply flex items-start justify-between mb-6;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-slate-900 tracking-tight;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-slate-500 mt-0.5;
+  }
+
+  /* ─── Section ────────────────────────────────── */
+  .section-label {
+    @apply text-xs font-bold text-slate-400 uppercase tracking-widest px-3 mb-1;
+  }
+
+  /* ─── Toolbar ────────────────────────────────── */
+  .toolbar {
+    @apply flex flex-wrap items-center gap-3 px-5 py-3.5 bg-slate-50/80 border-b border-slate-200;
+  }
+
+  /* ─── Metric Card ────────────────────────────── */
+  .metric-card {
+    @apply card p-5 flex items-start gap-4;
+  }
+
+  .metric-icon {
+    @apply w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0;
+  }
+
+  .metric-value {
+    @apply text-2xl font-bold text-slate-900 leading-none;
+  }
+
+  .metric-label {
+    @apply text-xs font-medium text-slate-500 mt-1;
+  }
+
+  /* ─── Sidebar Nav ────────────────────────────── */
+  .nav-item {
+    @apply relative flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer;
+  }
+
+  .nav-item-active {
+    @apply bg-blue-50 text-blue-700;
+  }
+
+  .nav-item-inactive {
+    @apply text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+  }
+
+  /* ─── Dropdowns & Menus ──────────────────────── */
+  .dropdown-panel {
+    @apply absolute z-40 bg-slate-100/90 backdrop-blur-md border border-slate-200/60 p-1.5 rounded-2xl shadow-xl flex flex-col gap-1 min-w-[160px];
+  }
+
+  .dropdown-item {
+    @apply flex items-center gap-2.5 w-full px-3 py-2.5 text-sm font-medium text-slate-700 bg-white rounded-xl hover:bg-slate-50 transition-colors shadow-sm shadow-slate-200/20 border border-slate-100/50;
+  }
+
+  .dropdown-item-active {
+    @apply bg-blue-50 text-blue-700 border-blue-100/50 shadow-blue-100/20;
+  }
+
+  .dropdown-item-danger {
+    @apply text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100/50 shadow-rose-100/20;
+  }
+
+  /* ─── Stat Badge ─────────────────────────────── */
+  .stat-up {
+    @apply text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full;
+  }
+
+  .stat-down {
+    @apply text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full;
+  }
+
+  /* ═══════════════════════════════════════════════
+     PREMIUM DASHBOARD (ZERO SCROLL)
+     ═══════════════════════════════════════════════ */
+
+  .dash-premium {
+    @apply flex flex-col gap-3.5 w-full;
+    height: auto;
+    overflow-y: auto;
+  }
+  
+  @media (min-width: 768px) {
+    .dash-premium {
+      height: calc(100vh - 48px);
+      overflow: hidden;
+    }
+  }
+
+  /* ─── Smart Insight Cards ─────────────────────── */
+  .insight-card {
+    @apply flex flex-col p-3.5 bg-white rounded-2xl border border-slate-200/50 transition-all duration-300 relative overflow-hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  }
+
+  .insight-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
+  }
+  
+  .insight-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .insight-grad-green::before { background: linear-gradient(135deg, rgba(16,185,129,0.04), transparent); }
+  .insight-grad-blue::before { background: linear-gradient(135deg, rgba(59,130,246,0.04), transparent); }
+  .insight-grad-orange::before { background: linear-gradient(135deg, rgba(249,115,22,0.04), transparent); }
+  .insight-grad-teal::before { background: linear-gradient(135deg, rgba(20,184,166,0.04), transparent); }
+
+  /* ─── Hero Chart Card ─────────────────────────── */
+  .hero-chart-card {
+    @apply relative rounded-2xl overflow-hidden shadow-sm border border-slate-200/60 w-full;
+    background: #fff;
+    padding: 20px 20px 12px;
+  }
+
+  .hero-chart-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(59,130,246,0.02) 0%, rgba(20,184,166,0.015) 50%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* ─── Growth Badge ────────────────────────────── */
+  .growth-badge {
+    @apply inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm border border-white/40;
+  }
+
+  .growth-badge-up {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    color: #059669;
+  }
+
+  .growth-badge-down {
+    background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+    color: #e11d48;
+  }
+
+  /* ─── Toggle Group ────────────────────────────── */
+  .toggle-group {
+    @apply inline-flex items-center rounded-lg p-0.5;
+    background: rgba(241, 245, 249, 0.9);
+    border: 1px solid rgba(226, 232, 240, 0.6);
+  }
+
+  .toggle-btn {
+    @apply px-3 py-1 text-[11px] font-semibold rounded-md transition-all duration-300 text-slate-500;
+    @apply hover:text-slate-700;
+  }
+
+  .toggle-btn-active {
+    @apply bg-white text-slate-800;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+
+  /* ─── Action Hub Cards (Compact) ──────────────── */
+  .action-hub-card {
+    @apply flex flex-row items-center gap-3 p-3 rounded-[14px] border cursor-pointer transition-all duration-300 overflow-hidden relative;
+    @apply hover:scale-[1.02] shadow-sm;
+  }
+
+  .action-hub-icon {
+    @apply w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-300 shadow-sm border border-white/60;
+  }
+
+  /* Compact Gradients */
+  .action-hub-blue {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-color: rgba(226, 232, 240, 0.8);
+  }
+  .action-hub-blue:hover {
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border-color: rgba(147, 197, 253, 0.6);
+  }
+  .action-hub-blue .action-hub-icon {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #1d4ed8;
+  }
+
+  .action-hub-emerald {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-color: rgba(226, 232, 240, 0.8);
+  }
+  .action-hub-emerald:hover {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border-color: rgba(110, 231, 183, 0.6);
+  }
+  .action-hub-emerald .action-hub-icon {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    color: #047857;
+  }
+
+  .action-hub-amber {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-color: rgba(226, 232, 240, 0.8);
+  }
+  .action-hub-amber:hover {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    border-color: rgba(253, 230, 138, 0.6);
+  }
+  .action-hub-amber .action-hub-icon {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #b45309;
+  }
+
+  .action-hub-teal {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-color: rgba(226, 232, 240, 0.8);
+  }
+  .action-hub-teal:hover {
+    background: linear-gradient(135deg, #f0fdfa, #ccfbf1);
+    border-color: rgba(94, 234, 212, 0.6);
+  }
+  .action-hub-teal .action-hub-icon {
+    background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+    color: #0f766e;
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* ─── Date Picker Reset ──────────────────────── */
+  input[type="date"] {
+    position: relative;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: auto;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  /* ─── Custom DatePicker Styling (Image 2 Match) ────────────────── */
+  .react-datepicker-wrapper {
+    width: 100%;
+  }
+
+  .datepicker-popper-overlay {
+    z-index: 10000 !important;
+  }
+
+  .react-datepicker {
+    font-family: 'Inter', sans-serif;
+    border: 1px solid #f1f5f9;
+    border-radius: 1.25rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    z-index: 9999;
+  }
+
+  .react-datepicker__header {
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  .react-datepicker__day-name {
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.75rem;
+    width: 2.25rem;
+    margin: 0.125rem;
+  }
+
+  .react-datepicker__day {
+    color: #334155;
+    font-weight: 500;
+    font-size: 0.875rem;
+    width: 2.25rem;
+    line-height: 2.25rem;
+    margin: 0.125rem;
+    border-radius: 0.5rem;
+  }
+
+  .react-datepicker__day:hover {
+    background-color: #f1f5f9;
+  }
+
+  .react-datepicker__day--selected {
+    background-color: #cbd5e1 !important;
+    color: #0f172a !important;
+    font-weight: 600 !important;
+  }
+
+  .react-datepicker__day--keyboard-selected {
+    background-color: #e2e8f0;
+    color: #0f172a;
+  }
+
+  .react-datepicker__day--today {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-weight: 600;
+    position: relative;
+  }
+
+  .react-datepicker__day--today::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background-color: #0f172a;
+    border-radius: 50%;
+  }
+
+  .react-datepicker__month {
+    margin: 0.5rem;
+  }
+
+  .react-datepicker__month {
+    margin: 0.5rem;
+  }
+
+  /* ─── Selection Grid View ────────────────────── */
+  .datepicker-selection-view .react-datepicker__month,
+  .datepicker-selection-view .react-datepicker__day-names {
+    display: none;
+  }
+
+  .selection-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.625rem;
+    padding: 1rem;
+    min-width: 250px;
+    background-color: #f8fafc; /* Very light grey background */
+  }
+
+  .selection-grid-years {
+    grid-template-columns: repeat(3, 1fr); /* 3 columns for better spacing */
+  }
+
+  .selection-item {
+    @apply flex items-center justify-center py-2.5 px-2 text-sm font-semibold rounded-xl border border-slate-100 shadow-sm transition-all duration-200 bg-white;
+    @apply text-slate-600 hover:border-blue-200 hover:bg-blue-50/50 hover:text-blue-600;
+  }
+
+  .selection-item-active {
+    @apply bg-blue-600 text-white border-blue-600 shadow-blue-200 hover:bg-blue-700 hover:text-white hover:border-blue-700 !important;
+  }
+}
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s infinite linear;
+  background: linear-gradient(to right, #f8fafc 4%, #f1f5f9 25%, #f8fafc 36%);
+  background-size: 1000px 100%;
+}
+

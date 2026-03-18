@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import AppSkeleton from './AppSkeleton';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useInvoiceStore } from '../stores/invoiceStore';
@@ -6,7 +7,7 @@ import { useInventoryStore } from '../stores/inventoryStore';
 import { useTemplateStore } from '../stores/templateStore';
 
 const ProtectedRoute: React.FC = () => {
-  const { isAuthenticated, loading } = useAuthStore();
+  const { isAuthenticated, loading, isInitializing } = useAuthStore();
   const fetchInvoices = useInvoiceStore((state) => state.fetchInvoices);
   const fetchInventory = useInventoryStore((state) => state.fetchInventory);
   const fetchTemplateData = useTemplateStore((state) => state.fetchTemplateData);
@@ -21,12 +22,8 @@ const ProtectedRoute: React.FC = () => {
     }
   }, [isAuthenticated, fetchInvoices, fetchInventory, fetchTemplateData]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-900"></div>
-      </div>
-    );
+  if (isInitializing || (isAuthenticated && loading)) {
+    return <AppSkeleton />;
   }
 
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" />;

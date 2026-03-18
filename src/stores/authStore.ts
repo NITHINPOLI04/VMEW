@@ -6,7 +6,9 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
+  isInitializing: boolean;
   error: string | null;
+  checkAuth: () => void;
   signup: (email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -17,15 +19,40 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   isAuthenticated: false,
   loading: false,
+  isInitializing: true,
   error: null,
+
+  checkAuth: () => {
+    const token = localStorage.getItem('token');
+    const userJson = localStorage.getItem('user');
+    if (token && userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        set({ 
+          user, 
+          token, 
+          isAuthenticated: true, 
+          isInitializing: false 
+        });
+      } catch (error) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        set({ isInitializing: false });
+      }
+    } else {
+      set({ isInitializing: false });
+    }
+  },
   
   signup: async (email, password) => {
     try {
       set({ loading: true, error: null });
       const { token, userId, email: userEmail } = await signup(email, password);
+      const user = { userId, email: userEmail };
       localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       set({ 
-        user: { userId, email: userEmail }, 
+        user, 
         token,
         isAuthenticated: true, 
         loading: false 
@@ -42,9 +69,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       try {
         set({ loading: true, error: null });
         const { token, userId, email: userEmail } = await login(email, password);
+        const user = { userId, email: userEmail };
         localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
         set({ 
-          user: { userId, email: userEmail }, 
+          user, 
           token,
           isAuthenticated: true, 
           loading: false 
@@ -65,6 +94,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ loading: true, error: null });
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       set({ 
         user: null, 
         token: null,

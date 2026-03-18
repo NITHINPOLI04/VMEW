@@ -1,2 +1,0 @@
-u/n: vmew-user
-p/w: vmew@1234
