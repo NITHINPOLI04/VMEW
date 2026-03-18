@@ -12,12 +12,12 @@ import { useContactStore } from '../stores/contactStore';
 import { Invoice, DeliveryChallan, Quotation } from '../types';
 import { toast } from 'react-hot-toast';
 import { usePopper } from 'react-popper';
-import * as XLSX from 'xlsx-js-style';
 import CustomSelect from '../components/CustomSelect';
 import CustomDatePicker from '../components/CustomDatePicker';
 import { useNavigate } from 'react-router-dom';
 import { parseISO, format } from 'date-fns';
 import TableSkeleton from '../components/TableSkeleton';
+import { exportStandardExcel, exportGroupedExcel } from '../utils/excelExport';
 
 type TabType = 'invoice' | 'dc' | 'quotation';
 type SortKey = 'newest' | 'oldest' | 'amount-high' | 'amount-low';
@@ -133,6 +133,10 @@ const BillLibrary: React.FC = () => {
 
   // ── Delete modal ───────────────────────────────────────────────────────────
   const [deleteModalOpen, setDeleteModalOpen] = useState<{ id: string; type: TabType } | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportBtnRef = useRef<HTMLButtonElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
+
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const filterPanelRef = useRef<HTMLDivElement>(null);
   const filterBtnRef = useRef<HTMLButtonElement>(null);
@@ -193,13 +197,16 @@ const BillLibrary: React.FC = () => {
       if (sortRef.current && sortBtnRef.current && !sortRef.current.contains(target) && !sortBtnRef.current.contains(target)) {
         setSortOpen(false);
       }
+      if (exportRef.current && exportBtnRef.current && !exportRef.current.contains(target) && !exportBtnRef.current.contains(target)) {
+        setExportOpen(false);
+      }
       if (createMenuRef.current && !createMenuRef.current.contains(target)) {
         setCreateMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [filterPanelOpen, sortOpen, createMenuOpen]);
+  }, [filterPanelOpen, sortOpen, exportOpen, createMenuOpen]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -260,6 +267,12 @@ const BillLibrary: React.FC = () => {
       toast.success('Payment status updated');
       setDropdownOpenId(null);
     } catch { toast.error('Failed to update payment status'); }
+  };
+
+  const handleDownload = (item: any) => {
+    if (activeTab === 'invoice') navigate(`/invoice-preview/${item._id}?action=download`);
+    else if (activeTab === 'dc') navigate(`/dc-preview/${item._id}?action=download`);
+    else if (activeTab === 'quotation') navigate(`/quotation-preview/${item._id}?action=download`);
   };
 
   // ── Apply filters ───────────────────────────────────────────────────────────
@@ -348,7 +361,7 @@ const BillLibrary: React.FC = () => {
   const currentMetrics = activeTab === 'invoice' ? invoiceMetrics : activeTab === 'dc' ? dcMetrics : quotationMetrics;
 
   // ── Export ──────────────────────────────────────────────────────────────────
-  const exportToExcel = () => {
+  const handleStandardExport = () => {
     if (activeTab !== 'invoice') return toast.error('Export supported for invoices only');
     const exportData = sortedItems.map((invoice: any, index) => {
       const totalTaxable = invoice.items.reduce((s: number, item: any) => s + (item.taxableAmount || 0), 0);
@@ -369,15 +382,44 @@ const BillLibrary: React.FC = () => {
         'Grand Total': invoice.grandTotal,
       };
     });
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const addr = XLSX.utils.encode_cell({ r: 0, c: C });
-      if (ws[addr]) ws[addr].s = { font: { bold: true } };
-    }
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Invoices');
-    XLSX.writeFile(wb, `Invoices_${selectedYear.replace('-', '_')}.xlsx`);
+    
+    exportStandardExcel(exportData, 'Invoices', `Invoices_${selectedYear.replace('-', '_')}.xlsx`);
+    toast.success('Exported successfully!');
+  };
+
+  const handleGroupedExport = () => {
+    if (activeTab !== 'invoice') return toast.error('Export supported for invoices only');
+    
+    let allItems: any[] = [];
+    
+    sortedItems.forEach((invoice: any) => {
+      const isIgst = invoice.taxType === 'igst';
+      
+      invoice.items.forEach((item: any, itemIndex: number) => {
+        allItems.push({
+          'Invoice No': invoice.invoiceNumber,
+          'Date': new Date(invoice.date).toLocaleDateString('en-IN'),
+          'Buyer Name': invoice.buyerName,
+          'Buyer GST': invoice.buyerGst || '',
+          'S.No': itemIndex + 1,
+          'Description': item.description,
+          'HSN/SAC Code': item.hsnSacCode || '',
+          'Qty': item.quantity,
+          'Unit': item.unit,
+          'Rate': item.rate,
+          'Taxable Amount': item.taxableAmount || 0,
+          'IGST %': isIgst ? item.igstPercentage || 0 : 0,
+          'IGST Amount': isIgst ? item.igstAmount || 0 : 0,
+          'SGST %': isIgst ? 0 : item.sgstPercentage || 0,
+          'SGST Amount': isIgst ? 0 : item.sgstAmount || 0,
+          'CGST %': isIgst ? 0 : item.cgstPercentage || 0,
+          'CGST Amount': isIgst ? 0 : item.cgstAmount || 0,
+          'Item Total': (item.taxableAmount || 0) + (item.igstAmount || 0) + (item.sgstAmount || 0) + (item.cgstAmount || 0)
+        });
+      });
+    });
+
+    exportGroupedExcel(allItems, 'HSN Summary', `HSN_Summary_Sheet_Invoices_${selectedYear.replace('-', '_')}.xlsx`);
     toast.success('Exported successfully!');
   };
 
@@ -486,11 +528,10 @@ const BillLibrary: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
             <input
               type="text"
-              placeholder={`Search ${activeTab === 'dc' ? 'challans' : activeTab + 's'}...`}
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               autoComplete="off"
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-400"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-slate-900"
             />
           </div>
 
@@ -522,7 +563,6 @@ const BillLibrary: React.FC = () => {
                   {/* Customer */}
                   <CustomSelect
                     value={stagedCustomer}
-                    placeholder="All Customers"
                     options={[
                       { value: '', label: 'All Customers' },
                       ...Array.from(new Set(
@@ -538,7 +578,6 @@ const BillLibrary: React.FC = () => {
                   {activeTab === 'invoice' && (
                     <CustomSelect
                       value={stagedStatus}
-                      placeholder="All Statuses"
                       options={[
                         { value: '', label: 'All Statuses' },
                         { value: 'Payment Complete', label: 'Payment Complete', colorClass: 'text-emerald-700', bgClass: 'bg-emerald-50' },
@@ -556,14 +595,12 @@ const BillLibrary: React.FC = () => {
                       <CustomDatePicker
                         selected={stagedFromDate ? parseISO(stagedFromDate) : null}
                         onChange={(date) => setStagedFromDate(date ? format(date, 'yyyy-MM-dd') : '')}
-                        placeholderText="From"
                       />
                     </div>
                     <div className="relative flex-1 min-w-0">
                       <CustomDatePicker
                         selected={stagedToDate ? parseISO(stagedToDate) : null}
                         onChange={(date) => setStagedToDate(date ? format(date, 'yyyy-MM-dd') : '')}
-                        placeholderText="To"
                       />
                     </div>
                   </div>
@@ -605,9 +642,34 @@ const BillLibrary: React.FC = () => {
 
             {/* Export */}
             {activeTab === 'invoice' && (
-              <button onClick={exportToExcel} disabled={loading || sortedItems.length === 0} className="btn btn-secondary btn-sm">
-                <Download className="h-3.5 w-3.5" /> Export
-              </button>
+              <div className="relative">
+                <button
+                  ref={exportBtnRef}
+                  onClick={() => setExportOpen(o => !o)}
+                  disabled={loading || sortedItems.length === 0}
+                  className={`btn btn-secondary btn-sm gap-1.5 ${exportOpen ? 'border-blue-400 text-blue-600 bg-blue-50' : ''}`}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Export
+                  <ChevronDown size={11} className="opacity-60" />
+                </button>
+                {exportOpen && (
+                  <div ref={exportRef} className="dropdown-panel right-0 top-full mt-2 w-56 z-50">
+                    <button
+                      onClick={() => { handleStandardExport(); setExportOpen(false); }}
+                      className="dropdown-item"
+                    >
+                      Export (Standard)
+                    </button>
+                    <button
+                      onClick={() => { handleGroupedExport(); setExportOpen(false); }}
+                      className="dropdown-item"
+                    >
+                      Export (Grouped by HSN)
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -689,7 +751,6 @@ const BillLibrary: React.FC = () => {
                                           value={invoiceStore.getReceivedAmount(item._id) || ''}
                                           onChange={(e) => invoiceStore.setReceivedAmount(item._id, Number(e.target.value))}
                                           className="w-full border border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-800 transition-shadow outline-none"
-                                          placeholder="0.00"
                                         />
                                       </div>
                                       <p className="text-sm text-slate-700">
@@ -707,9 +768,13 @@ const BillLibrary: React.FC = () => {
                             <Link to={`/generate-bills?type=${activeTab}&edit=${item._id}`} onClick={(e) => e.stopPropagation()} className="text-slate-400 hover:text-emerald-600 p-1.5 rounded-md hover:bg-emerald-50 transition-colors" title="Edit">
                               <Edit className="h-4 w-4" />
                             </Link>
-                            <Link to={`/${linkType}-preview/${item._id}?action=download`} onClick={(e) => e.stopPropagation()} className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-md hover:bg-indigo-50 transition-colors" title="Download">
-                              <Download className="h-4 w-4" />
-                            </Link>
+                             <button
+                               onClick={(e) => { e.stopPropagation(); handleDownload(item); }}
+                               className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-md hover:bg-indigo-50 transition-colors"
+                               title="Download"
+                             >
+                               <Download className="h-4 w-4" />
+                             </button>
                             <button onClick={(e) => { e.stopPropagation(); setDeleteModalOpen({ id: item._id, type: activeTab }); }} className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors" title="Delete">
                               <Trash2 className="h-4 w-4" />
                             </button>

@@ -163,17 +163,17 @@ const Login: React.FC = () => {
                   <Skeleton className="h-12 w-full rounded-xl mb-4" />
                 ) : (
                   <>
-                    <label htmlFor="login_email" className="sr-only">Email Address</label>
-                    <input
-                      id="login_email"
-                      name="field_v_email"
+                    <label htmlFor="email" className="sr-only">Email Address</label>
+                      <input
+                      id="email"
+                      name="email"
                       type="email"
+                      required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoComplete="off"
-                      className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all duration-300 text-slate-900 text-sm placeholder:text-slate-400 bg-white"
-                      placeholder="Email"
+                      className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                      placeholder="name@company.com"
+                      autoComplete="email"
                     />
                   </>
                 )}
@@ -184,17 +184,17 @@ const Login: React.FC = () => {
                   <Skeleton className="h-12 w-full rounded-xl mb-4" />
                 ) : (
                   <>
-                    <label htmlFor="login_password" className="sr-only">Password</label>
-                    <input
-                      id="login_password"
-                      name="field_v_password"
+                    <label htmlFor="password" className="sr-only">Password</label>
+                      <input
+                      id="password"
+                      name="password"
                       type="password"
+                      required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      required
-                      autoComplete="new-password"
-                      className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all duration-300 text-slate-900 text-sm placeholder:text-gray-400 bg-white"
-                      placeholder="Password"
+                      className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                      placeholder="••••••••"
+                      autoComplete="current-password"
                     />
                   </>
                 )}

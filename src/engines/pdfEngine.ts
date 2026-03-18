@@ -526,3 +526,39 @@ export const buildBankDetails = (
     { label: 'IFSC Code:', value: defaultInfo?.ifscCode || 'SBIN0015580' },
     { label: 'Branch:', value: defaultInfo?.branch || 'ASILMETTA' }
   ];
+
+/**
+ * Draws the "Authorized Signatory" box with proper text wrapping for long company names.
+ * Ensures "For [Company Name]" is at the top and "Authorized Signatory" is at the bottom right.
+ */
+export const drawSignatoryBox = (
+  pdf: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  companyName: string
+): void => {
+  pdf.setDrawColor(200, 200, 200);
+  pdf.setFillColor(250, 250, 250);
+  pdf.roundedRect(x, y, width, height, 3, 3, 'FD');
+
+  const padding = 4;
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9);
+  pdf.setTextColor(30, 64, 175);
+
+  const fullText = `For ${companyName}`;
+  const lines = pdf.splitTextToSize(fullText, width - padding * 2);
+  
+  let currentY = y + 6;
+  lines.forEach((line: string) => {
+    pdf.text(line, x + padding, currentY);
+    currentY += 4;
+  });
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.setTextColor(15, 23, 42);
+  pdf.text('Authorized Signatory', x + width - padding, y + height - 4, { align: 'right' });
+};

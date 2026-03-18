@@ -187,7 +187,7 @@ const BillForm: React.FC<BillFormProps> = ({
                     />
 
                     {/* Items Section - Inline Table Style */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
                         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                             <div className="flex items-center gap-2">
                                 <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -240,7 +240,6 @@ const BillForm: React.FC<BillFormProps> = ({
                                                 value={item.description}
                                                 onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                                 required
-                                                placeholder="Item description..."
                                                 rows={2}
                                                 autoComplete="off"
                                                 name={`field_v_item_desc_${index}`}
@@ -268,7 +267,6 @@ const BillForm: React.FC<BillFormProps> = ({
                                                 value={item.hsnSacCode}
                                                 onChange={(e) => handleItemChange(index, 'hsnSacCode', e.target.value)}
                                                 required={billType === 'invoice'}
-                                                placeholder="e.g. 998313"
                                                 autoComplete="off"
                                                 name={`field_v_hsn_${index}`}
                                                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 bg-white"
@@ -319,7 +317,6 @@ const BillForm: React.FC<BillFormProps> = ({
                                                         min="0"
                                                         step="0.01"
                                                         required
-                                                        placeholder="0.00"
                                                         autoComplete="off"
                                                         name={`field_v_rate_${index}`}
                                                         className="w-full pl-7 pr-3 py-2 text-sm rounded-lg border border-slate-200 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 bg-white font-medium"

@@ -93,6 +93,7 @@ export const getInitialPO = () => ({
     items: [{
         id: Date.now().toString(),
         description: '',
+        hsnSacCode: '',
         quantity: 1,
         unit: 'Nos',
         rate: 0,

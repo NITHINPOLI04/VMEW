@@ -18,6 +18,7 @@ import {
     drawDocTitle,
     drawDocMetaRow,
     drawTwoColumnDetails,
+    drawSignatoryBox,
 } from '../engines/pdfEngine';
 
 const DCPreview: React.FC = () => {
@@ -164,11 +165,11 @@ const DCPreview: React.FC = () => {
                     fillColor: [248, 250, 252],
                 },
                 columnStyles: {
-                    0: { cellWidth: 12 },
-                    1: { cellWidth: 120 },
-                    2: { cellWidth: 21 },
-                    3: { cellWidth: 12 },
-                    4: { cellWidth: 15 },
+                    0: { cellWidth: 12, halign: 'left' },
+                    1: { cellWidth: 120, halign: 'left' },
+                    2: { cellWidth: 21, halign: 'right' },
+                    3: { cellWidth: 12, halign: 'right' },
+                    4: { cellWidth: 15, halign: 'right' },
                 },
                 theme: 'grid',
                 didParseCell: (data: any) => {
@@ -209,28 +210,17 @@ const DCPreview: React.FC = () => {
             pdf.text('Signature:', margin + 4, finalY + 22);
             pdf.text('Date:', margin + 4, finalY + 27);
 
-            // Signatory box
-            const rightBoxBottomX = margin + leftBoxBottomWidth + boxGap;
-            pdf.setDrawColor(200, 200, 200);
-            pdf.setFillColor(250, 250, 250);
-            pdf.roundedRect(rightBoxBottomX, finalY, rightBoxBottomWidth, maxBoxHeight, 3, 3, 'FD');
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(10);
-            pdf.setTextColor(30, 64, 175);
-            const companyName = letterhead?.companyName || 'Venkateswara Marine Electrical Works';
-            const companyLines = pdf.splitTextToSize('For ' + companyName, rightBoxBottomWidth - 6);
-            let cy = finalY + 6;
-            pdf.setFontSize(8);
-            pdf.setTextColor(15, 23, 42);
-            pdf.setFont('helvetica', 'bold');
-            companyLines.forEach((line: string) => {
-                pdf.text(line, rightBoxBottomX + 4, cy);
-                cy += 4;
-            });
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(8);
-            pdf.setTextColor(15, 23, 42);
-            pdf.text('Authorized Signatory', rightBoxBottomX + rightBoxBottomWidth - 4, finalY + maxBoxHeight - 4, { align: 'right' });
+            const signatoryBoxWidth = rightBoxBottomWidth;
+            const signatoryBoxHeight = maxBoxHeight;
+            const signatoryBoxX = margin + leftBoxBottomWidth + boxGap;
+            drawSignatoryBox(
+                pdf,
+                signatoryBoxX,
+                finalY,
+                signatoryBoxWidth,
+                signatoryBoxHeight,
+                letterhead?.companyName || 'Venkateswara Marine Electrical Works'
+            );
 
             // Footer with separator line
             const totalPages = (pdf as any).internal.getNumberOfPages();

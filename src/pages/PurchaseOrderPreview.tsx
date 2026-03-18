@@ -22,6 +22,7 @@ import {
     drawTotalsBox,
     drawAmountInWords,
     drawPageNumbers,
+    drawSignatoryBox,
 } from '../engines/pdfEngine';
 
 const PurchaseOrderPreview: React.FC = () => {
@@ -68,7 +69,7 @@ const PurchaseOrderPreview: React.FC = () => {
         if (isTemp) {
             navigate('/purchase-order');
         } else {
-            navigate(`/purchase-order?edit=${id}`);
+            navigate(`/purchase-order/new?edit=${id}`);
         }
     };
 
@@ -132,15 +133,15 @@ const PurchaseOrderPreview: React.FC = () => {
                 discountedItems
             } = calculateDiscountedTaxes(poData.items, poData.discountEnabled || false, poData.discountPercentage || 0);
 
-            const tableHeaders = ['Sl No', 'Description', 'HSN/SAC', 'Qty', 'Unit', 'Rate', 'Taxable Amt', 'SGST%', 'SGST Amt', 'CGST%', 'CGST Amt'];
-            const igstHeaders = ['Sl No', 'Description', 'HSN/SAC', 'Qty', 'Unit', 'Rate', 'Taxable Amt', 'IGST%', 'IGST Amt'];
-
-            const usedHeaders = poData.taxType === 'igst' ? igstHeaders : tableHeaders;
+            const baseHeaders = ['Sl No', 'Description', 'HSN/SAC', 'Quantity', 'Unit', 'Rate', 'Taxable Amt'];
+            const usedHeaders = poData.taxType === 'igst'
+                ? [...baseHeaders, 'IGST %', 'IGST Amt']
+                : [...baseHeaders, 'SGST %', 'SGST Amt', 'CGST %', 'CGST Amt'];
 
             let tableData: string[][];
             if (poData.taxType === 'igst') {
                 tableData = discountedItems.map((item, index) => [
-                    (index + 1).toString(), item.description, '',
+                    (index + 1).toString(), item.description, item.hsnSacCode || '',
                     item.quantity.toString(), item.unit,
                     item.rate.toFixed(2), (item.taxableAmount || 0).toFixed(2),
                     `${item.igstPercentage || 0}%`, (item.igstAmount || 0).toFixed(2),
@@ -148,7 +149,7 @@ const PurchaseOrderPreview: React.FC = () => {
                 tableData.push(['', '', '', '', '', 'Total:', subTotal.toFixed(2), '', totalIgst.toFixed(2)]);
             } else {
                 tableData = discountedItems.map((item, index) => [
-                    (index + 1).toString(), item.description, '',
+                    (index + 1).toString(), item.description, item.hsnSacCode || '',
                     item.quantity.toString(), item.unit,
                     item.rate.toFixed(2), (item.taxableAmount || 0).toFixed(2),
                     `${item.sgstPercentage || 0}%`, (item.sgstAmount || 0).toFixed(2),
@@ -160,18 +161,18 @@ const PurchaseOrderPreview: React.FC = () => {
             let columnStyles: any;
             if (poData.taxType === 'igst') {
                 columnStyles = {
-                    0: { cellWidth: 10 }, 1: { cellWidth: 75 }, 2: { cellWidth: 17 },
-                    3: { cellWidth: 10 }, 4: { cellWidth: 13 },
+                    0: { cellWidth: 10, halign: 'left' }, 1: { cellWidth: 58, halign: 'left' }, 2: { cellWidth: 17, halign: 'right' },
+                    3: { cellWidth: 10, halign: 'right' }, 4: { cellWidth: 13, halign: 'right' },
                     5: { cellWidth: 15, halign: 'right' }, 6: { cellWidth: 20, halign: 'right' },
-                    7: { cellWidth: 10 }, 8: { cellWidth: 15, halign: 'right' },
+                    7: { cellWidth: 10, halign: 'right' }, 8: { cellWidth: 15, halign: 'right' },
                 };
             } else {
                 columnStyles = {
-                    0: { cellWidth: 10 }, 1: { cellWidth: 47 }, 2: { cellWidth: 14 },
-                    3: { cellWidth: 10 }, 4: { cellWidth: 10 },
+                    0: { cellWidth: 10, halign: 'left' }, 1: { cellWidth: 33, halign: 'left' }, 2: { cellWidth: 14, halign: 'right' },
+                    3: { cellWidth: 10, halign: 'right' }, 4: { cellWidth: 10, halign: 'right' },
                     5: { cellWidth: 15, halign: 'right' }, 6: { cellWidth: 18, halign: 'right' },
-                    7: { cellWidth: 9 }, 8: { cellWidth: 14, halign: 'right' },
-                    9: { cellWidth: 9 }, 10: { cellWidth: 14, halign: 'right' },
+                    7: { cellWidth: 9, halign: 'right' }, 8: { cellWidth: 14, halign: 'right' },
+                    9: { cellWidth: 9, halign: 'right' }, 10: { cellWidth: 14, halign: 'right' },
                 };
             }
 
@@ -227,26 +228,22 @@ const PurchaseOrderPreview: React.FC = () => {
                 notesEndY = noteY + 3;
             }
 
-            // PO-specific: Authorized Signatory block
-            const signatoryY = notesEndY + 8;
-            const sigCompanyName = letterhead?.companyName || 'Venkateswara Marine Electrical Works';
-            const boxWidth = 60;
-            const boxX = pageWidth - margin - boxWidth;
-            pdf.setDrawColor(200, 200, 200);
-            pdf.setFillColor(250, 250, 250);
-            pdf.roundedRect(boxX, signatoryY, boxWidth, 22, 2, 2, 'FD');
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(9);
-            pdf.setTextColor(30, 64, 175);
-            pdf.text(`For ${sigCompanyName}`, boxX + boxWidth / 2, signatoryY + 6, { align: 'center' });
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(8);
-            pdf.setTextColor(15, 23, 42);
-            pdf.text('Authorized Signatory', boxX + boxWidth / 2, signatoryY + 18, { align: 'center' });
+            const signatoryY = notesEndY + 3;
+            const signatoryBoxWidth = contentWidth * 0.48;
+            const signatoryBoxHeight = 30;
+            const signatoryBoxX = pageWidth - margin - signatoryBoxWidth;
+            drawSignatoryBox(
+                pdf,
+                signatoryBoxX,
+                signatoryY,
+                signatoryBoxWidth,
+                signatoryBoxHeight,
+                letterhead?.companyName || 'Venkateswara Marine Electrical Works'
+            );
 
             drawPageNumbers(pdf, pageWidth, pageHeight, margin);
 
-            const fileName = `PurchaseOrder_${poData.poNumber.replace(/[/\\\\]/g, '-')}.pdf`;
+            const fileName = `PO_${poData.poNumber.replace(/[/\\\\]/g, '-')}.pdf`;
             pdf.save(fileName);
             toast.success('PDF generated successfully!');
 
@@ -263,6 +260,20 @@ const PurchaseOrderPreview: React.FC = () => {
         setDownloadSuccess(true);
         setTimeout(() => setDownloadSuccess(false), 2000);
     };
+
+    useEffect(() => {
+        if (poData && !loading) {
+            const searchParams = new URLSearchParams(location.search);
+            if (searchParams.get('action') === 'download') {
+                const timer = setTimeout(() => {
+                    executeDownload();
+                    navigate(location.pathname, { replace: true });
+                }, 500);
+                return () => clearTimeout(timer);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [poData, loading, location.search, location.pathname, navigate]);
 
     if (loading) {
         return (

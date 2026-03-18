@@ -78,10 +78,10 @@ export const quotationSections = (): SectionDef[] => [
   {
     title: 'Terms & Conditions',
     fields: [
-      { name: 'deliveryTerms', label: 'Delivery', type: 'text', placeholder: 'e.g. Ex-Works / FOR Destination' },
-      { name: 'paymentTerms', label: 'Payment', type: 'text', placeholder: 'e.g. 100% Advance / 30 Days Credit' },
-      { name: 'guarantee', label: 'Guarantee', type: 'text', placeholder: 'e.g. 12 Months from date of supply' },
-      { name: 'validity', label: 'Validity', type: 'text', placeholder: 'e.g. 30 Days' },
+      { name: 'deliveryTerms', label: 'Delivery', type: 'text' },
+      { name: 'paymentTerms', label: 'Payment', type: 'text' },
+      { name: 'guarantee', label: 'Guarantee', type: 'text' },
+      { name: 'validity', label: 'Validity', type: 'text' },
     ],
   },
 ];
@@ -112,7 +112,7 @@ export const poSections = (): SectionDef[] => [
   {
     title: 'PO Details',
     fields: [
-      { name: 'poNumber', label: 'PO Number', type: 'text', required: true, placeholder: 'Manually enter PO number' },
+      { name: 'poNumber', label: 'PO Number', type: 'text', required: true },
       { name: 'date', label: 'Date', type: 'date', required: true },
     ],
   },
@@ -127,8 +127,8 @@ export const poSections = (): SectionDef[] => [
   {
     title: 'Order Context',
     fields: [
-      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'e.g. Purchase order for hardware materials' },
-      { name: 'reference', label: 'Reference', type: 'text', placeholder: 'e.g. Your Quotation No. 123 dated 01-Jan' },
+      { name: 'subject', label: 'Subject', type: 'text' },
+      { name: 'reference', label: 'Reference', type: 'text' },
     ],
   },
   {
@@ -171,7 +171,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
   onEntityInputFocus,
 }) => {
   const inputClass =
-    'w-full px-4 py-2 text-sm rounded-xl border border-slate-200 bg-white transition-all focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400';
+    'w-full px-4 py-2 text-sm rounded-xl border border-slate-200 bg-white transition-all focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all';
 
   const getSectionIcon = (title: string) => {
     if (title.includes('Document')) return <FileText className="w-5 h-5" />;
@@ -265,7 +265,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
                   onChange={onChange}
                   onFocus={onEntityInputFocus}
                   required={field.required}
-                  placeholder={field.placeholder || `Search or add ${field.name === 'supplierName' ? 'supplier' : 'buyer'}...`}
+                  placeholder={field.name === 'supplierName' ? 'Search or add supplier...' : 'Search or add buyer...'}
                   autoComplete="off"
                   className={`pr-10 ${inputClass}`}
                 />

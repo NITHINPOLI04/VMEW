@@ -25,6 +25,7 @@ import PurchaseOrderPreview from './pages/PurchaseOrderPreview';
 // Components
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   const { isAuthenticated, loading, isInitializing, checkAuth } = useAuthStore();
@@ -120,6 +121,7 @@ function App() {
   return (
     <>
       <Router>
+        <ScrollToTop />
         <Routes>
           <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
 

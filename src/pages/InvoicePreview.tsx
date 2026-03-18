@@ -193,18 +193,18 @@ const InvoicePreview: React.FC = () => {
       let columnStyles: any;
       if (invoice.taxType === 'igst') {
         columnStyles = {
-          0: { cellWidth: 9 }, 1: { cellWidth: 84 }, 2: { cellWidth: 16 },
-          3: { cellWidth: 9 }, 4: { cellWidth: 10 },
+          0: { cellWidth: 9, halign: 'left' }, 1: { cellWidth: 84, halign: 'left' }, 2: { cellWidth: 16, halign: 'right' },
+          3: { cellWidth: 9, halign: 'right' }, 4: { cellWidth: 10, halign: 'right' },
           5: { cellWidth: 17, halign: 'right' }, 6: { cellWidth: 19, halign: 'right' },
-          7: { cellWidth: 9 }, 8: { cellWidth: 15, halign: 'right' },
+          7: { cellWidth: 9, halign: 'right' }, 8: { cellWidth: 15, halign: 'right' },
         };
       } else {
         columnStyles = {
-          0: { cellWidth: 9 }, 1: { cellWidth: 49 }, 2: { cellWidth: 16 },
-          3: { cellWidth: 9 }, 4: { cellWidth: 10 },
+          0: { cellWidth: 9, halign: 'left' }, 1: { cellWidth: 49, halign: 'left' }, 2: { cellWidth: 16, halign: 'right' },
+          3: { cellWidth: 9, halign: 'right' }, 4: { cellWidth: 10, halign: 'right' },
           5: { cellWidth: 17, halign: 'right' }, 6: { cellWidth: 19, halign: 'right' },
-          7: { cellWidth: 10 }, 8: { cellWidth: 16, halign: 'right' },
-          9: { cellWidth: 10 }, 10: { cellWidth: 16, halign: 'right' },
+          7: { cellWidth: 10, halign: 'right' }, 8: { cellWidth: 16, halign: 'right' },
+          9: { cellWidth: 10, halign: 'right' }, 10: { cellWidth: 16, halign: 'right' },
         };
       }
 
@@ -248,7 +248,7 @@ const InvoicePreview: React.FC = () => {
 
       drawPageNumbers(pdf, pageWidth, pageHeight, margin);
 
-      const fileName = `Invoice_${invoice.invoiceNumber.replace(/[/\\\\]/g, '-')}.pdf`;
+      const fileName = `INV_${invoice.invoiceNumber.replace(/[/\\\\]/g, '-')}.pdf`;
       pdf.save(fileName);
       toast.success('PDF generated successfully!');
 

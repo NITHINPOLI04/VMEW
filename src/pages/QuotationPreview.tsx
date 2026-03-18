@@ -168,18 +168,18 @@ const QuotationPreview: React.FC = () => {
             let columnStyles: any;
             if (quotationData.taxType === 'igst') {
                 columnStyles = {
-                    0: { cellWidth: 9 }, 1: { cellWidth: 84 }, 2: { cellWidth: 16 },
-                    3: { cellWidth: 9 }, 4: { cellWidth: 10 },
+                    0: { cellWidth: 9, halign: 'left' }, 1: { cellWidth: 84, halign: 'left' }, 2: { cellWidth: 16, halign: 'right' },
+                    3: { cellWidth: 9, halign: 'right' }, 4: { cellWidth: 10, halign: 'right' },
                     5: { cellWidth: 17, halign: 'right' }, 6: { cellWidth: 19, halign: 'right' },
-                    7: { cellWidth: 9 }, 8: { cellWidth: 15, halign: 'right' },
+                    7: { cellWidth: 9, halign: 'right' }, 8: { cellWidth: 15, halign: 'right' },
                 };
             } else {
                 columnStyles = {
-                    0: { cellWidth: 9 }, 1: { cellWidth: 49 }, 2: { cellWidth: 16 },
-                    3: { cellWidth: 9 }, 4: { cellWidth: 10 },
+                    0: { cellWidth: 9, halign: 'left' }, 1: { cellWidth: 49, halign: 'left' }, 2: { cellWidth: 16, halign: 'right' },
+                    3: { cellWidth: 9, halign: 'right' }, 4: { cellWidth: 10, halign: 'right' },
                     5: { cellWidth: 17, halign: 'right' }, 6: { cellWidth: 19, halign: 'right' },
-                    7: { cellWidth: 10 }, 8: { cellWidth: 16, halign: 'right' },
-                    9: { cellWidth: 10 }, 10: { cellWidth: 16, halign: 'right' },
+                    7: { cellWidth: 10, halign: 'right' }, 8: { cellWidth: 16, halign: 'right' },
+                    9: { cellWidth: 10, halign: 'right' }, 10: { cellWidth: 16, halign: 'right' },
                 };
             }
 
@@ -224,7 +224,7 @@ const QuotationPreview: React.FC = () => {
 
             drawPageNumbers(pdf, pageWidth, pageHeight, margin);
 
-            const fileName = `Quotation_${quotationData.quotationNumber.replace(/[/\\\\]/g, '-')}.pdf`;
+            const fileName = `Q_${quotationData.quotationNumber.replace(/[/\\\\]/g, '-')}.pdf`;
             pdf.save(fileName);
             toast.success('PDF generated successfully!');
 
@@ -482,8 +482,6 @@ const QuotationPreview: React.FC = () => {
                     <div className="flex justify-between items-end mt-12 pt-8 border-t border-slate-200">
                         <div></div>
                         <div className="text-right">
-                            <h4 className="font-bold text-slate-800 mb-12">For {letterhead?.companyName || 'Company'}</h4>
-                            <p className="text-sm text-slate-600 font-medium">Authorized Signatory</p>
                         </div>
                     </div>
                 </div>

@@ -24,6 +24,7 @@ export interface InvoiceFormData {
   buyerGst: string;
   buyerPan: string;
   buyerMsme: string;
+  dueDate?: string;
   vessel: string;
   poNumber: string;
   dcNumber: string;
@@ -190,6 +191,7 @@ export interface Customer {
 export interface PurchaseOrderItem {
   id: string;
   description: string;
+  hsnSacCode: string;
   quantity: number;
   unit: string;
   rate: number;

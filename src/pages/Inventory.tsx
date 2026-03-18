@@ -375,11 +375,10 @@ const Inventory: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search items..."
               value={searchQuery}
               onChange={handleSearchChange}
               autoComplete="off"
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-400"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-slate-900"
             />
           </div>
 
@@ -548,13 +547,12 @@ const Inventory: React.FC = () => {
                   <input
                     type="text"
                     name="field_v_description"
-                    autoFocus
-                    placeholder="Enter item description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    autoComplete="off"
-                    className="w-full px-4 py-2 text-[14px] rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:ring-4 focus:ring-[#2563EB]/10 focus:border-[#2563EB] transition-all"
+                    autoFocus
+                    className="w-full px-4 py-2 text-[14px] rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-4 focus:ring-[#2563EB]/10 focus:border-[#2563EB] transition-all"
                     required
+                    autoComplete="off"
                   />
                 </div>
 
@@ -564,12 +562,11 @@ const Inventory: React.FC = () => {
                   <input
                     type="text"
                     name="field_v_hsnSacCode"
-                    placeholder="Enter HSN/SAC code"
                     value={formData.hsnSacCode}
                     onChange={handleInputChange}
-                    autoComplete="off"
-                    className="w-full px-4 py-2 text-[14px] rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:ring-4 focus:ring-[#2563EB]/10 focus:border-[#2563EB] transition-all"
+                    className="w-full px-4 py-2 text-[14px] rounded-[10px] border border-[#E2E8F0] bg-white text-[#0F172A] focus:outline-none focus:ring-4 focus:ring-[#2563EB]/10 focus:border-[#2563EB] transition-all"
                     required
+                    autoComplete="off"
                   />
                 </div>
 

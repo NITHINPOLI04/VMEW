@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, Trash2, ShoppingBag, PlusCircle, Edit, Download,
   Calendar, CheckCircle2, ReceiptText, ArrowUpDown, ChevronDown
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { usePOStore } from '../stores/poStore';
 import { PurchaseOrder } from '../types';
 import { toast } from 'react-hot-toast';
 import CustomSelect from '../components/CustomSelect';
 import TableSkeleton from '../components/TableSkeleton';
 import { MetricSkeleton } from '../components/Skeleton';
+import { exportStandardExcel, exportGroupedExcel } from '../utils/excelExport';
 
 const months = [
   { value: '', label: 'All Months' },
@@ -71,6 +71,10 @@ const PurchaseOrderLibrary: React.FC = () => {
   const sortRef = React.useRef<HTMLDivElement>(null);
   const sortBtnRef = React.useRef<HTMLButtonElement>(null);
 
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportBtnRef = useRef<HTMLButtonElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
+
   const fmt = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
   const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortKey)?.label ?? 'Sort';
 
@@ -80,10 +84,13 @@ const PurchaseOrderLibrary: React.FC = () => {
       if (sortRef.current && sortBtnRef.current && !sortRef.current.contains(target) && !sortBtnRef.current.contains(target)) {
         setSortOpen(false);
       }
+      if (exportRef.current && exportBtnRef.current && !exportRef.current.contains(target) && !exportBtnRef.current.contains(target)) {
+        setExportOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [sortOpen]);
+  }, [sortOpen, exportOpen]);
 
   useEffect(() => {
     const today = new Date();
@@ -157,7 +164,7 @@ const PurchaseOrderLibrary: React.FC = () => {
     }
   });
 
-  const exportToExcel = () => {
+  const handleStandardExport = () => {
     const exportData = sortedItems.map((po: any, index) => {
       const totalTaxable = po.items.reduce((s: number, item: any) => s + (item.taxableAmount || 0), 0);
       const isIgst = po.taxType === 'igst';
@@ -176,15 +183,39 @@ const PurchaseOrderLibrary: React.FC = () => {
         'Grand Total': po.grandTotal,
       };
     });
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const addr = XLSX.utils.encode_cell({ r: 0, c: C });
-      if (ws[addr]) ws[addr].s = { font: { bold: true } };
-    }
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Purchase Orders');
-    XLSX.writeFile(wb, `Purchase_Orders_${selectedYear.replace('-', '_')}.xlsx`);
+    
+    exportStandardExcel(exportData, 'Purchase Orders', `Purchase_Orders_${selectedYear.replace('-', '_')}.xlsx`);
+    toast.success('Exported successfully!');
+  };
+
+  const handleGroupedExport = () => {
+    let allItems: any[] = [];
+    sortedItems.forEach((po: any) => {
+      const isIgst = po.taxType === 'igst';
+      po.items.forEach((item: any, itemIndex: number) => {
+        allItems.push({
+          'PO Number': po.poNumber,
+          'Date': new Date(po.date).toLocaleDateString('en-IN'),
+          'Supplier Name': po.supplierName,
+          'S.No': itemIndex + 1,
+          'Description': item.description,
+          'HSN/SAC Code': item.hsnSacCode || '',
+          'Qty': item.quantity,
+          'Unit': item.unit,
+          'Rate': item.rate,
+          'Taxable Amount': item.taxableAmount || 0,
+          'IGST %': isIgst ? item.igstPercentage || 0 : 0,
+          'IGST Amount': isIgst ? item.igstAmount || 0 : 0,
+          'SGST %': isIgst ? 0 : item.sgstPercentage || 0,
+          'SGST Amount': isIgst ? 0 : item.sgstAmount || 0,
+          'CGST %': isIgst ? 0 : item.cgstPercentage || 0,
+          'CGST Amount': isIgst ? 0 : item.cgstAmount || 0,
+          'Item Total': (item.taxableAmount || 0) + (item.igstAmount || 0) + (item.sgstAmount || 0) + (item.cgstAmount || 0)
+        });
+      });
+    });
+
+    exportGroupedExcel(allItems, 'HSN Summary', `HSN_Summary_Sheet_PO_${selectedYear.replace('-', '_')}.xlsx`);
     toast.success('Exported successfully!');
   };
 
@@ -239,11 +270,10 @@ const PurchaseOrderLibrary: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search POs..."
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               autoComplete="off"
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-400"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-slate-900"
             />
           </div>
 
@@ -275,10 +305,35 @@ const PurchaseOrderLibrary: React.FC = () => {
               )}
             </div>
 
-            {/* Export */}
-            <button onClick={exportToExcel} disabled={loading || sortedItems.length === 0} className="btn btn-secondary btn-sm">
-              <Download className="h-3.5 w-3.5" /> Export
-            </button>
+            {/* Export Dropdown */}
+            <div className="relative">
+              <button
+                ref={exportBtnRef}
+                onClick={() => setExportOpen(o => !o)}
+                disabled={loading || sortedItems.length === 0}
+                className={`btn btn-secondary btn-sm gap-1.5 ${exportOpen ? 'border-blue-400 text-blue-600 bg-blue-50' : ''}`}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export
+                <ChevronDown size={11} className="opacity-60" />
+              </button>
+              {exportOpen && (
+                <div ref={exportRef} className="dropdown-panel right-0 top-full mt-2 w-56 z-50">
+                  <button
+                    onClick={() => { handleStandardExport(); setExportOpen(false); }}
+                    className="dropdown-item"
+                  >
+                    Export (Standard)
+                  </button>
+                  <button
+                    onClick={() => { handleGroupedExport(); setExportOpen(false); }}
+                    className="dropdown-item"
+                  >
+                    Export (Grouped by HSN)
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -328,21 +383,20 @@ const PurchaseOrderLibrary: React.FC = () => {
                       <td data-label="Actions">
                         <div className="flex items-center justify-center gap-1">
                           <Link
-                            to={`/purchase-orders?edit=${item._id}`}
+                            to={`/purchase-order/new?edit=${item._id}`}
                             onClick={(e) => e.stopPropagation()}
                             className="text-slate-400 hover:text-emerald-600 p-1.5 rounded-md hover:bg-emerald-50 transition-colors"
                             title="Edit"
                           >
                             <Edit className="h-4 w-4" />
                           </Link>
-                          <Link
-                            to={`/po-preview/${item._id}?action=download`}
-                            onClick={(e) => e.stopPropagation()}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/po-preview/${item._id}?action=download`); }}
                             className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-md hover:bg-indigo-50 transition-colors"
                             title="Download"
                           >
                             <Download className="h-4 w-4" />
-                          </Link>
+                          </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeleteModalOpen({ id: item._id }); }}
                             className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors"

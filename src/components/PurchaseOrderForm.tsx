@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PlusCircle, Eye, Zap, RefreshCw, ShoppingBag } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { usePOStore } from '../stores/poStore';
 import { useContactStore } from '../stores/contactStore';
@@ -22,6 +22,8 @@ interface PurchaseOrderFormProps {
 
 const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, editId }) => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const effectiveEditId = editId || searchParams.get('edit');
     const { createPO, updatePO, fetchPO } = usePOStore();
     const { suppliers, fetchSuppliers, addSupplier } = useContactStore();
 
@@ -42,24 +44,55 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
 
     useEffect(() => {
         const loadPOForEdit = async () => {
-            if (editId) {
+            if (effectiveEditId) {
                 setLoading(true);
                 try {
-                    const data = await fetchPO(editId);
+                    const data = await fetchPO(effectiveEditId);
                     if (data) {
-                        setFormData(data);
+                        setFormData({
+                            poNumber: data.poNumber,
+                            date: data.date,
+                            supplierName: data.supplierName,
+                            supplierAddress: data.supplierAddress || '',
+                            supplierGst: data.supplierGst || '', // Changed from supplierGstin to supplierGst to match existing code
+                            subject: data.subject || '',
+                            reference: data.reference || '',
+                            items: data.items.map((item: any) => ({
+                                id: item.id || Math.random().toString(36).substr(2, 9),
+                                description: item.description,
+                                hsnSacCode: item.hsnSacCode || '',
+                                quantity: item.quantity,
+                                unit: item.unit,
+                                rate: item.rate,
+                                taxableAmount: item.taxableAmount || (item.quantity * item.rate),
+                                sgstPercentage: item.sgstPercentage || 0,
+                                sgstAmount: item.sgstAmount || 0,
+                                cgstPercentage: item.cgstPercentage || 0,
+                                cgstAmount: item.cgstAmount || 0,
+                                igstPercentage: item.igstPercentage || 0,
+                                igstAmount: item.igstAmount || 0
+                            })),
+                            discountEnabled: data.discountEnabled || false,
+                            discountPercentage: data.discountPercentage || 0,
+                            discountAmount: data.discountAmount || 0,
+                            taxType: data.taxType || 'sgstcgst',
+                            grandTotal: data.grandTotal,
+                            totalInWords: data.totalInWords || '',
+                            notes: data.notes || ''
+                        });
                         setSelectedDate(new Date(data.date));
                         setIsEditing(true);
                     }
                 } catch (error) {
                     toast.error('Failed to load PO for editing');
+                    console.error("Error fetching PO for edit:", error);
                 } finally {
                     setLoading(false);
                 }
             }
         };
         loadPOForEdit();
-    }, [editId, fetchPO]);
+    }, [effectiveEditId, fetchPO]);
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -151,6 +184,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
         const newItem = {
             id: Date.now().toString(),
             description: '',
+            hsnSacCode: '',
             quantity: 1,
             unit: 'Nos',
             rate: 0,
@@ -214,10 +248,10 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                 });
             }
 
-            if (isEditing && editId) {
-                await updatePO(editId, finalData);
+            if (isEditing && effectiveEditId) {
+                await updatePO(effectiveEditId, finalData);
                 toast.success('PO updated successfully!');
-                navigate(`/po-preview/${editId}`);
+                navigate(`/po-preview/${effectiveEditId}`);
             } else {
                 const result: any = await createPO(finalData);
                 if (result && result._id) {
@@ -320,7 +354,6 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                                 value={item.description}
                                                 onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                                 required
-                                                placeholder="Item description..."
                                                 rows={2}
                                                 autoComplete="off"
                                                 name={`field_v_item_desc_${index}`}
@@ -338,8 +371,18 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                         </div>
                                     </div>
 
-                                    {/* Row 2: Qty & Unit */}
-                                    <div className="grid grid-cols-2 gap-3 mb-3">
+                                    {/* Row 2: HSN/SAC + Qty & Unit */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">HSN / SAC</label>
+                                            <input
+                                                type="text"
+                                                value={item.hsnSacCode || ''}
+                                                onChange={(e) => handleItemChange(index, 'hsnSacCode', e.target.value)}
+                                                autoComplete="off"
+                                                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 bg-white"
+                                            />
+                                        </div>
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Qty & Unit</label>
                                             <div className="flex gap-2">
@@ -367,8 +410,10 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                                 />
                                             </div>
                                         </div>
+                                    </div>
 
-                                        {/* Rate */}
+                                    {/* Row 3: Rate + Taxable Amount */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Rate (₹)</label>
                                             <div className="relative">
@@ -380,17 +425,12 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                                     min="0"
                                                     step="0.01"
                                                     required
-                                                    placeholder="0.00"
                                                     autoComplete="off"
                                                     name={`field_v_rate_${index}`}
                                                     className="w-full pl-7 pr-3 py-2 text-sm rounded-lg border border-slate-200 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 bg-white font-medium"
                                                 />
                                             </div>
                                         </div>
-                                    </div>
-
-                                    {/* Row 3: Rate + Taxable amount */}
-                                    <div className="grid grid-cols-2 gap-3 mb-3">
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Taxable Amount</label>
                                             <div className="px-3 py-2 text-sm rounded-lg bg-slate-50 border border-slate-100 text-slate-700 font-bold h-[38px] flex items-center">

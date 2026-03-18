@@ -8,6 +8,7 @@ import { useInvoiceStore } from '../stores/invoiceStore';
 import { useInventoryStore } from '../stores/inventoryStore';
 import Chart from 'chart.js/auto';
 import DashboardSkeleton from '../components/DashboardSkeleton';
+import { parseISO, isAfter, startOfDay } from 'date-fns';
 
 const Dashboard: React.FC = () => {
   const [currentYear] = useState('2025-2026');
@@ -59,13 +60,20 @@ const Dashboard: React.FC = () => {
 
   const totalRevenue = useMemo(() => inv.reduce((s, i) => s + i.grandTotal, 0), [inv]);
 
-  const { now, todayStr } = useMemo(() => {
+  const { now, todayStart } = useMemo(() => {
     const d = new Date();
-    const str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    return { now: d, todayStr: str };
+    return { now: d, todayStart: startOfDay(d) };
   }, []);
 
-  const overdueCount = useMemo(() => inv.filter(i => i.paymentStatus === 'Unpaid' && i.date < todayStr).length, [inv, todayStr]);
+  const overdueCount = useMemo(() => 
+    inv.filter(i => {
+      if (i.paymentStatus === 'Payment Complete') return false;
+      // Only count as overdue if dueDate explicitly exists and is in the past
+      if (!i.dueDate) return false;
+      const dueDate = parseISO(i.dueDate);
+      return !isNaN(dueDate.getTime()) && !isAfter(dueDate, todayStart);
+    }).length, 
+  [inv, todayStart]);
 
   const trend = useMemo(() => {
     const cur = now.getMonth(), prevM = cur === 0 ? 11 : cur - 1, prevY = cur === 0 ? now.getFullYear() - 1 : now.getFullYear();
@@ -83,10 +91,17 @@ const Dashboard: React.FC = () => {
   const monthlyRevenue = useMemo(() => {
     const d = Array(12).fill(0);
     inv.forEach(i => { 
-      // Financial year starts in April (index 3). 
-      // Adjusted month index: (actualMonth - 3 + 12) % 12
-      const m = (new Date(i.date).getMonth() + 9) % 12; 
-      if (m >= 0 && m < 12) d[m] += i.grandTotal; 
+      try {
+        const date = i.date ? parseISO(i.date) : null;
+        if (date && !isNaN(date.getTime())) {
+          // Financial year starts in April (index 3). 
+          // Adjusted month index: (actualMonth - 3 + 12) % 12
+          const m = (date.getMonth() + 9) % 12; 
+          if (m >= 0 && m < 12) d[m] += i.grandTotal;
+        }
+      } catch (e) {
+        console.warn('Invalid date in invoice:', i.date);
+      }
     });
     return d;
   }, [inv]);
@@ -112,80 +127,85 @@ const Dashboard: React.FC = () => {
 
   // ─── Chart ────────────────────────────────────────────
   useEffect(() => {
-    if (!canvasRef.current) return;
-    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
+    const timer = setTimeout(() => {
+      if (!canvasRef.current) return;
+      if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
+      const ctx = canvasRef.current.getContext('2d');
+      if (!ctx) return;
 
-    const isM = chartMode === 'monthly';
-    const labels = isM
-      ? ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
-      : Array.from({ length: 8 }, (_, i) => { const d = new Date(now); d.setDate(d.getDate() - (7 - i) * 7); return `W${d.getDate()}/${d.getMonth() + 1}`; });
-    const data = isM ? monthlyRevenue : weeklyRevenue;
+      const isM = chartMode === 'monthly';
+      const labels = isM
+        ? ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
+        : Array.from({ length: 8 }, (_, i) => { const d = new Date(now); d.setDate(d.getDate() - (7 - i) * 7); return `W${d.getDate()}/${d.getMonth() + 1}`; });
+      const data = isM ? monthlyRevenue : weeklyRevenue;
 
-    chartRef.current = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Revenue (₹)',
-          data,
-          borderColor: '#3b82f6',
-          backgroundColor: (context: any) => {
-            const g = context.chart.ctx.createLinearGradient(0, 0, 0, 300);
-            g.addColorStop(0, 'rgba(59,130,246,0.18)');
-            g.addColorStop(0.6, 'rgba(59,130,246,0.04)');
-            g.addColorStop(1, 'rgba(59,130,246,0)');
-            return g;
-          },
-          pointBackgroundColor: '#3b82f6',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2.5,
-          pointRadius: 4,
-          pointHoverRadius: 7,
-          pointHoverBorderWidth: 3,
-          pointHoverBackgroundColor: '#2563eb',
-          tension: 0.45,
-          fill: true,
-          borderWidth: 2.5,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: {
-          padding: { top: 12, bottom: 4, left: 0, right: 12 }
+      chartRef.current = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Revenue (₹)',
+            data,
+            borderColor: '#3b82f6',
+            backgroundColor: (context: any) => {
+              const g = context.chart.ctx.createLinearGradient(0, 0, 0, 300);
+              g.addColorStop(0, 'rgba(59,130,246,0.18)');
+              g.addColorStop(0.6, 'rgba(59,130,246,0.04)');
+              g.addColorStop(1, 'rgba(59,130,246,0)');
+              return g;
+            },
+            pointBackgroundColor: '#3b82f6',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2.5,
+            pointRadius: 4,
+            pointHoverRadius: 7,
+            pointHoverBorderWidth: 3,
+            pointHoverBackgroundColor: '#2563eb',
+            tension: 0.45,
+            fill: true,
+            borderWidth: 2.5,
+          }],
         },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#0f172a',
-            padding: 12,
-            cornerRadius: 8,
-            bodyFont: { family: 'Inter', size: 12 },
-            titleFont: { family: 'Inter', weight: 'bold', size: 12 },
-            displayColors: false,
-            callbacks: { label: (c: any) => `  ₹${Number(c.raw).toLocaleString('en-IN')}` },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: { top: 12, bottom: 4, left: 0, right: 12 }
           },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              padding: 12,
+              cornerRadius: 8,
+              bodyFont: { family: 'Inter', size: 12 },
+              titleFont: { family: 'Inter', weight: 'bold', size: 12 },
+              displayColors: false,
+              callbacks: { label: (c: any) => `  ₹${Number(c.raw).toLocaleString('en-IN')}` },
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(226,232,240,0.35)' },
+              ticks: { font: { family: 'Inter', size: 10 }, color: '#94a3b8', callback: (v: any) => `₹${Number(v).toLocaleString('en-IN')}`, maxTicksLimit: 5 },
+              border: { display: false },
+            },
+            x: {
+              grid: { display: false },
+              ticks: { font: { family: 'Inter', size: 10 }, color: '#94a3b8' },
+              border: { display: false },
+            },
+          },
+          interaction: { intersect: false, mode: 'index' },
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: { color: 'rgba(226,232,240,0.35)' },
-            ticks: { font: { family: 'Inter', size: 10 }, color: '#94a3b8', callback: (v: any) => `₹${Number(v).toLocaleString('en-IN')}`, maxTicksLimit: 5 },
-            border: { display: false },
-          },
-          x: {
-            grid: { display: false },
-            ticks: { font: { family: 'Inter', size: 10 }, color: '#94a3b8' },
-            border: { display: false },
-          },
-        },
-        interaction: { intersect: false, mode: 'index' },
-      },
-    });
+      });
+    }, 100);
 
-    return () => { if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; } };
+    return () => {
+      clearTimeout(timer);
+      if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
+    };
   }, [inv, chartMode, monthlyRevenue, weeklyRevenue, now]);
 
   if (loading) return <DashboardSkeleton />;

@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 
 const TemplateSetup: React.FC = () => {
   const { letterhead, defaultInfo, updateLetterhead, updateDefaultInfo } = useTemplateStore();
+  const hasInitialized = React.useRef(false);
 
   const [letterheadForm, setLetterheadForm] = useState({
     companyName: 'Venkateswara Marine Electrical Works',
@@ -31,8 +32,11 @@ const TemplateSetup: React.FC = () => {
   });
 
   useEffect(() => {
-    if (letterhead) setLetterheadForm(letterhead);
-    if (defaultInfo) setDefaultInfoForm(defaultInfo);
+    if ((letterhead || defaultInfo) && !hasInitialized.current) {
+      if (letterhead) setLetterheadForm(letterhead);
+      if (defaultInfo) setDefaultInfoForm(defaultInfo);
+      hasInitialized.current = true;
+    }
   }, [letterhead, defaultInfo]);
 
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
@@ -74,12 +78,14 @@ const TemplateSetup: React.FC = () => {
   }, []);
 
   const handleLetterheadChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name: prefixedName, value } = e.target;
+    const name = prefixedName.replace('field_v_', '');
     setLetterheadForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleDefaultInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name: prefixedName, value } = e.target;
+    const name = prefixedName.replace('field_v_', '');
     setDefaultInfoForm(prev => ({ ...prev, [name]: value }));
   };
 
