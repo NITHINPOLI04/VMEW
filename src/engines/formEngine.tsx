@@ -342,7 +342,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
                 {field.label}
                 {field.required && <span className="text-red-500 ml-1">*</span>}
               </label>
-              {renderField({ ...field, name: `field_v_${field.name}` })}
+              {renderField(field)}
             </div>
           ))}
         </div>

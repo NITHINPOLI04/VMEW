@@ -82,7 +82,12 @@ const Dashboard: React.FC = () => {
 
   const monthlyRevenue = useMemo(() => {
     const d = Array(12).fill(0);
-    inv.forEach(i => { const m = new Date(i.date).getMonth() - 3; if (m >= 0 && m < 12) d[m] += i.grandTotal; });
+    inv.forEach(i => { 
+      // Financial year starts in April (index 3). 
+      // Adjusted month index: (actualMonth - 3 + 12) % 12
+      const m = (new Date(i.date).getMonth() + 9) % 12; 
+      if (m >= 0 && m < 12) d[m] += i.grandTotal; 
+    });
     return d;
   }, [inv]);
 
