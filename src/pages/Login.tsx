@@ -146,25 +146,21 @@ const Login: React.FC = () => {
 
             <div className="text-center mb-8">
               <p className="text-[15px] text-[#4B5563] leading-relaxed mx-auto max-w-[280px]">
-                Hey, Enter your details to get sign in to your account
+                Hey, Enter your details to Bill like never before
               </p>
             </div>
 
-            <form 
-              onSubmit={handleSubmit} 
+            <form
+              onSubmit={handleSubmit}
               className="space-y-4 flex-1 flex flex-col"
-              autoComplete="off"
             >
-              {/* Hidden dummy fields to trick browser autofill */}
-              <input type="text" name="prevent_autofill" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
-              <input type="password" name="password_fake" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
               <div className="relative group">
                 {loading ? (
                   <Skeleton className="h-12 w-full rounded-xl mb-4" />
                 ) : (
                   <>
                     <label htmlFor="email" className="sr-only">Email Address</label>
-                      <input
+                    <input
                       id="email"
                       name="email"
                       type="email"
@@ -185,7 +181,7 @@ const Login: React.FC = () => {
                 ) : (
                   <>
                     <label htmlFor="password" className="sr-only">Password</label>
-                      <input
+                    <input
                       id="password"
                       name="password"
                       type="password"

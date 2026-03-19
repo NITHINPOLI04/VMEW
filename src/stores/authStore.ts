@@ -23,8 +23,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   error: null,
 
   checkAuth: () => {
-    const token = localStorage.getItem('token');
-    const userJson = localStorage.getItem('user');
+    const token = sessionStorage.getItem('token');
+    const userJson = sessionStorage.getItem('user');
     if (token && userJson) {
       try {
         const user = JSON.parse(userJson);
@@ -35,8 +35,8 @@ export const useAuthStore = create<AuthState>((set) => ({
           isInitializing: false 
         });
       } catch (error) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
         set({ isInitializing: false });
       }
     } else {
@@ -49,8 +49,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ loading: true, error: null });
       const { token, userId, email: userEmail } = await signup(email, password);
       const user = { userId, email: userEmail };
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      sessionStorage.setItem('token', token);
+      sessionStorage.setItem('user', JSON.stringify(user));
       set({ 
         user, 
         token,
@@ -70,8 +70,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ loading: true, error: null });
         const { token, userId, email: userEmail } = await login(email, password);
         const user = { userId, email: userEmail };
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
+        sessionStorage.setItem('token', token);
+        sessionStorage.setItem('user', JSON.stringify(user));
         set({ 
           user, 
           token,
@@ -93,8 +93,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     try {
       set({ loading: true, error: null });
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
       set({ 
         user: null, 
         token: null,
