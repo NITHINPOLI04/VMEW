@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FileText, Truck, FileSpreadsheet } from 'lucide-react';
+import { FileText, Truck, FileSpreadsheet, ChevronLeft } from 'lucide-react';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useDCStore } from '../stores/dcStore';
 import { useQuotationStore } from '../stores/quotationStore';
@@ -149,7 +149,17 @@ const GenerateBills: React.FC = () => {
     <div className="space-y-4 pb-0 bg-slate-50/80 min-h-screen">
       {/* Page Header */}
       <div className="page-header">
-        <div>
+        <div className="flex items-center gap-3">
+          {isEditing && (
+            <button
+              onClick={() => navigate('/bill-library')}
+              className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors shrink-0"
+              title="Go Back"
+              aria-label="Go Back"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
           <h1 className="page-title">
             {isEditing ? `Edit ${billType.charAt(0).toUpperCase() + billType.slice(1)}` : 'Generate New Bill'}
           </h1>
