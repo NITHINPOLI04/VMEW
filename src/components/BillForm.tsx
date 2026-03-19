@@ -94,7 +94,7 @@ const BillForm: React.FC<BillFormProps> = ({
             grandTotal
         } = calculateDiscountedTaxes(items, discountEnabled, discountPercentage, taxType);
 
-        setFormData((prev: any) => ({ ...prev, grandTotal, subTotal, discountAmount, discountEnabled, discountPercentage, taxableAmount: totalTaxableValue, totalSgst, totalCgst, totalIgst, taxType }));
+        setFormData((prev: any) => ({ ...prev, items, grandTotal, subTotal, discountAmount, discountEnabled, discountPercentage, taxableAmount: totalTaxableValue, totalSgst, totalCgst, totalIgst, taxType }));
     };
 
     const handleItemChange = (index: number, field: string, value: string | number) => {
@@ -117,7 +117,7 @@ const BillForm: React.FC<BillFormProps> = ({
             } else {
                 updatedItems[index] = { ...updatedItems[index], [field]: value };
             }
-            setFormData((prev: any) => ({ ...prev, items: updatedItems }));
+            // Removed redundant setFormData to avoid race condition
             calculateTaxTotals(updatedItems, formData.taxType, formData.discountEnabled, formData.discountPercentage);
         } else if (billType === 'dc') {
             if (field === 'quantity') {
@@ -144,8 +144,11 @@ const BillForm: React.FC<BillFormProps> = ({
     const handleRemoveItem = (index: number) => {
         if (formData.items.length === 1) return;
         const updatedItems = formData.items.filter((_: any, i: number) => i !== index);
-        setFormData((prev: any) => ({ ...prev, items: updatedItems }));
-        if (billType === 'invoice' || billType === 'quotation') calculateTaxTotals(updatedItems, formData.taxType, formData.discountEnabled, formData.discountPercentage);
+        if (billType === 'invoice' || billType === 'quotation') {
+            calculateTaxTotals(updatedItems, formData.taxType, formData.discountEnabled, formData.discountPercentage);
+        } else {
+            setFormData((prev: any) => ({ ...prev, items: updatedItems }));
+        }
     };
 
     const handleMoveItem = (index: number, direction: 'up' | 'down') => {

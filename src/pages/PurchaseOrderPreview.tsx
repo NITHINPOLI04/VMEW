@@ -158,21 +158,22 @@ const PurchaseOrderPreview: React.FC = () => {
                 tableData.push(['', '', '', '', '', 'Total:', subTotal.toFixed(2), '', totalSgst.toFixed(2), '', totalCgst.toFixed(2)]);
             }
 
+            // Column dimensions matched to Invoice PDF table
             let columnStyles: any;
             if (poData.taxType === 'igst') {
                 columnStyles = {
-                    0: { cellWidth: 10, halign: 'left' }, 1: { cellWidth: 58, halign: 'left' }, 2: { cellWidth: 17, halign: 'right' },
-                    3: { cellWidth: 10, halign: 'right' }, 4: { cellWidth: 13, halign: 'right' },
-                    5: { cellWidth: 15, halign: 'right' }, 6: { cellWidth: 20, halign: 'right' },
-                    7: { cellWidth: 10, halign: 'right' }, 8: { cellWidth: 15, halign: 'right' },
+                    0: { cellWidth: 9, halign: 'left' }, 1: { cellWidth: 84, halign: 'left' }, 2: { cellWidth: 16, halign: 'right' },
+                    3: { cellWidth: 9, halign: 'right' }, 4: { cellWidth: 10, halign: 'right' },
+                    5: { cellWidth: 17, halign: 'right' }, 6: { cellWidth: 19, halign: 'right' },
+                    7: { cellWidth: 9, halign: 'right' }, 8: { cellWidth: 15, halign: 'right' },
                 };
             } else {
                 columnStyles = {
-                    0: { cellWidth: 10, halign: 'left' }, 1: { cellWidth: 33, halign: 'left' }, 2: { cellWidth: 14, halign: 'right' },
-                    3: { cellWidth: 10, halign: 'right' }, 4: { cellWidth: 10, halign: 'right' },
-                    5: { cellWidth: 15, halign: 'right' }, 6: { cellWidth: 18, halign: 'right' },
-                    7: { cellWidth: 9, halign: 'right' }, 8: { cellWidth: 14, halign: 'right' },
-                    9: { cellWidth: 9, halign: 'right' }, 10: { cellWidth: 14, halign: 'right' },
+                    0: { cellWidth: 9, halign: 'left' }, 1: { cellWidth: 49, halign: 'left' }, 2: { cellWidth: 16, halign: 'right' },
+                    3: { cellWidth: 9, halign: 'right' }, 4: { cellWidth: 10, halign: 'right' },
+                    5: { cellWidth: 17, halign: 'right' }, 6: { cellWidth: 19, halign: 'right' },
+                    7: { cellWidth: 10, halign: 'right' }, 8: { cellWidth: 16, halign: 'right' },
+                    9: { cellWidth: 10, halign: 'right' }, 10: { cellWidth: 16, halign: 'right' },
                 };
             }
 

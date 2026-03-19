@@ -118,6 +118,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
 
         setFormData((prev: any) => ({
             ...prev,
+            items,
             grandTotal,
             subTotal,
             discountAmount,
