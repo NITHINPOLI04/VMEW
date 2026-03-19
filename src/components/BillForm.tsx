@@ -83,7 +83,7 @@ const BillForm: React.FC<BillFormProps> = ({
         setFormData((prev: any) => ({ ...prev, date: date.toISOString() }));
     };
 
-    const calculateTaxTotals = (items: any[], _taxType: string, discountEnabled: boolean = formData.discountEnabled, discountPercentage: number = formData.discountPercentage || 0) => {
+    const calculateTaxTotals = (items: any[], taxType: string, discountEnabled: boolean = formData.discountEnabled, discountPercentage: number = formData.discountPercentage || 0) => {
         const {
             subTotal,
             discountAmount,
@@ -92,9 +92,9 @@ const BillForm: React.FC<BillFormProps> = ({
             totalCgst,
             totalIgst,
             grandTotal
-        } = calculateDiscountedTaxes(items, discountEnabled, discountPercentage);
+        } = calculateDiscountedTaxes(items, discountEnabled, discountPercentage, taxType);
 
-        setFormData((prev: any) => ({ ...prev, grandTotal, subTotal, discountAmount, discountEnabled, discountPercentage, taxableAmount: totalTaxableValue, totalSgst, totalCgst, totalIgst }));
+        setFormData((prev: any) => ({ ...prev, grandTotal, subTotal, discountAmount, discountEnabled, discountPercentage, taxableAmount: totalTaxableValue, totalSgst, totalCgst, totalIgst, taxType }));
     };
 
     const handleItemChange = (index: number, field: string, value: string | number) => {

@@ -105,7 +105,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const calculateTaxTotals = (items: any[] = formData.items, _taxType: string = formData.taxType, discountEnabled: boolean = formData.discountEnabled, discountPercentage: any = formData.discountPercentage) => {
+    const calculateTaxTotals = (items: any[] = formData.items, taxType: string = formData.taxType, discountEnabled: boolean = formData.discountEnabled, discountPercentage: any = formData.discountPercentage) => {
         const {
             subTotal,
             discountAmount,
@@ -114,7 +114,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
             totalCgst,
             totalIgst,
             grandTotal
-        } = calculateDiscountedTaxes(items, discountEnabled, parseFloat(discountPercentage) || 0);
+        } = calculateDiscountedTaxes(items, discountEnabled, parseFloat(discountPercentage) || 0, taxType);
 
         setFormData((prev: any) => ({
             ...prev,
@@ -126,7 +126,8 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
             totalCgst,
             totalIgst,
             discountEnabled,
-            discountPercentage
+            discountPercentage,
+            taxType
         }));
     };
 

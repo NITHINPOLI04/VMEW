@@ -131,9 +131,9 @@ const PurchaseOrderPreview: React.FC = () => {
                 totalIgst,
                 discountAmount,
                 discountedItems
-            } = calculateDiscountedTaxes(poData.items, poData.discountEnabled || false, poData.discountPercentage || 0);
+            } = calculateDiscountedTaxes(poData.items, poData.discountEnabled || false, poData.discountPercentage || 0, poData.taxType);
 
-            const baseHeaders = ['Sl No', 'Description', 'HSN/SAC', 'Quantity', 'Unit', 'Rate', 'Taxable Amt'];
+            const baseHeaders = ['Sl No', 'Description', 'HSN/SAC Code', 'Quantity', 'Unit', 'Rate', 'Taxable Amt'];
             const usedHeaders = poData.taxType === 'igst'
                 ? [...baseHeaders, 'IGST %', 'IGST Amt']
                 : [...baseHeaders, 'SGST %', 'SGST Amt', 'CGST %', 'CGST Amt'];
@@ -299,7 +299,7 @@ const PurchaseOrderPreview: React.FC = () => {
         totalIgst,
         discountAmount,
         discountedItems
-    } = calculateDiscountedTaxes(poData.items, poData.discountEnabled || false, poData.discountPercentage || 0);
+    } = calculateDiscountedTaxes(poData.items, poData.discountEnabled || false, poData.discountPercentage || 0, poData.taxType);
 
     return (
         <div className="pb-12 max-w-7xl mx-auto">

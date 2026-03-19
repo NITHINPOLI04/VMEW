@@ -150,7 +150,7 @@ const InvoicePreview: React.FC = () => {
         totalIgst,
         discountAmount,
         discountedItems
-      } = calculateDiscountedTaxes(invoice.items, invoice.discountEnabled || false, invoice.discountPercentage || 0);
+      } = calculateDiscountedTaxes(invoice.items, invoice.discountEnabled || false, invoice.discountPercentage || 0, invoice.taxType);
 
       let tableHeaders: string[];
       if (invoice.taxType === 'igst') {
@@ -338,7 +338,7 @@ const InvoicePreview: React.FC = () => {
     totalIgst,
     discountAmount: calculatedDiscountAmount,
     discountedItems
-  } = calculateDiscountedTaxes(invoice.items, invoice.discountEnabled || false, invoice.discountPercentage || 0);
+  } = calculateDiscountedTaxes(invoice.items, invoice.discountEnabled || false, invoice.discountPercentage || 0, invoice.taxType);
 
   return (
     <div className="pb-12 max-w-7xl mx-auto">

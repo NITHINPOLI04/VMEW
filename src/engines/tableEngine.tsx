@@ -76,7 +76,7 @@ export const buildPOColumns = (taxType: string): ColumnDef<TaxableItem>[] => {
   const base: ColumnDef<TaxableItem>[] = [
     { header: 'S. No.', render: (_, i) => i + 1 },
     { header: 'Description', render: item => item.description },
-    { header: 'HSN/SAC', render: (_item) => '-', align: 'center' },
+    { header: 'HSN/SAC', render: item => item.hsnSacCode || '-', align: 'center' },
     { header: 'Qty', render: item => item.quantity, align: 'center' },
     { header: 'Unit', render: item => item.unit, align: 'center' },
     { header: 'Rate (₹)', render: item => `₹${item.rate.toFixed(2)}`, align: 'right' },

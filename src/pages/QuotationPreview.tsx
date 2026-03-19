@@ -134,7 +134,7 @@ const QuotationPreview: React.FC = () => {
                 totalIgst,
                 discountAmount,
                 discountedItems
-            } = calculateDiscountedTaxes(quotationData.items, quotationData.discountEnabled || false, quotationData.discountPercentage || 0);
+            } = calculateDiscountedTaxes(quotationData.items, quotationData.discountEnabled || false, quotationData.discountPercentage || 0, quotationData.taxType);
 
             const tableHeaders = quotationData.taxType === 'igst'
                 ? ['Sl No', 'Description of Goods', 'HSN/SAC Code', 'Qty', 'Unit', 'Rate', 'Taxable Amount', 'IGST %', 'IGST Amt']
@@ -286,7 +286,7 @@ const QuotationPreview: React.FC = () => {
         totalIgst,
         discountAmount,
         discountedItems
-    } = calculateDiscountedTaxes(quotationData.items, quotationData.discountEnabled || false, quotationData.discountPercentage || 0);
+    } = calculateDiscountedTaxes(quotationData.items, quotationData.discountEnabled || false, quotationData.discountPercentage || 0, quotationData.taxType);
 
     const terms: string[] = [];
     if (quotationData.deliveryTerms) terms.push(`Delivery : ${quotationData.deliveryTerms}`);
