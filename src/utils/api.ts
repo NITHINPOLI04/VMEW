@@ -140,6 +140,16 @@ export const createSupplier = (supplierData: Omit<Supplier, '_id' | 'createdAt' 
     Authorization: `Bearer ${token}`,
   });
 
+export const updateSupplier = (id: string, supplierData: Partial<Omit<Supplier, '_id' | 'createdAt' | 'updatedAt'>>, token: string) =>
+  apiRequest<Supplier>('/api/suppliers/' + id, 'PUT', supplierData, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const deleteSupplier = (id: string, token: string) =>
+  apiRequest<{ message: string }>('/api/suppliers/' + id, 'DELETE', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
 // Customer APIs
 export const getCustomers = (token: string) =>
   apiRequest<Customer[]>('/api/customers', 'GET', undefined, {
@@ -148,6 +158,16 @@ export const getCustomers = (token: string) =>
 
 export const createCustomer = (customerData: Omit<Customer, '_id' | 'createdAt' | 'updatedAt'>, token: string) =>
   apiRequest<Customer>('/api/customers', 'POST', customerData, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const updateCustomer = (id: string, customerData: Partial<Omit<Customer, '_id' | 'createdAt' | 'updatedAt'>>, token: string) =>
+  apiRequest<Customer>('/api/customers/' + id, 'PUT', customerData, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const deleteCustomer = (id: string, token: string) =>
+  apiRequest<{ message: string }>('/api/customers/' + id, 'DELETE', undefined, {
     Authorization: `Bearer ${token}`,
   });
 

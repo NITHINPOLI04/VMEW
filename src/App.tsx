@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import GenerateBills from './pages/GenerateBills';
 import BillLibrary from './pages/BillLibrary';
 import Inventory from './pages/Inventory';
+import Companies from './pages/Companies';
 import TemplateSetup from './pages/TemplateSetup';
 import InvoicePreview from './pages/InvoicePreview';
 import DCPreview from './pages/DCPreview';
@@ -135,6 +136,7 @@ function App() {
                 <Route path="new" element={<PurchaseOrderForm />} />
               </Route>
               <Route path="/inventory" element={<Inventory />} />
+              <Route path="/companies" element={<Companies />} />
               <Route path="/template-setup" element={<TemplateSetup />} />
               <Route path="/invoice-preview/:id" element={<InvoicePreview />} />
               <Route path="/dc-preview/:id" element={<DCPreview />} />

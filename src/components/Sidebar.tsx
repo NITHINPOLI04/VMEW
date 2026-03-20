@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   ShoppingBag,
+  Building2,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
@@ -33,6 +34,7 @@ const navItems = [
     ]
   },
   { to: '/inventory', icon: Package, label: 'Inventory' },
+  { to: '/companies', icon: Building2, label: 'Companies' },
   { to: '/template-setup', icon: Settings, label: 'Template Setup' },
 ];
 

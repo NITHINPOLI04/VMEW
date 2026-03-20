@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Package, PlusCircle, Search, Pencil, Trash2, Download, ArrowUpDown, PackagePlus, PackageMinus, IndianRupee, ChevronDown, X, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Package, PlusCircle, Search, Edit, Trash2, Download, ArrowUpDown, PackagePlus, PackageMinus, IndianRupee, ChevronDown, X, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useInventoryStore } from '../stores/inventoryStore';
 import CustomSelect from '../components/CustomSelect';
 import { InventoryItem } from '../types';
@@ -470,7 +470,7 @@ const Inventory: React.FC = () => {
                             className="text-slate-400 hover:text-emerald-600 p-1.5 rounded-md hover:bg-emerald-50 transition-colors"
                             title="Edit"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeleteModalOpen(item.id); }}
