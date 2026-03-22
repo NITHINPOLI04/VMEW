@@ -365,12 +365,12 @@ const PurchaseOrderPreview: React.FC = () => {
                     <div className="flex justify-between mb-6">
                         <div>
                             <h2 className="text-xl font-bold mb-1">PURCHASE ORDER</h2>
-                            <p className="text-sm">PO No: <span className="font-medium">{poData.poNumber}</span></p>
-                            <p className="text-sm">Date: <span className="font-medium">{new Date(poData.date).toLocaleDateString('en-IN')}</span></p>
+                            <p className="text-sm"><span className="font-semibold">PO No:</span> <span className="font-medium">{poData.poNumber}</span></p>
+                            <p className="text-sm"><span className="font-semibold">Date:</span> <span className="font-medium">{new Date(poData.date).toLocaleDateString('en-IN')}</span></p>
                         </div>
                         <div className="text-right">
-                            <p className="text-sm">PAN No: <span className="font-medium">{defaultInfo?.panNo || 'AGIPP2674H'}</span></p>
-                            <p className="text-sm">MSME No: <span className="font-medium">{defaultInfo?.msmeNo || 'UDYAM-AP-10-000719'}</span></p>
+                            <p className="text-sm"><span className="font-semibold">PAN No:</span> <span className="font-medium">{defaultInfo?.panNo || 'AGIPP2674H'}</span></p>
+                            <p className="text-sm"><span className="font-semibold">MSME No:</span> <span className="font-medium">{defaultInfo?.msmeNo || 'UDYAM-AP-10-000719'}</span></p>
                         </div>
                     </div>
 
@@ -378,25 +378,25 @@ const PurchaseOrderPreview: React.FC = () => {
                         <h3 className="font-bold border-b pb-2 mb-2">Supplier Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <p className="text-sm font-medium">Name:</p>
+                                <p className="text-sm font-semibold">Name:</p>
                                 <p className="mb-2">{poData.supplierName}</p>
 
-                                <p className="text-sm font-medium">Address:</p>
+                                <p className="text-sm font-semibold">Address:</p>
                                 <p className="mb-2 whitespace-pre-wrap">{poData.supplierAddress}</p>
 
-                                <p className="text-sm font-medium">GST No:</p>
+                                <p className="text-sm font-semibold">GST No:</p>
                                 <p className="mb-2">{poData.supplierGst || 'N/A'}</p>
                             </div>
                             <div>
                                 {poData.subject && (
                                     <>
-                                        <p className="text-sm font-medium">Subject:</p>
+                                        <p className="text-sm font-semibold">Subject:</p>
                                         <p className="mb-2">{poData.subject}</p>
                                     </>
                                 )}
                                 {poData.reference && (
                                     <>
-                                        <p className="text-sm font-medium">Reference:</p>
+                                        <p className="text-sm font-semibold">Reference:</p>
                                         <p className="mb-2">{poData.reference}</p>
                                     </>
                                 )}

@@ -359,12 +359,12 @@ const QuotationPreview: React.FC = () => {
                     <div className="flex justify-between mb-6">
                         <div>
                             <h2 className="text-xl font-bold mb-1">QUOTATION</h2>
-                            <p className="text-sm">Quotation No: <span className="font-medium">{quotationData.quotationNumber}</span></p>
-                            <p className="text-sm">Date: <span className="font-medium">{new Date(quotationData.date).toLocaleDateString('en-IN')}</span></p>
+                            <p className="text-sm"><span className="font-semibold">Quotation No:</span> <span className="font-medium">{quotationData.quotationNumber}</span></p>
+                            <p className="text-sm"><span className="font-semibold">Date:</span> <span className="font-medium">{new Date(quotationData.date).toLocaleDateString('en-IN')}</span></p>
                         </div>
                         <div className="text-right">
-                            <p className="text-sm">PAN No: <span className="font-medium">{defaultInfo?.panNo || 'AGIPP2674H'}</span></p>
-                            <p className="text-sm">MSME No: <span className="font-medium">{defaultInfo?.msmeNo || 'UDYAM-AP-10-000719'}</span></p>
+                            <p className="text-sm"><span className="font-semibold">PAN No:</span> <span className="font-medium">{defaultInfo?.panNo || 'AGIPP2674H'}</span></p>
+                            <p className="text-sm"><span className="font-semibold">MSME No:</span> <span className="font-medium">{defaultInfo?.msmeNo || 'UDYAM-AP-10-000719'}</span></p>
                         </div>
                     </div>
 
@@ -372,17 +372,17 @@ const QuotationPreview: React.FC = () => {
                         <h3 className="font-bold border-b pb-2 mb-2">Buyer Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <p className="text-sm font-medium">Name:</p>
+                                <p className="text-sm font-semibold">Name:</p>
                                 <p className="mb-2">{quotationData.buyerName}</p>
-                                <p className="text-sm font-medium">Address:</p>
+                                <p className="text-sm font-semibold">Address:</p>
                                 <p className="mb-2 whitespace-pre-wrap">{quotationData.buyerAddress}</p>
-                                <p className="text-sm font-medium">GST No:</p>
+                                <p className="text-sm font-semibold">GST No:</p>
                                 <p className="mb-2">{quotationData.buyerGst || 'N/A'}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium">Ref No:</p>
+                                <p className="text-sm font-semibold">Ref No:</p>
                                 <p className="mb-2">{quotationData.refNumber || 'N/A'}</p>
-                                <p className="text-sm font-medium">Enq No:</p>
+                                <p className="text-sm font-semibold">Enq No:</p>
                                 <p className="mb-2">{quotationData.enqNumber || 'N/A'}</p>
                             </div>
                         </div>

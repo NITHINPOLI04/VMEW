@@ -417,12 +417,12 @@ const InvoicePreview: React.FC = () => {
           <div className="flex justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold mb-1">TAX INVOICE</h2>
-              <p className="text-sm">Invoice No: <span className="font-medium">{invoice.invoiceNumber}</span></p>
-              <p className="text-sm">Date: <span className="font-medium">{new Date(invoice.date).toLocaleDateString('en-IN')}</span></p>
+              <p className="text-sm"><span className="font-semibold">Invoice No:</span> <span className="font-medium">{invoice.invoiceNumber}</span></p>
+              <p className="text-sm"><span className="font-semibold">Date:</span> <span className="font-medium">{new Date(invoice.date).toLocaleDateString('en-IN')}</span></p>
             </div>
             <div className="text-right">
-              <p className="text-sm">PAN No: <span className="font-medium">{defaultInfo?.panNo || 'AGIPP2674H'}</span></p>
-              <p className="text-sm">MSME No: <span className="font-medium">{defaultInfo?.msmeNo || 'UDYAM-AP-10-000719'}</span></p>
+              <p className="text-sm"><span className="font-semibold">PAN No:</span> <span className="font-medium">{defaultInfo?.panNo || 'AGIPP2674H'}</span></p>
+              <p className="text-sm"><span className="font-semibold">MSME No:</span> <span className="font-medium">{defaultInfo?.msmeNo || 'UDYAM-AP-10-000719'}</span></p>
             </div>
           </div>
 
@@ -430,26 +430,26 @@ const InvoicePreview: React.FC = () => {
             <h3 className="font-bold border-b pb-2 mb-2">Buyer Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium">Name:</p>
+                <p className="text-sm font-semibold">Name:</p>
                 <p className="mb-2">{invoice.buyerName}</p>
 
-                <p className="text-sm font-medium">Address:</p>
+                <p className="text-sm font-semibold">Address:</p>
                 <p className="mb-2 whitespace-pre-wrap">{invoice.buyerAddress}</p>
 
-                <p className="text-sm font-medium">GST No:</p>
+                <p className="text-sm font-semibold">GST No:</p>
                 <p className="mb-2">{invoice.buyerGst}</p>
               </div>
               <div>
-                <p className="text-sm font-medium">Vessel:</p>
+                <p className="text-sm font-semibold">Vessel:</p>
                 <p className="mb-2">{invoice.vessel}</p>
 
-                <p className="text-sm font-medium">E-way Bill No:</p>
+                <p className="text-sm font-semibold">E-way Bill No:</p>
                 <p className="mb-2">{invoice.ewayBillNo}</p>
 
-                <p className="text-sm font-medium">P.O. No:</p>
+                <p className="text-sm font-semibold">P.O. No:</p>
                 <p className="mb-2">{invoice.poNumber}</p>
 
-                <p className="text-sm font-medium">DC No:</p>
+                <p className="text-sm font-semibold">DC No:</p>
                 <p>{invoice.dcNumber}</p>
               </div>
             </div>
