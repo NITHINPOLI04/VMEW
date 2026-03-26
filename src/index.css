@@ -167,6 +167,17 @@
     @apply px-4 py-3.5 text-slate-700;
   }
 
+  /* Description Column Specific Fix */
+  .description-cell {
+    text-align: left !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+  }
+
+
   /* ─── Mobile Table Card View ─────────────────── */
   @media (max-width: 768px) {
     .saas-table thead {

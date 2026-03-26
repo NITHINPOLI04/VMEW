@@ -76,7 +76,8 @@ const DCPreview: React.FC = () => {
             const [img] = await loadImages(['/logo.png']);
 
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            pdf.setFont('helvetica');
+            pdf.setFont('helvetica', 'normal');
+            (pdf as any).setCharSpace(0);
 
             const margin = PDF_MARGIN;
             const pageWidth = PDF_PAGE_WIDTH;
@@ -150,6 +151,7 @@ const DCPreview: React.FC = () => {
                     fontSize: 8,
                     cellPadding: 0.8,
                     overflow: 'linebreak',
+                    halign: 'left',
                     lineWidth: 0.1,
                     lineColor: [220, 220, 220],
                 },

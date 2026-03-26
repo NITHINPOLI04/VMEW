@@ -23,6 +23,28 @@ export const loadImages = (srcs: string[]): Promise<HTMLImageElement[]> => {
   );
 };
 
+// ─── Safe Text Renderer ──────────────────────────────────────────────────────
+
+/**
+ * Renders text safely using splitTextToSize to prevent jsPDF character-spacing bugs.
+ * Always use this instead of pdf.text(text, x, y, { maxWidth }) to avoid
+ * letters being spaced out like "L E D F l o o d L i g h t".
+ * Returns the Y position after the last line.
+ */
+export const drawWrappedText = (
+  pdf: jsPDF,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number = 5
+): number => {
+  if (!text) return y;
+  const lines = pdf.splitTextToSize(String(text), maxWidth);
+  pdf.text(lines, x, y);
+  return y + lines.length * lineHeight;
+};
+
 // ─── PDF Constants ────────────────────────────────────────────────────────────
 
 export const PDF_MARGIN = 15;
@@ -163,9 +185,15 @@ export const drawTwoColumnDetails = (
     }
     if (value) {
       pdf.setFont('helvetica', 'normal');
-      pdf.text(value, valueX, buyerY);
+      const maxW = leftBoxWidth - leftLabelOffset - 2;
+      const lines = pdf.splitTextToSize(String(value), maxW);
+      lines.forEach((line: string) => {
+        pdf.text(line, valueX, buyerY);
+        buyerY += 5;
+      });
+    } else {
+      buyerY += 5;
     }
-    buyerY += 5;
   });
 
   let rightY = y + 6;
@@ -175,20 +203,21 @@ export const drawTwoColumnDetails = (
   rightLines.forEach(({ label, value, wrap }) => {
     const labelX = rightBoxX;
     const valueX = labelX + rightLabelOffset;
+    const maxW = contentWidth * 0.48 - rightLabelOffset;
     if (label) {
       pdf.setFont('helvetica', 'bold');
       pdf.text(label, labelX, rightY);
     }
     if (value) {
       pdf.setFont('helvetica', 'normal');
-      if (wrap) {
-        const splitText = pdf.splitTextToSize(value, contentWidth * 0.48 - rightLabelOffset);
+      if (wrap || String(value).length > 30) {
+        const splitText = pdf.splitTextToSize(String(value), maxW);
         splitText.forEach((line: string) => {
           pdf.text(line, valueX, rightY);
           rightY += 5;
         });
       } else {
-        pdf.text(value, valueX, rightY);
+        pdf.text(String(value), valueX, rightY);
         rightY += 5;
       }
     } else {
@@ -236,6 +265,7 @@ export const drawItemsTable = (
       lineWidth: 0.1,
       font: 'helvetica',
       overflow: 'linebreak',
+      halign: 'left',
       ...customStyles
     },
     headStyles: {

@@ -77,7 +77,8 @@ const PurchaseOrderPreview: React.FC = () => {
             const [img] = await loadImages(['/logo.png']);
 
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            pdf.setFont('helvetica');
+            pdf.setFont('helvetica', 'normal');
+            (pdf as any).setCharSpace(0);
 
             const isCompact = poData.items.length <= 10;
             const margin = isCompact ? 10 : PDF_MARGIN;

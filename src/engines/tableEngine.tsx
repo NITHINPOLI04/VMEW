@@ -21,7 +21,7 @@ export interface ColumnDef<T = any> {
 export const buildInvoiceColumns = (taxType: string): ColumnDef[] => {
   const base: ColumnDef[] = [
     { header: 'S. No.', render: (_, i) => i + 1 },
-    { header: 'Description of Goods', render: item => item.description },
+    { header: 'Description of Goods', render: item => item.description, className: 'description-cell' },
     { header: 'HSN/SAC Code', render: item => item.hsnSacCode },
     { header: 'Qty', render: item => item.quantity, align: 'center' },
     { header: 'Unit', render: item => item.unit, align: 'center' },
@@ -50,7 +50,7 @@ export const buildQuotationColumns = (taxType: string): ColumnDef[] =>
 
 export const buildDCColumns = (): ColumnDef[] => [
   { header: 'S. No.', render: (_, i) => i + 1 },
-  { header: 'Description of Goods', render: item => item.description },
+  { header: 'Description of Goods', render: item => item.description, className: 'description-cell' },
   { header: 'HSN/SAC Code', render: item => item.hsnSacCode },
   { header: 'Qty', render: item => item.quantity, align: 'center' },
   { header: 'Unit', render: item => item.unit, align: 'center' },
@@ -75,7 +75,7 @@ export interface TaxableItem {
 export const buildPOColumns = (taxType: string): ColumnDef<TaxableItem>[] => {
   const base: ColumnDef<TaxableItem>[] = [
     { header: 'S. No.', render: (_, i) => i + 1 },
-    { header: 'Description', render: item => item.description },
+    { header: 'Description', render: item => item.description, className: 'description-cell' },
     { header: 'HSN/SAC', render: item => item.hsnSacCode || '-', align: 'center' },
     { header: 'Qty', render: item => item.quantity, align: 'center' },
     { header: 'Unit', render: item => item.unit, align: 'center' },

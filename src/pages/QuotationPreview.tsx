@@ -82,7 +82,8 @@ const QuotationPreview: React.FC = () => {
             const [img, qrImg] = await loadImages(['/logo.png', '/Payment_QR.png']);
 
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            pdf.setFont('helvetica');
+            pdf.setFont('helvetica', 'normal');
+            (pdf as any).setCharSpace(0);
 
             const margin = PDF_MARGIN;
             const pageWidth = PDF_PAGE_WIDTH;
