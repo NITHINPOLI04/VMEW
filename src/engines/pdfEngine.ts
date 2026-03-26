@@ -213,7 +213,8 @@ export const drawItemsTable = (
   startY: number,
   margin: number,
   headerEndY: number,
-  onRedrawHeader: (currentY: number) => void
+  onRedrawHeader: (currentY: number) => void,
+  customStyles?: any
 ): void => {
   autoTable(pdf, {
     head: [tableHeaders],
@@ -234,7 +235,8 @@ export const drawItemsTable = (
       lineColor: [220, 220, 220],
       lineWidth: 0.1,
       font: 'helvetica',
-      overflow: 'linebreak'
+      overflow: 'linebreak',
+      ...customStyles
     },
     headStyles: {
       fillColor: [69, 130, 181],

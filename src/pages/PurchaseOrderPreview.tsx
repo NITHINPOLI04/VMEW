@@ -14,7 +14,6 @@ import {
     PDF_MARGIN,
     PDF_PAGE_WIDTH,
     PDF_PAGE_HEIGHT,
-    PDF_CONTENT_WIDTH,
     drawDocTitle,
     drawDocMetaRow,
     drawTwoColumnDetails,
@@ -22,7 +21,6 @@ import {
     drawTotalsBox,
     drawAmountInWords,
     drawPageNumbers,
-    drawSignatoryBox,
 } from '../engines/pdfEngine';
 
 const PurchaseOrderPreview: React.FC = () => {
@@ -81,10 +79,12 @@ const PurchaseOrderPreview: React.FC = () => {
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             pdf.setFont('helvetica');
 
-            const margin = PDF_MARGIN;
+            const isCompact = poData.items.length <= 10;
+            const margin = isCompact ? 10 : PDF_MARGIN;
+            const spacing = isCompact ? 3 : 5;
             const pageWidth = PDF_PAGE_WIDTH;
             const pageHeight = PDF_PAGE_HEIGHT;
-            const contentWidth = PDF_CONTENT_WIDTH;
+            const contentWidth = pageWidth - margin * 2;
 
             let headerEndY = 0;
 
@@ -177,9 +177,9 @@ const PurchaseOrderPreview: React.FC = () => {
                 };
             }
 
-            drawItemsTable(pdf, usedHeaders, tableData, columnStyles, yPos, margin, headerEndY, drawHeader);
+            drawItemsTable(pdf, usedHeaders, tableData, columnStyles, yPos, margin, headerEndY, drawHeader, { cellPadding: isCompact ? 0.5 : 0.8 });
 
-            let finalY = (pdf as any).lastAutoTable.finalY + 5;
+            let finalY = (pdf as any).lastAutoTable.finalY + spacing;
 
             const totalsBoxHeight = (poData.taxType === 'igst' ? 23 : 28) + (poData.discountEnabled ? 5 : 0);
             const amountWordsLines = pdf.splitTextToSize(
@@ -187,8 +187,7 @@ const PurchaseOrderPreview: React.FC = () => {
             );
             const amountWordsHeight = amountWordsLines.length * 5 + 15;
             const notesHeight = poData.notes ? 15 : 0;
-            const signatoryHeight = 30;
-            const totalFooterHeight = totalsBoxHeight + amountWordsHeight + notesHeight + signatoryHeight;
+            const totalFooterHeight = totalsBoxHeight + amountWordsHeight + notesHeight;
 
             if (finalY + totalFooterHeight > pageHeight - 15) {
                 pdf.addPage();
@@ -228,19 +227,6 @@ const PurchaseOrderPreview: React.FC = () => {
                 });
                 notesEndY = noteY + 3;
             }
-
-            const signatoryY = notesEndY + 3;
-            const signatoryBoxWidth = contentWidth * 0.48;
-            const signatoryBoxHeight = 30;
-            const signatoryBoxX = pageWidth - margin - signatoryBoxWidth;
-            drawSignatoryBox(
-                pdf,
-                signatoryBoxX,
-                signatoryY,
-                signatoryBoxWidth,
-                signatoryBoxHeight,
-                letterhead?.companyName || 'Venkateswara Marine Electrical Works'
-            );
 
             drawPageNumbers(pdf, pageWidth, pageHeight, margin);
 
@@ -468,14 +454,6 @@ const PurchaseOrderPreview: React.FC = () => {
                             <p className="text-sm text-slate-700 whitespace-pre-wrap">{poData.notes}</p>
                         </div>
                     )}
-
-                    <div className="flex justify-between items-end mt-12 pt-8 border-t border-slate-200">
-                        <div></div>
-                        <div className="text-right">
-                            <h4 className="font-bold text-slate-800 mb-12">For {letterhead?.companyName || 'Company'}</h4>
-                            <p className="text-sm text-slate-600 font-medium">Authorized Signatory</p>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

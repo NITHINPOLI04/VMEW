@@ -189,7 +189,7 @@ const PurchaseOrderLibrary: React.FC = () => {
   };
 
   const handleGroupedExport = () => {
-    let allItems: any[] = [];
+    const allItems: any[] = [];
     sortedItems.forEach((po: any) => {
       const isIgst = po.taxType === 'igst';
       po.items.forEach((item: any, itemIndex: number) => {

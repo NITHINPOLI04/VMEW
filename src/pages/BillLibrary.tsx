@@ -390,7 +390,7 @@ const BillLibrary: React.FC = () => {
   const handleGroupedExport = () => {
     if (activeTab !== 'invoice') return toast.error('Export supported for invoices only');
     
-    let allItems: any[] = [];
+    const allItems: any[] = [];
     
     sortedItems.forEach((invoice: any) => {
       const isIgst = invoice.taxType === 'igst';
