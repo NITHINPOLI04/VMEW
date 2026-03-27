@@ -102,13 +102,16 @@ const BillForm: React.FC<BillFormProps> = ({
 
         if (billType === 'invoice' || billType === 'quotation') {
             if (field === 'quantity' || field === 'rate') {
-                const qty = field === 'quantity' ? Number(value) : updatedItems[index].quantity;
-                const rate = field === 'rate' ? Number(value) : updatedItems[index].rate;
+                let qty = field === 'quantity' ? (parseFloat(String(value)) || 0) : updatedItems[index].quantity;
+                if (field === 'quantity' && updatedItems[index].unit === 'Nos') {
+                    qty = Math.floor(qty);
+                }
+                const rate = field === 'rate' ? (parseFloat(String(value)) || 0) : updatedItems[index].rate;
                 const taxableAmount = qty * rate;
                 const sgstAmount = (taxableAmount * updatedItems[index].sgstPercentage) / 100;
                 const cgstAmount = (taxableAmount * updatedItems[index].cgstPercentage) / 100;
                 const igstAmount = (taxableAmount * updatedItems[index].igstPercentage) / 100;
-                updatedItems[index] = { ...updatedItems[index], [field]: Number(value), taxableAmount, sgstAmount, cgstAmount, igstAmount };
+                updatedItems[index] = { ...updatedItems[index], [field]: field === 'quantity' ? qty : (parseFloat(String(value)) || 0), taxableAmount, sgstAmount, cgstAmount, igstAmount };
             } else if (['sgstPercentage', 'cgstPercentage', 'igstPercentage'].includes(field)) {
                 const percentage = Number(value);
                 const taxField = field === 'sgstPercentage' ? 'sgstAmount' : field === 'cgstPercentage' ? 'cgstAmount' : 'igstAmount';
@@ -116,14 +119,29 @@ const BillForm: React.FC<BillFormProps> = ({
                 updatedItems[index] = { ...updatedItems[index], [field]: percentage, [taxField]: taxAmount };
             } else {
                 updatedItems[index] = { ...updatedItems[index], [field]: value };
+                if (field === 'unit' && value === 'Nos') {
+                    updatedItems[index].quantity = Math.floor(updatedItems[index].quantity);
+                    const taxableAmount = updatedItems[index].quantity * updatedItems[index].rate;
+                    const sgstAmount = (taxableAmount * updatedItems[index].sgstPercentage) / 100;
+                    const cgstAmount = (taxableAmount * updatedItems[index].cgstPercentage) / 100;
+                    const igstAmount = (taxableAmount * updatedItems[index].igstPercentage) / 100;
+                    updatedItems[index] = { ...updatedItems[index], taxableAmount, sgstAmount, cgstAmount, igstAmount };
+                }
             }
             // Removed redundant setFormData to avoid race condition
             calculateTaxTotals(updatedItems, formData.taxType, formData.discountEnabled, formData.discountPercentage);
         } else if (billType === 'dc') {
             if (field === 'quantity') {
-                updatedItems[index] = { ...updatedItems[index], [field]: Number(value) };
+                let qty = parseFloat(String(value)) || 0;
+                if (updatedItems[index].unit === 'Nos') {
+                    qty = Math.floor(qty);
+                }
+                updatedItems[index] = { ...updatedItems[index], [field]: qty };
             } else {
                 updatedItems[index] = { ...updatedItems[index], [field]: value };
+                if (field === 'unit' && value === 'Nos') {
+                    updatedItems[index].quantity = Math.floor(updatedItems[index].quantity);
+                }
             }
             setFormData((prev: any) => ({ ...prev, items: updatedItems }));
         }
@@ -283,7 +301,8 @@ const BillForm: React.FC<BillFormProps> = ({
                                                     type="number"
                                                     value={item.quantity}
                                                     onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                                                    min="1"
+                                                    min={item.unit === 'Nos' ? '1' : '0.01'}
+                                                    step={item.unit === 'Nos' ? '1' : '0.01'}
                                                     required
                                                     autoComplete="off"
                                                     name={`field_v_qty_${index}`}
