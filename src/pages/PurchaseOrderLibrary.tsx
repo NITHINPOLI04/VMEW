@@ -5,6 +5,7 @@ import {
   Calendar, CheckCircle2, ReceiptText, ArrowUpDown, ChevronDown
 } from 'lucide-react';
 import { usePOStore } from '../stores/poStore';
+import { useFinancialYearStore } from '../stores/financialYearStore';
 import { PurchaseOrder } from '../types';
 import { toast } from 'react-hot-toast';
 import CustomSelect from '../components/CustomSelect';
@@ -59,7 +60,8 @@ const PurchaseOrderLibrary: React.FC = () => {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedYear, setSelectedYear] = useState('');
+  const selectedYear = useFinancialYearStore(state => state.selectedFY);
+  const setSelectedYear = useFinancialYearStore(state => state.setSelectedFY);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
@@ -103,7 +105,6 @@ const PurchaseOrderLibrary: React.FC = () => {
       `${parseInt(currentFinancialYear.split('-')[0]) - 2}-${parseInt(currentFinancialYear.split('-')[1]) - 2}`,
     ];
     setAvailableYears(yearsList);
-    setSelectedYear(currentFinancialYear);
   }, []);
 
   useEffect(() => {

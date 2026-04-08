@@ -6,12 +6,13 @@ import {
 } from 'lucide-react';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useInventoryStore } from '../stores/inventoryStore';
+import { useFinancialYearStore } from '../stores/financialYearStore';
 import Chart from 'chart.js/auto';
 import DashboardSkeleton from '../components/DashboardSkeleton';
 import { parseISO, isAfter, startOfDay } from 'date-fns';
 
 const Dashboard: React.FC = () => {
-  const [currentYear] = useState('2025-2026');
+  const selectedFY = useFinancialYearStore(state => state.selectedFY);
   const [error, setError] = useState<string | null>(null);
   const [chartMode, setChartMode] = useState<'monthly' | 'weekly'>('monthly');
   const chartRef = useRef<Chart | null>(null);
@@ -28,7 +29,7 @@ const Dashboard: React.FC = () => {
         setError(null);
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
-            await Promise.all([fetchInvoices('2025-2026'), fetchInventory('2025-2026')]);
+            await Promise.all([fetchInvoices(selectedFY), fetchInventory(selectedFY)]);
             break;
           } catch (err) {
             if (attempt === 2) throw err;
@@ -41,7 +42,13 @@ const Dashboard: React.FC = () => {
       }
     };
     loadData();
-  }, [fetchInvoices, fetchInventory]);
+  }, [fetchInvoices, fetchInventory, selectedFY]);
+
+  // Temporary required logs
+  useEffect(() => {
+    console.log("Selected FY:", selectedFY);
+    console.log("Dashboard Data Invoices length:", invoices.length);
+  }, [selectedFY, invoices.length]);
 
   // ─── Computed ──────────────────────────────────────────
   const inv = useMemo(() => (Array.isArray(invoices) ? invoices : []), [invoices]);
@@ -224,7 +231,7 @@ const Dashboard: React.FC = () => {
       <div className="flex items-center justify-between shrink-0 h-10">
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-none">Dashboard</h1>
-          <p className="text-[11px] text-slate-400 mt-1">FY {currentYear} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</p>
+          <p className="text-[11px] text-slate-400 mt-1">FY {selectedFY} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</p>
         </div>
         {overdueCount > 0 && (
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-rose-50 border border-rose-100 text-rose-600 shadow-sm">

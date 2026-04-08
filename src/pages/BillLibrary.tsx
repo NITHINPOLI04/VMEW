@@ -9,6 +9,7 @@ import { useInvoiceStore } from '../stores/invoiceStore';
 import { useDCStore } from '../stores/dcStore';
 import { useQuotationStore } from '../stores/quotationStore';
 import { useContactStore } from '../stores/contactStore';
+import { useFinancialYearStore } from '../stores/financialYearStore';
 import { Invoice, DeliveryChallan, Quotation } from '../types';
 import { toast } from 'react-hot-toast';
 import { usePopper } from 'react-popper';
@@ -110,7 +111,8 @@ const BillLibrary: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // ── Primary filters (FY/Month) ──────────────────────────────────────────────
-  const [selectedYear, setSelectedYear] = useState('');
+  const selectedYear = useFinancialYearStore(state => state.selectedFY);
+  const setSelectedYear = useFinancialYearStore(state => state.setSelectedFY);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
 
@@ -175,7 +177,6 @@ const BillLibrary: React.FC = () => {
       `${parseInt(fy.split('-')[0]) - 2}-${parseInt(fy.split('-')[1]) - 2}`,
     ];
     setAvailableYears(list);
-    setSelectedYear(fy);
     fetchCustomers();
   }, [fetchCustomers]);
 

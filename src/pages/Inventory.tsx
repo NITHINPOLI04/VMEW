@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Package, PlusCircle, Search, Edit, Trash2, Download, ArrowUpDown, PackagePlus, PackageMinus, IndianRupee, ChevronDown, X, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useInventoryStore } from '../stores/inventoryStore';
+import { useFinancialYearStore } from '../stores/financialYearStore';
 import CustomSelect from '../components/CustomSelect';
 import { InventoryItem } from '../types';
 import { toast } from 'react-hot-toast';
@@ -49,7 +50,8 @@ const Inventory: React.FC = () => {
   const { fetchInventory, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useInventoryStore();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedYear, setSelectedYear] = useState('');
+  const selectedYear = useFinancialYearStore(state => state.selectedFY);
+  const setSelectedYear = useFinancialYearStore(state => state.setSelectedFY);
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'Sales' | 'Purchase'>('Sales');
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,7 +117,6 @@ const Inventory: React.FC = () => {
       `${parseInt(currentFinancialYear.split('-')[0]) - 2}-${parseInt(currentFinancialYear.split('-')[1]) - 2}`,
     ];
     setAvailableYears(yearsList);
-    setSelectedYear(currentFinancialYear);
   }, []);
 
   useEffect(() => {
