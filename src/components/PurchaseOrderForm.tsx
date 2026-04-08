@@ -483,7 +483,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                     </div>
 
                     {/* ── Form Actions ── */}
-                    <div className="flex items-center justify-end gap-3 pt-2 pb-0">
+                    <div className="flex items-center justify-end gap-3 pt-2 pb-2">
                         <button
                             type="button"
                             onClick={handlePreview}

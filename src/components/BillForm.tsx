@@ -386,7 +386,7 @@ const BillForm: React.FC<BillFormProps> = ({
                     </div>
 
                     {/* Form Actions - placed right after line items */}
-                    <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2 pb-0">
+                    <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2 pb-2">
                         <button
                             type="button"
                             onClick={onPreview}
