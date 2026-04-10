@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Download, Save, Edit, ChevronLeft, Check, Loader2 } from 'lucide-react';
-import { calculateDiscountedTaxes } from '../utils/taxCalculator';
+import { getVerifiedTotals } from '../utils/calcVerifier';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useTemplateStore } from '../stores/templateStore';
 import jsPDF from 'jspdf';
@@ -144,6 +144,10 @@ const InvoicePreview: React.FC = () => {
 
       const yPos = drawHeader(10);
 
+      const verified = getVerifiedTotals(invoice);
+      if (verified.verification.severity === 'material') {
+        console.warn('[PDF] Material mismatch detected:', verified.verification.mismatches);
+      }
       const {
         subTotal,
         totalSgst,
@@ -151,7 +155,7 @@ const InvoicePreview: React.FC = () => {
         totalIgst,
         discountAmount,
         discountedItems
-      } = calculateDiscountedTaxes(invoice.items, invoice.discountEnabled || false, invoice.discountPercentage || 0, invoice.taxType);
+      } = verified;
 
       let tableHeaders: string[];
       if (invoice.taxType === 'igst') {
@@ -237,8 +241,9 @@ const InvoicePreview: React.FC = () => {
       const totalsEndY = drawTotalsBox(
         pdf, pageWidth, finalY,
         invoice.taxType, subTotal, totalSgst, totalCgst, totalIgst,
-        invoice.grandTotal,
-        invoice.discountEnabled, invoice.discountPercentage, discountAmount
+        verified.grandTotal,
+        invoice.discountEnabled, invoice.discountPercentage, discountAmount,
+        invoice.discountType || 'percentage'
       );
 
       const bottomY = drawAmountInWords(
@@ -332,6 +337,10 @@ const InvoicePreview: React.FC = () => {
     );
   }
 
+  const verified = getVerifiedTotals(invoice);
+  if (verified.verification.severity === 'material') {
+    toast.error(`Calculation mismatch detected (₹${verified.verification.totalDrift.toFixed(2)} drift). Values have been auto-corrected.`);
+  }
   const {
     subTotal: calculatedSubTotal,
     totalSgst,
@@ -339,7 +348,8 @@ const InvoicePreview: React.FC = () => {
     totalIgst,
     discountAmount: calculatedDiscountAmount,
     discountedItems
-  } = calculateDiscountedTaxes(invoice.items, invoice.discountEnabled || false, invoice.discountPercentage || 0, invoice.taxType);
+  } = verified;
+  const displayGrandTotal = verified.grandTotal;
 
   return (
     <div className="pb-12 max-w-7xl mx-auto">
@@ -476,7 +486,7 @@ const InvoicePreview: React.FC = () => {
               {invoice.discountEnabled && (
                 <div className="p-3 border-b border-slate-200 bg-red-50 text-red-700">
                   <div className="flex justify-between">
-                    <span className="font-medium">Discount ({invoice.discountPercentage || 0}%):</span>
+                    <span className="font-medium">{(invoice.discountType || 'percentage') === 'fixed' ? 'Discount (Fixed):' : `Discount (${invoice.discountPercentage || 0}%):`}</span>
                     <span>-₹{calculatedDiscountAmount.toFixed(2)}</span>
                   </div>
                 </div>
@@ -504,7 +514,7 @@ const InvoicePreview: React.FC = () => {
               <div className="p-3">
                 <div className="flex justify-between text-lg">
                   <span className="font-bold">Grand Total:</span>
-                  <span className="font-bold">₹{invoice.grandTotal.toFixed(2)}</span>
+                  <span className="font-bold">₹{displayGrandTotal.toFixed(2)}</span>
                 </div>
               </div>
             </div>

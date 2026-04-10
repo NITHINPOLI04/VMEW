@@ -12,7 +12,7 @@ import {
     TaxFieldsRow,
     ItemTotalsSummary,
 } from '../engines/tableEngine';
-import { calculateDiscountedTaxes } from '../utils/taxCalculator';
+import { computeItemTotals, computeDocumentTotals, makeDiscountConfig, type TaxType } from '../utils/calcEngine';
 import CustomSelect from './CustomSelect';
 
 interface PurchaseOrderFormProps {
@@ -105,7 +105,13 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const calculateTaxTotals = (items: any[] = formData.items, taxType: string = formData.taxType, discountEnabled: boolean = formData.discountEnabled, discountPercentage: any = formData.discountPercentage) => {
+    const calculateTaxTotals = (items: any[] = formData.items, taxType: string = formData.taxType, discountEnabled: boolean = formData.discountEnabled, discountPercentage: any = formData.discountPercentage, discountType: string = formData.discountType || 'percentage', discountFixedAmount: number = formData.discountFixedAmount || 0) => {
+        const discountConfig = makeDiscountConfig(
+            discountEnabled,
+            parseFloat(discountPercentage) || 0,
+            discountType as 'percentage' | 'fixed',
+            discountFixedAmount
+        );
         const {
             subTotal,
             discountAmount,
@@ -114,7 +120,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
             totalCgst,
             totalIgst,
             grandTotal
-        } = calculateDiscountedTaxes(items, discountEnabled, parseFloat(discountPercentage) || 0, taxType);
+        } = computeDocumentTotals(items, discountConfig, taxType as TaxType);
 
         setFormData((prev: any) => ({
             ...prev,
@@ -128,6 +134,8 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
             totalIgst,
             discountEnabled,
             discountPercentage,
+            discountType,
+            discountFixedAmount,
             taxType
         }));
     };
@@ -166,30 +174,20 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                 qty = Math.floor(qty);
             }
             const rate = field === 'rate' ? (parseFloat(String(value)) || 0) : updatedItems[index].rate;
-            const taxableAmount = qty * rate;
-            const sgstAmount = (taxableAmount * updatedItems[index].sgstPercentage) / 100;
-            const cgstAmount = (taxableAmount * updatedItems[index].cgstPercentage) / 100;
-            const igstAmount = (taxableAmount * updatedItems[index].igstPercentage) / 100;
-
-            updatedItems[index] = { ...updatedItems[index], [field]: field === 'quantity' ? qty : (parseFloat(String(value)) || 0), taxableAmount, sgstAmount, cgstAmount, igstAmount };
+            updatedItems[index] = { ...updatedItems[index], [field]: field === 'quantity' ? qty : (parseFloat(String(value)) || 0) };
+            updatedItems[index] = computeItemTotals({ ...updatedItems[index], quantity: qty, rate }, formData.taxType as TaxType);
         } else if (['sgstPercentage', 'cgstPercentage', 'igstPercentage'].includes(field)) {
-            const percentage = Number(value);
-            const taxField = field === 'sgstPercentage' ? 'sgstAmount' : field === 'cgstPercentage' ? 'cgstAmount' : 'igstAmount';
-            const taxAmount = (updatedItems[index].taxableAmount * percentage) / 100;
-            updatedItems[index] = { ...updatedItems[index], [field]: percentage, [taxField]: taxAmount };
+            updatedItems[index] = { ...updatedItems[index], [field]: Number(value) };
+            updatedItems[index] = computeItemTotals(updatedItems[index], formData.taxType as TaxType);
         } else {
             updatedItems[index] = { ...updatedItems[index], [field]: value };
             if (field === 'unit' && value === 'Nos') {
                 updatedItems[index].quantity = Math.floor(updatedItems[index].quantity);
-                const taxableAmount = updatedItems[index].quantity * updatedItems[index].rate;
-                const sgstAmount = (taxableAmount * updatedItems[index].sgstPercentage) / 100;
-                const cgstAmount = (taxableAmount * updatedItems[index].cgstPercentage) / 100;
-                const igstAmount = (taxableAmount * updatedItems[index].igstPercentage) / 100;
-                updatedItems[index] = { ...updatedItems[index], taxableAmount, sgstAmount, cgstAmount, igstAmount };
+                updatedItems[index] = computeItemTotals(updatedItems[index], formData.taxType as TaxType);
             }
         }
 
-        setFormData((prev: any) => ({ ...prev, items: updatedItems }));
+        // Single calculateTaxTotals call — no redundant setFormData (fixes race condition)
         calculateTaxTotals(updatedItems, formData.taxType, formData.discountEnabled, formData.discountPercentage);
     };
 
@@ -532,7 +530,8 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                             onChange={(e) => {
                                                 const isEnabled = e.target.checked;
                                                 const pct = isEnabled ? formData.discountPercentage : 0;
-                                                calculateTaxTotals(formData.items, formData.taxType, isEnabled, pct);
+                                                const fixedAmt = isEnabled ? formData.discountFixedAmount : 0;
+                                                calculateTaxTotals(formData.items, formData.taxType, isEnabled, pct, formData.discountType || 'percentage', fixedAmt);
                                             }}
                                         />
                                         <div className={`w-10 h-6 rounded-full transition-all duration-300 ${formData.discountEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
@@ -542,19 +541,56 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                 </label>
 
                                 {formData.discountEnabled && (
-                                    <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center gap-2">
+                                        {/* Discount Type Toggle */}
+                                        <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    calculateTaxTotals(formData.items, formData.taxType, true, 0, 'percentage', 0);
+                                                }}
+                                                className={`px-2.5 py-1 text-xs font-bold transition-all ${
+                                                    (formData.discountType || 'percentage') === 'percentage'
+                                                        ? 'bg-emerald-500 text-white'
+                                                        : 'bg-white text-slate-500 hover:bg-slate-50'
+                                                }`}
+                                                aria-label="Percentage discount"
+                                            >
+                                                %
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    calculateTaxTotals(formData.items, formData.taxType, true, 0, 'fixed', 0);
+                                                }}
+                                                className={`px-2.5 py-1 text-xs font-bold transition-all border-l border-slate-200 ${
+                                                    formData.discountType === 'fixed'
+                                                        ? 'bg-emerald-500 text-white'
+                                                        : 'bg-white text-slate-500 hover:bg-slate-50'
+                                                }`}
+                                                aria-label="Fixed amount discount"
+                                            >
+                                                ₹
+                                            </button>
+                                        </div>
+
+                                        {/* Discount Value Input */}
                                         <input
                                             type="number"
-                                            value={formData.discountPercentage || 0}
+                                            value={(formData.discountType || 'percentage') === 'percentage' ? (formData.discountPercentage || 0) : (formData.discountFixedAmount || 0)}
                                             onChange={(e) => {
                                                 const val = parseFloat(e.target.value) || 0;
-                                                calculateTaxTotals(formData.items, formData.taxType, formData.discountEnabled, val);
+                                                if ((formData.discountType || 'percentage') === 'percentage') {
+                                                    calculateTaxTotals(formData.items, formData.taxType, true, val, 'percentage', 0);
+                                                } else {
+                                                    calculateTaxTotals(formData.items, formData.taxType, true, 0, 'fixed', val);
+                                                }
                                             }}
                                             autoComplete="off"
                                             name="field_v_discount"
-                                            className="w-14 px-2 py-1 text-center font-bold text-sm rounded-lg border-2 border-emerald-100 bg-white focus:border-emerald-500 outline-none focus:ring-4 focus:ring-emerald-500/10"
+                                            className={`${(formData.discountType || 'percentage') === 'fixed' ? 'w-20' : 'w-14'} px-2 py-1 text-center font-bold text-sm rounded-lg border-2 border-emerald-100 bg-white focus:border-emerald-500 outline-none focus:ring-4 focus:ring-emerald-500/10`}
                                         />
-                                        <span className="text-xs font-bold text-emerald-600">%</span>
+                                        <span className="text-xs font-bold text-emerald-600">{(formData.discountType || 'percentage') === 'percentage' ? '%' : '₹'}</span>
                                     </div>
                                 )}
                             </div>
@@ -568,6 +604,8 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                 discountEnabled={formData.discountEnabled}
                                 discountPercentage={formData.discountPercentage}
                                 discountAmount={formData.discountAmount}
+                                discountType={formData.discountType || 'percentage'}
+                                discountFixedAmount={formData.discountFixedAmount}
                                 subTotal={formData.subTotal}
                                 totalSgst={formData.totalSgst}
                                 totalCgst={formData.totalCgst}

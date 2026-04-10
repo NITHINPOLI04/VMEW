@@ -13,7 +13,7 @@ import {
     TaxFieldsRow,
     ItemTotalsSummary,
 } from '../engines/tableEngine';
-import { calculateDiscountedTaxes } from '../utils/taxCalculator';
+import { computeItemTotals, computeDocumentTotals, makeDiscountConfig, type TaxType } from '../utils/calcEngine';
 
 interface BillFormProps {
     billType: 'invoice' | 'dc' | 'quotation';
@@ -83,7 +83,13 @@ const BillForm: React.FC<BillFormProps> = ({
         setFormData((prev: any) => ({ ...prev, date: date.toISOString() }));
     };
 
-    const calculateTaxTotals = (items: any[], taxType: string, discountEnabled: boolean = formData.discountEnabled, discountPercentage: number = formData.discountPercentage || 0) => {
+    const calculateTaxTotals = (items: any[], taxType: string, discountEnabled: boolean = formData.discountEnabled, discountPercentage: number = formData.discountPercentage || 0, discountType: string = formData.discountType || 'percentage', discountFixedAmount: number = formData.discountFixedAmount || 0) => {
+        const discountConfig = makeDiscountConfig(
+            discountEnabled,
+            discountPercentage,
+            discountType as 'percentage' | 'fixed',
+            discountFixedAmount
+        );
         const {
             subTotal,
             discountAmount,
@@ -92,9 +98,9 @@ const BillForm: React.FC<BillFormProps> = ({
             totalCgst,
             totalIgst,
             grandTotal
-        } = calculateDiscountedTaxes(items, discountEnabled, discountPercentage, taxType);
+        } = computeDocumentTotals(items, discountConfig, taxType as TaxType);
 
-        setFormData((prev: any) => ({ ...prev, items, grandTotal, subTotal, discountAmount, discountEnabled, discountPercentage, taxableAmount: totalTaxableValue, totalSgst, totalCgst, totalIgst, taxType }));
+        setFormData((prev: any) => ({ ...prev, items, grandTotal, subTotal, discountAmount, discountEnabled, discountPercentage, discountType, discountFixedAmount, taxableAmount: totalTaxableValue, totalSgst, totalCgst, totalIgst, taxType }));
     };
 
     const handleItemChange = (index: number, field: string, value: string | number) => {
@@ -107,28 +113,18 @@ const BillForm: React.FC<BillFormProps> = ({
                     qty = Math.floor(qty);
                 }
                 const rate = field === 'rate' ? (parseFloat(String(value)) || 0) : updatedItems[index].rate;
-                const taxableAmount = qty * rate;
-                const sgstAmount = (taxableAmount * updatedItems[index].sgstPercentage) / 100;
-                const cgstAmount = (taxableAmount * updatedItems[index].cgstPercentage) / 100;
-                const igstAmount = (taxableAmount * updatedItems[index].igstPercentage) / 100;
-                updatedItems[index] = { ...updatedItems[index], [field]: field === 'quantity' ? qty : (parseFloat(String(value)) || 0), taxableAmount, sgstAmount, cgstAmount, igstAmount };
+                updatedItems[index] = { ...updatedItems[index], [field]: field === 'quantity' ? qty : (parseFloat(String(value)) || 0) };
+                updatedItems[index] = computeItemTotals({ ...updatedItems[index], quantity: qty, rate }, formData.taxType as TaxType);
             } else if (['sgstPercentage', 'cgstPercentage', 'igstPercentage'].includes(field)) {
-                const percentage = Number(value);
-                const taxField = field === 'sgstPercentage' ? 'sgstAmount' : field === 'cgstPercentage' ? 'cgstAmount' : 'igstAmount';
-                const taxAmount = (updatedItems[index].taxableAmount * percentage) / 100;
-                updatedItems[index] = { ...updatedItems[index], [field]: percentage, [taxField]: taxAmount };
+                updatedItems[index] = { ...updatedItems[index], [field]: Number(value) };
+                updatedItems[index] = computeItemTotals(updatedItems[index], formData.taxType as TaxType);
             } else {
                 updatedItems[index] = { ...updatedItems[index], [field]: value };
                 if (field === 'unit' && value === 'Nos') {
                     updatedItems[index].quantity = Math.floor(updatedItems[index].quantity);
-                    const taxableAmount = updatedItems[index].quantity * updatedItems[index].rate;
-                    const sgstAmount = (taxableAmount * updatedItems[index].sgstPercentage) / 100;
-                    const cgstAmount = (taxableAmount * updatedItems[index].cgstPercentage) / 100;
-                    const igstAmount = (taxableAmount * updatedItems[index].igstPercentage) / 100;
-                    updatedItems[index] = { ...updatedItems[index], taxableAmount, sgstAmount, cgstAmount, igstAmount };
+                    updatedItems[index] = computeItemTotals(updatedItems[index], formData.taxType as TaxType);
                 }
             }
-            // Removed redundant setFormData to avoid race condition
             calculateTaxTotals(updatedItems, formData.taxType, formData.discountEnabled, formData.discountPercentage);
         } else if (billType === 'dc') {
             if (field === 'quantity') {
@@ -429,7 +425,8 @@ const BillForm: React.FC<BillFormProps> = ({
                                                     onChange={(e) => {
                                                         const isEnabled = e.target.checked;
                                                         const pct = isEnabled ? formData.discountPercentage : 0;
-                                                        calculateTaxTotals(formData.items, formData.taxType, isEnabled, pct);
+                                                        const fixedAmt = isEnabled ? formData.discountFixedAmount : 0;
+                                                        calculateTaxTotals(formData.items, formData.taxType, isEnabled, pct, formData.discountType || 'percentage', fixedAmt);
                                                     }}
                                                 />
                                                 <div className={`w-10 h-6 rounded-full transition-all duration-300 ${formData.discountEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
@@ -439,21 +436,58 @@ const BillForm: React.FC<BillFormProps> = ({
                                         </label>
 
                                         {formData.discountEnabled && (
-                                            <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-300">
-                                                <label htmlFor="discount_pct" className="sr-only">Discount Percentage</label>
+                                            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-300">
+                                                {/* Discount Type Toggle */}
+                                                <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            calculateTaxTotals(formData.items, formData.taxType, true, 0, 'percentage', 0);
+                                                        }}
+                                                        className={`px-2.5 py-1 text-xs font-bold transition-all ${
+                                                            (formData.discountType || 'percentage') === 'percentage'
+                                                                ? 'bg-emerald-500 text-white'
+                                                                : 'bg-white text-slate-500 hover:bg-slate-50'
+                                                        }`}
+                                                        aria-label="Percentage discount"
+                                                    >
+                                                        %
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            calculateTaxTotals(formData.items, formData.taxType, true, 0, 'fixed', 0);
+                                                        }}
+                                                        className={`px-2.5 py-1 text-xs font-bold transition-all border-l border-slate-200 ${
+                                                            formData.discountType === 'fixed'
+                                                                ? 'bg-emerald-500 text-white'
+                                                                : 'bg-white text-slate-500 hover:bg-slate-50'
+                                                        }`}
+                                                        aria-label="Fixed amount discount"
+                                                    >
+                                                        ₹
+                                                    </button>
+                                                </div>
+
+                                                {/* Discount Value Input */}
+                                                <label htmlFor="discount_val" className="sr-only">{(formData.discountType || 'percentage') === 'percentage' ? 'Discount Percentage' : 'Discount Amount'}</label>
                                                 <input
-                                                    id="discount_pct"
+                                                    id="discount_val"
                                                     type="number"
-                                                    value={formData.discountPercentage || 0}
+                                                    value={(formData.discountType || 'percentage') === 'percentage' ? (formData.discountPercentage || 0) : (formData.discountFixedAmount || 0)}
                                                     onChange={(e) => {
                                                         const val = parseFloat(e.target.value) || 0;
-                                                        calculateTaxTotals(formData.items, formData.taxType, formData.discountEnabled, val);
+                                                        if ((formData.discountType || 'percentage') === 'percentage') {
+                                                            calculateTaxTotals(formData.items, formData.taxType, true, val, 'percentage', 0);
+                                                        } else {
+                                                            calculateTaxTotals(formData.items, formData.taxType, true, 0, 'fixed', val);
+                                                        }
                                                     }}
                                                     autoComplete="off"
                                                     name="field_v_discount"
-                                                    className="w-14 px-2 py-1 text-center font-bold text-sm rounded-lg border-2 border-emerald-100 bg-white focus:border-emerald-500 outline-none focus:ring-4 focus:ring-emerald-500/10"
+                                                    className={`${(formData.discountType || 'percentage') === 'fixed' ? 'w-20' : 'w-14'} px-2 py-1 text-center font-bold text-sm rounded-lg border-2 border-emerald-100 bg-white focus:border-emerald-500 outline-none focus:ring-4 focus:ring-emerald-500/10`}
                                                 />
-                                                <span className="text-xs font-bold text-emerald-600">%</span>
+                                                <span className="text-xs font-bold text-emerald-600">{(formData.discountType || 'percentage') === 'percentage' ? '%' : '₹'}</span>
                                             </div>
                                         )}
                                     </div>
@@ -470,6 +504,8 @@ const BillForm: React.FC<BillFormProps> = ({
                                     discountEnabled={formData.discountEnabled}
                                     discountPercentage={formData.discountPercentage}
                                     discountAmount={formData.discountAmount}
+                                    discountType={formData.discountType || 'percentage'}
+                                    discountFixedAmount={formData.discountFixedAmount}
                                     subTotal={formData.subTotal}
                                     totalSgst={formData.totalSgst}
                                     totalCgst={formData.totalCgst}

@@ -28,7 +28,9 @@ export const getInitialInvoice = (defaultInfo: any = null) => ({
     taxType: 'sgstcgst',
     grandTotal: 0,
     totalInWords: '',
-    paymentStatus: 'Unpaid'
+    paymentStatus: 'Unpaid',
+    discountType: 'percentage' as const,
+    discountFixedAmount: 0
 });
 
 export const getInitialDC = () => ({
@@ -79,7 +81,9 @@ export const getInitialQuotation = () => ({
     guarantee: '',
     validity: '',
     grandTotal: 0,
-    totalInWords: ''
+    totalInWords: '',
+    discountType: 'percentage' as const,
+    discountFixedAmount: 0
 });
 
 export const getInitialPO = () => ({
@@ -108,5 +112,7 @@ export const getInitialPO = () => ({
     taxType: 'sgstcgst',
     grandTotal: 0,
     totalInWords: '',
-    notes: 'With reference to the above subject we have pleasure in placing our confirmatory order to supply of the below in accordance with the terms given in the quotation.'
+    notes: 'With reference to the above subject we have pleasure in placing our confirmatory order to supply of the below in accordance with the terms given in the quotation.',
+    discountType: 'percentage' as const,
+    discountFixedAmount: 0
 });

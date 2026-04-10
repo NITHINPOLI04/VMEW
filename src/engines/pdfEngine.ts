@@ -307,7 +307,8 @@ export const drawTotalsBox = (
   grandTotal: number,
   discountEnabled?: boolean,
   discountPercentage?: number,
-  discountAmount?: number
+  discountAmount?: number,
+  discountType?: string
 ): number => {
   const margin = PDF_MARGIN;
   const totalsBoxWidth = 70;
@@ -330,9 +331,13 @@ export const drawTotalsBox = (
   pdf.text(`${totalTaxableAmount.toFixed(2)}`, valueX, lineY, { align: 'right' });
   lineY += 5;
 
-  if (discountEnabled && discountPercentage !== undefined && discountAmount !== undefined) {
+  if (discountEnabled && discountAmount !== undefined) {
     pdf.setTextColor(220, 38, 38); // text-red-600 logic
-    pdf.text(`Discount (${discountPercentage}%):`, labelX, lineY);
+    const effectiveType = discountType || 'percentage';
+    const discountLabel = effectiveType === 'fixed'
+      ? 'Discount (Fixed):'
+      : `Discount (${discountPercentage || 0}%):`;
+    pdf.text(discountLabel, labelX, lineY);
     pdf.text(`-${discountAmount.toFixed(2)}`, valueX, lineY, { align: 'right' });
     pdf.setTextColor(15, 23, 42); // reset text color
     lineY += 5;

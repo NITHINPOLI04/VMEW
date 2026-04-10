@@ -333,18 +333,25 @@ export const ItemTotalsSummary: React.FC<{
   discountEnabled?: boolean;
   discountPercentage?: number;
   discountAmount?: number;
+  discountType?: string;
+  discountFixedAmount?: number;
   subTotal?: number;
   totalSgst?: number;
   totalCgst?: number;
   totalIgst?: number;
-}> = ({ items, taxType, grandTotal, discountEnabled, discountPercentage, discountAmount, subTotal, totalSgst, totalCgst, totalIgst }) => {
+}> = ({ items, taxType, grandTotal, discountEnabled, discountPercentage, discountAmount, discountType, discountFixedAmount, subTotal, totalSgst, totalCgst, totalIgst }) => {
   const computedSubTotal = subTotal !== undefined ? subTotal : items.reduce((s, i) => s + (i.taxableAmount || 0), 0);
   const compDiscountAmount = discountAmount !== undefined ? discountAmount : 0;
   const compDiscountPercentage = discountPercentage !== undefined ? discountPercentage : 0;
+  const effectiveDiscountType = discountType || 'percentage';
   
   const compTotalSgst = totalSgst !== undefined ? totalSgst : items.reduce((s, i) => s + (i.sgstAmount || 0), 0);
   const compTotalCgst = totalCgst !== undefined ? totalCgst : items.reduce((s, i) => s + (i.cgstAmount || 0), 0);
   const compTotalIgst = totalIgst !== undefined ? totalIgst : items.reduce((s, i) => s + (i.igstAmount || 0), 0);
+
+  const discountLabel = effectiveDiscountType === 'fixed'
+    ? 'Discount (Fixed)'
+    : `Discount (${compDiscountPercentage}%)`;
 
   const rowClass = "flex justify-between items-center py-1";
   const labelClass = "text-xs font-bold text-slate-400 uppercase tracking-widest";
@@ -360,7 +367,7 @@ export const ItemTotalsSummary: React.FC<{
 
         {discountEnabled && (
           <div className={rowClass}>
-            <span className={`${labelClass} text-emerald-500`}>Discount ({compDiscountPercentage}%)</span>
+            <span className={`${labelClass} text-emerald-500`}>{discountLabel}</span>
             <span className="text-sm font-bold text-emerald-600">-₹{compDiscountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
           </div>
         )}

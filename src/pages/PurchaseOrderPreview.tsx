@@ -5,7 +5,7 @@ import { usePOStore } from '../stores/poStore';
 import { useTemplateStore } from '../stores/templateStore';
 import jsPDF from 'jspdf';
 import { PurchaseOrder } from '../types';
-import { calculateDiscountedTaxes } from '../utils/taxCalculator';
+import { getVerifiedTotals } from '../utils/calcVerifier';
 import { toast } from 'react-hot-toast';
 import LetterheadPreview from '../engines/previewComponents';
 import { DocumentItemsTable, buildPOColumns } from '../engines/tableEngine';
@@ -125,6 +125,10 @@ const PurchaseOrderPreview: React.FC = () => {
 
             const yPos = drawHeader(10);
 
+            const verified = getVerifiedTotals(poData);
+            if (verified.verification.severity === 'material') {
+                console.warn('[PDF] Material mismatch detected:', verified.verification.mismatches);
+            }
             const {
                 subTotal,
                 totalSgst,
@@ -132,7 +136,7 @@ const PurchaseOrderPreview: React.FC = () => {
                 totalIgst,
                 discountAmount,
                 discountedItems
-            } = calculateDiscountedTaxes(poData.items, poData.discountEnabled || false, poData.discountPercentage || 0, poData.taxType);
+            } = verified;
 
             const baseHeaders = ['Sl No', 'Description', 'HSN/SAC Code', 'Quantity', 'Unit', 'Rate', 'Taxable Amt'];
             const usedHeaders = poData.taxType === 'igst'
@@ -199,8 +203,9 @@ const PurchaseOrderPreview: React.FC = () => {
             const totalsEndY = drawTotalsBox(
                 pdf, pageWidth, finalY,
                 poData.taxType, subTotal, totalSgst, totalCgst, totalIgst,
-                poData.grandTotal,
-                poData.discountEnabled, poData.discountPercentage, discountAmount
+                verified.grandTotal,
+                poData.discountEnabled, poData.discountPercentage, discountAmount,
+                poData.discountType || 'percentage'
             );
 
             const wordsEndY = drawAmountInWords(
@@ -280,6 +285,10 @@ const PurchaseOrderPreview: React.FC = () => {
         );
     }
 
+    const verified = getVerifiedTotals(poData);
+    if (verified.verification.severity === 'material') {
+        toast.error(`Calculation mismatch detected (₹${verified.verification.totalDrift.toFixed(2)} drift). Values have been auto-corrected.`);
+    }
     const {
         subTotal,
         totalSgst,
@@ -287,7 +296,8 @@ const PurchaseOrderPreview: React.FC = () => {
         totalIgst,
         discountAmount,
         discountedItems
-    } = calculateDiscountedTaxes(poData.items, poData.discountEnabled || false, poData.discountPercentage || 0, poData.taxType);
+    } = verified;
+    const displayGrandTotal = verified.grandTotal;
 
     return (
         <div className="pb-12 max-w-7xl mx-auto">
@@ -412,7 +422,7 @@ const PurchaseOrderPreview: React.FC = () => {
                             {poData.discountEnabled && (
                                 <div className="p-3 border-b border-slate-200 bg-red-50 text-red-700">
                                     <div className="flex justify-between">
-                                        <span className="font-medium">Discount ({poData.discountPercentage || 0}%):</span>
+                                        <span className="font-medium">{(poData.discountType || 'percentage') === 'fixed' ? 'Discount (Fixed):' : `Discount (${poData.discountPercentage || 0}%):`}</span>
                                         <span>-₹{discountAmount.toFixed(2)}</span>
                                     </div>
                                 </div>
@@ -439,7 +449,7 @@ const PurchaseOrderPreview: React.FC = () => {
                             <div className="p-3">
                                 <div className="flex justify-between text-lg">
                                     <span className="font-bold">Grand Total:</span>
-                                    <span className="font-bold">₹{poData.grandTotal.toFixed(2)}</span>
+                                    <span className="font-bold">₹{displayGrandTotal.toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>

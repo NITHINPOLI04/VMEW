@@ -33,6 +33,8 @@ export interface InvoiceFormData {
   discountEnabled?: boolean;
   discountPercentage?: number;
   discountAmount?: number;
+  discountType?: 'percentage' | 'fixed';
+  discountFixedAmount?: number;
   subTotal?: number;
   taxType: string; // 'sgstcgst' | 'igst'
   grandTotal: number;
@@ -111,6 +113,8 @@ export interface QuotationFormData {
   discountEnabled?: boolean;
   discountPercentage?: number;
   discountAmount?: number;
+  discountType?: 'percentage' | 'fixed';
+  discountFixedAmount?: number;
   subTotal?: number;
   deliveryTerms?: string;
   paymentTerms?: string;
@@ -217,6 +221,8 @@ export interface PurchaseOrderFormData {
   discountEnabled?: boolean;
   discountPercentage?: number;
   discountAmount?: number;
+  discountType?: 'percentage' | 'fixed';
+  discountFixedAmount?: number;
   subTotal?: number;
   taxType: string; // 'sgstcgst' | 'igst'
   grandTotal: number;

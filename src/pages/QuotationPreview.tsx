@@ -24,7 +24,7 @@ import {
     drawPageNumbers,
     buildBankDetails,
 } from '../engines/pdfEngine';
-import { calculateDiscountedTaxes } from '../utils/taxCalculator';
+import { getVerifiedTotals } from '../utils/calcVerifier';
 import { DocumentItemsTable, buildInvoiceColumns } from '../engines/tableEngine';
 
 const QuotationPreview: React.FC = () => {
@@ -128,6 +128,10 @@ const QuotationPreview: React.FC = () => {
 
             const yPos = drawHeader(10);
 
+            const verified = getVerifiedTotals(quotationData);
+            if (verified.verification.severity === 'material') {
+                console.warn('[PDF] Material mismatch detected:', verified.verification.mismatches);
+            }
             const {
                 subTotal,
                 totalSgst,
@@ -135,7 +139,7 @@ const QuotationPreview: React.FC = () => {
                 totalIgst,
                 discountAmount,
                 discountedItems
-            } = calculateDiscountedTaxes(quotationData.items, quotationData.discountEnabled || false, quotationData.discountPercentage || 0, quotationData.taxType);
+            } = verified;
 
             const tableHeaders = quotationData.taxType === 'igst'
                 ? ['Sl No', 'Description of Goods', 'HSN/SAC Code', 'Qty', 'Unit', 'Rate', 'Taxable Amount', 'IGST %', 'IGST Amt']
@@ -213,8 +217,9 @@ const QuotationPreview: React.FC = () => {
             const totalsEndY = drawTotalsBox(
                 pdf, pageWidth, finalY,
                 quotationData.taxType, subTotal, totalSgst, totalCgst, totalIgst,
-                quotationData.grandTotal,
-                quotationData.discountEnabled, quotationData.discountPercentage, discountAmount
+                verified.grandTotal,
+                quotationData.discountEnabled, quotationData.discountPercentage, discountAmount,
+                quotationData.discountType || 'percentage'
             );
 
             const bottomY = drawAmountInWords(
@@ -280,6 +285,10 @@ const QuotationPreview: React.FC = () => {
         );
     }
 
+    const verified = getVerifiedTotals(quotationData);
+    if (verified.verification.severity === 'material') {
+        toast.error(`Calculation mismatch detected (₹${verified.verification.totalDrift.toFixed(2)} drift). Values have been auto-corrected.`);
+    }
     const {
         subTotal,
         totalSgst,
@@ -287,7 +296,8 @@ const QuotationPreview: React.FC = () => {
         totalIgst,
         discountAmount,
         discountedItems
-    } = calculateDiscountedTaxes(quotationData.items, quotationData.discountEnabled || false, quotationData.discountPercentage || 0, quotationData.taxType);
+    } = verified;
+    const displayGrandTotal = verified.grandTotal;
 
     const terms: string[] = [];
     if (quotationData.deliveryTerms) terms.push(`Delivery : ${quotationData.deliveryTerms}`);
@@ -409,7 +419,7 @@ const QuotationPreview: React.FC = () => {
                             {quotationData.discountEnabled && (
                                 <div className="p-3 border-b border-slate-200 bg-red-50 text-red-700">
                                     <div className="flex justify-between">
-                                        <span className="font-medium">Discount ({quotationData.discountPercentage || 0}%):</span>
+                                        <span className="font-medium">{(quotationData.discountType || 'percentage') === 'fixed' ? 'Discount (Fixed):' : `Discount (${quotationData.discountPercentage || 0}%):`}</span>
                                         <span>-₹{discountAmount.toFixed(2)}</span>
                                     </div>
                                 </div>
@@ -436,7 +446,7 @@ const QuotationPreview: React.FC = () => {
                             <div className="p-3">
                                 <div className="flex justify-between text-lg">
                                     <span className="font-bold">Grand Total:</span>
-                                    <span className="font-bold">₹{quotationData.grandTotal.toFixed(2)}</span>
+                                    <span className="font-bold">₹{displayGrandTotal.toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
