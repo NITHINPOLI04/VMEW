@@ -1,12 +1,13 @@
 import React from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlusCircle, ChevronLeft } from 'lucide-react';
 
 const PurchaseOrderWorkspace: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const isCreatePage = location.pathname.includes('/new') || location.search.includes('?edit=');
-  const isEditingPage = location.search.includes('?edit=');
+  const [searchParams] = useSearchParams();
+  const isEditingPage = searchParams.has('edit');
+  const isCreatePage = location.pathname.includes('/new') || isEditingPage;
 
   return (
     <div className="space-y-4 pb-0 bg-slate-50/80">

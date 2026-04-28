@@ -98,12 +98,20 @@ export const verifyDocument = <TItem extends CalcItem = CalcItem>(
   const mismatches: Mismatch[] = [];
 
   const compare = (field: string, stored: number | undefined, computedVal: number) => {
-    const storedVal = stored ?? 0;
-    const diff = round2(Math.abs(storedVal - computedVal));
+    // Native backward compatibility:
+    // If a document was created before a specific verification field (like totalSgst) 
+    // was added to the database schema, it will be `undefined`.
+    // In this case, we implicitly trust the computed value rather than loudly 
+    // screaming that there is a massive drift from `0`.
+    if (stored === undefined) {
+      return;
+    }
+
+    const diff = round2(Math.abs(stored - computedVal));
     if (diff > tolerance) {
       mismatches.push({
         field,
-        stored: storedVal,
+        stored,
         computed: computedVal,
         difference: diff,
       });

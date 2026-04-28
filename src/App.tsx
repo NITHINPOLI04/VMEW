@@ -6,6 +6,9 @@ import AppSkeleton from './components/AppSkeleton';
 import { useTemplateStore } from './stores/templateStore';
 import { useInvoiceStore } from './stores/invoiceStore';
 import { useInventoryStore } from './stores/inventoryStore';
+import { useDCStore } from './stores/dcStore';
+import { useQuotationStore } from './stores/quotationStore';
+import { usePOStore } from './stores/poStore';
 
 // Pages
 import Login from './pages/Login';
@@ -30,10 +33,12 @@ import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   const { isAuthenticated, loading, isInitializing, checkAuth } = useAuthStore();
-  const { fetchTemplateData } = useTemplateStore();
+  const { fetchTemplateData, clearTemplates } = useTemplateStore();
   const { clearInvoices } = useInvoiceStore();
   const { clearInventory } = useInventoryStore();
-  const { clearTemplates } = useTemplateStore();
+  const { clearDCs } = useDCStore();
+  const { clearQuotations } = useQuotationStore();
+  const { clearPOs } = usePOStore();
 
   // Initialize auth
   useEffect(() => {
@@ -47,14 +52,17 @@ function App() {
     }
   }, [isAuthenticated, fetchTemplateData]);
 
-  // Clear stores when the user logs out
+  // Clear ALL stores when the user logs out to prevent data leakage between sessions
   useEffect(() => {
     if (!isAuthenticated) {
       clearInvoices();
       clearInventory();
       clearTemplates();
+      clearDCs();
+      clearQuotations();
+      clearPOs();
     }
-  }, [isAuthenticated, clearInvoices, clearInventory, clearTemplates]);
+  }, [isAuthenticated, clearInvoices, clearInventory, clearTemplates, clearDCs, clearQuotations, clearPOs]);
 
   // Network status detection
   useEffect(() => {

@@ -1,14 +1,7 @@
 import { create } from 'zustand';
 import { useAuthStore } from './authStore';
 import { QuotationFormData, Quotation } from '../types/index';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const API_URL = `${API_BASE_URL}/api`;
-
-const getHeaders = (token: string) => ({
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-});
+import { getQuotations, getQuotationById, createQuotationApi, updateQuotationApi, deleteQuotationApi } from '../utils/api';
 
 interface QuotationState {
     quotations: Quotation[];
@@ -33,12 +26,7 @@ export const useQuotationStore = create<QuotationState>((set) => ({
             const token = useAuthStore.getState().token;
             if (!token) throw new Error('Not authenticated');
 
-            const response = await fetch(`${API_URL}/quotation/${year}`, {
-                headers: getHeaders(token)
-            });
-            if (!response.ok) throw new Error('Failed to fetch quotations');
-            const quotations = await response.json();
-
+            const quotations = await getQuotations(year, token);
             set({ quotations, loading: false });
             return quotations;
         } catch (error: any) {
@@ -53,12 +41,7 @@ export const useQuotationStore = create<QuotationState>((set) => ({
             const token = useAuthStore.getState().token;
             if (!token) throw new Error('Not authenticated');
 
-            const response = await fetch(`${API_URL}/quotation/id/${id}`, {
-                headers: getHeaders(token)
-            });
-            if (!response.ok) throw new Error('Failed to fetch quotation');
-            const quotation = await response.json();
-
+            const quotation = await getQuotationById(id, token);
             set({ loading: false });
             return quotation;
         } catch (error: any) {
@@ -73,14 +56,7 @@ export const useQuotationStore = create<QuotationState>((set) => ({
             const token = useAuthStore.getState().token;
             if (!token) throw new Error('Not authenticated');
 
-            const response = await fetch(`${API_URL}/quotation`, {
-                method: 'POST',
-                headers: getHeaders(token),
-                body: JSON.stringify(quotationData)
-            });
-            if (!response.ok) throw new Error('Failed to create quotation');
-            const newQuotation = await response.json();
-
+            const newQuotation = await createQuotationApi(quotationData, token);
             set((state) => ({
                 quotations: [...state.quotations, newQuotation],
                 loading: false,
@@ -98,14 +74,7 @@ export const useQuotationStore = create<QuotationState>((set) => ({
             const token = useAuthStore.getState().token;
             if (!token) throw new Error('Not authenticated');
 
-            const response = await fetch(`${API_URL}/quotation/${id}`, {
-                method: 'PUT',
-                headers: getHeaders(token),
-                body: JSON.stringify(quotationData)
-            });
-            if (!response.ok) throw new Error('Failed to update quotation');
-            const updatedQuotation = await response.json();
-
+            const updatedQuotation = await updateQuotationApi(id, quotationData, token);
             set((state) => ({
                 quotations: state.quotations.map((q) => (q._id === id ? updatedQuotation : q)),
                 loading: false,
@@ -122,12 +91,7 @@ export const useQuotationStore = create<QuotationState>((set) => ({
             const token = useAuthStore.getState().token;
             if (!token) throw new Error('Not authenticated');
 
-            const response = await fetch(`${API_URL}/quotation/${id}`, {
-                method: 'DELETE',
-                headers: getHeaders(token)
-            });
-            if (!response.ok) throw new Error('Failed to delete quotation');
-
+            await deleteQuotationApi(id, token);
             set((state) => ({
                 quotations: state.quotations.filter((q) => q._id !== id),
                 loading: false,

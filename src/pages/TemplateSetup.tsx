@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { Building2, FileText, Save, Download, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Building2, FileText, Save, Download, Loader2, FileCheck, File as FileIcon } from 'lucide-react';
 import { useTemplateStore } from '../stores/templateStore';
 import { generateLetterheadPDF, generateLetterheadPDFBlob } from '../engines/generateLetterheadPDF';
+import { generateLetterheadDOCX } from '../engines/generateLetterheadDOCX';
 import { toast } from 'react-hot-toast';
 
 const TemplateSetup: React.FC = () => {
   const { letterhead, defaultInfo, updateLetterhead, updateDefaultInfo } = useTemplateStore();
-  const hasInitialized = React.useRef(false);
+  const hasInitialized = useRef(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  const [downloadingWord, setDownloadingWord] = useState(false);
 
   const [letterheadForm, setLetterheadForm] = useState({
     companyName: 'Venkateswara Marine Electrical Works',
@@ -77,6 +82,16 @@ const TemplateSetup: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDownloadMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleLetterheadChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name: prefixedName, value } = e.target;
     const name = prefixedName.replace('field_v_', '');
@@ -118,12 +133,27 @@ const TemplateSetup: React.FC = () => {
   const handleDownloadLetterhead = async () => {
     try {
       setDownloading(true);
+      setDownloadMenuOpen(false);
       await generateLetterheadPDF(letterheadForm);
       toast.success('Letterhead PDF downloaded');
     } catch {
       toast.error('Failed to generate letterhead PDF');
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleDownloadWord = async () => {
+    try {
+      setDownloadingWord(true);
+      setDownloadMenuOpen(false);
+      await generateLetterheadDOCX(letterheadForm);
+      toast.success('Letterhead Word doc downloaded');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to generate letterhead Word document');
+    } finally {
+      setDownloadingWord(false);
     }
   };
 
@@ -337,15 +367,45 @@ const TemplateSetup: React.FC = () => {
                     <h3 className="text-lg font-bold">Live Output</h3>
                     <p className="text-slate-400 text-xs mt-1">Snapshot of your letterhead</p>
                   </div>
-                  {/* Download Button strictly matching Bill Library / Toolbar pattern colors */}
-                  <button
-                    onClick={handleDownloadLetterhead}
-                    disabled={downloading}
-                    className="flex items-center justify-center w-10 h-10 bg-slate-800 border border-slate-700 text-slate-200 rounded-full hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-all shadow-sm"
-                    title="Download Letterhead PDF"
-                  >
-                    {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  </button>
+                  {/* Download Dropdown */}
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      onClick={() => setDownloadMenuOpen(!downloadMenuOpen)}
+                      disabled={downloading || downloadingWord}
+                      className="flex items-center justify-center w-10 h-10 bg-slate-800 border border-slate-700 text-slate-200 rounded-full hover:bg-slate-700 hover:border-slate-600 transition-all shadow-sm"
+                      title="Download Options"
+                    >
+                      {downloading || downloadingWord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                    </button>
+
+                    {downloadMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden transform origin-top-right transition-all">
+                        <div className="py-1">
+                          <button
+                            onClick={handleDownloadLetterhead}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                          >
+                            <FileIcon className="w-4 h-4" />
+                            <div className="flex flex-col text-left">
+                              <span className="font-semibold">Download PDF</span>
+                              <span className="text-[10px] text-slate-500">Standard format</span>
+                            </div>
+                          </button>
+                          <div className="h-px bg-slate-100 mx-3"></div>
+                          <button
+                            onClick={handleDownloadWord}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                          >
+                            <FileText className="w-4 h-4" />
+                            <div className="flex flex-col text-left">
+                              <span className="font-semibold">Download Word</span>
+                              <span className="text-[10px] text-slate-500">Editable format</span>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Actual PDF Output */}

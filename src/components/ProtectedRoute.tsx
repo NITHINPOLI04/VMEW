@@ -5,22 +5,22 @@ import { useAuthStore } from '../stores/authStore';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { useTemplateStore } from '../stores/templateStore';
+import { useFinancialYearStore } from '../stores/financialYearStore';
 
 const ProtectedRoute: React.FC = () => {
   const { isAuthenticated, loading, isInitializing } = useAuthStore();
   const fetchInvoices = useInvoiceStore((state) => state.fetchInvoices);
   const fetchInventory = useInventoryStore((state) => state.fetchInventory);
   const fetchTemplateData = useTemplateStore((state) => state.fetchTemplateData);
+  const selectedFY = useFinancialYearStore((state) => state.selectedFY);
 
   useEffect(() => {
     if (isAuthenticated) {
-      const currentYear = new Date().getFullYear();
-      const financialYear = new Date().getMonth() >= 3 ? `${currentYear}-${currentYear + 1}` : `${currentYear - 1}-${currentYear}`;
-      fetchInvoices(financialYear);
-      fetchInventory(financialYear);
+      fetchInvoices(selectedFY);
+      fetchInventory(selectedFY);
       fetchTemplateData();
     }
-  }, [isAuthenticated, fetchInvoices, fetchInventory, fetchTemplateData]);
+  }, [isAuthenticated, selectedFY, fetchInvoices, fetchInventory, fetchTemplateData]);
 
   if (isInitializing || (isAuthenticated && loading)) {
     return <AppSkeleton />;

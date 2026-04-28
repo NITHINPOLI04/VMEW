@@ -1,4 +1,4 @@
-import { Invoice, InvoiceFormData, InventoryItem, Letterhead, DefaultInfo, Supplier, Customer, PurchaseOrder, PurchaseOrderFormData } from '../types/index';
+import { Invoice, InvoiceFormData, DeliveryChallan, DeliveryChallanFormData, Quotation, QuotationFormData, InventoryItem, Letterhead, DefaultInfo, Supplier, Customer, PurchaseOrder, PurchaseOrderFormData } from '../types/index';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -75,6 +75,58 @@ export const deleteInvoice = (id: string, token: string) =>
     Authorization: `Bearer ${token}`,
   });
 
+// Delivery Challan APIs
+export const getDCs = (year: string, token: string) =>
+  apiRequest<DeliveryChallan[]>('/api/dc/' + year, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const getDCById = (id: string, token: string) =>
+  apiRequest<DeliveryChallan>('/api/dc/id/' + id, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const createDCApi = (dcData: DeliveryChallanFormData, token: string) =>
+  apiRequest<DeliveryChallan>('/api/dc', 'POST', dcData, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const updateDCApi = (id: string, dcData: DeliveryChallanFormData, token: string) =>
+  apiRequest<DeliveryChallan>('/api/dc/' + id, 'PUT', dcData, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const deleteDCApi = (id: string, token: string) =>
+  apiRequest<void>('/api/dc/' + id, 'DELETE', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+// Quotation APIs
+export const getQuotations = (year: string, token: string) =>
+  apiRequest<Quotation[]>('/api/quotation/' + year, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const getQuotationById = (id: string, token: string) =>
+  apiRequest<Quotation>('/api/quotation/id/' + id, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const createQuotationApi = (quotationData: QuotationFormData, token: string) =>
+  apiRequest<Quotation>('/api/quotation', 'POST', quotationData, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const updateQuotationApi = (id: string, quotationData: QuotationFormData, token: string) =>
+  apiRequest<Quotation>('/api/quotation/' + id, 'PUT', quotationData, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const deleteQuotationApi = (id: string, token: string) =>
+  apiRequest<void>('/api/quotation/' + id, 'DELETE', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
 // Template APIs
 export const getTemplate = (type: string, token: string) =>
   apiRequest<Letterhead | DefaultInfo | null>('/api/templates/' + type, 'GET', undefined, {
@@ -124,10 +176,6 @@ export const deleteInventoryItem = (id: string, token: string) =>
   apiRequest<void>('/api/inventory/' + id, 'DELETE', undefined, {
     Authorization: `Bearer ${token}`,
   });
-
-// Utility API
-export const convertNumberToWords = (number: number) =>
-  apiRequest<{ words: string }>('/api/utils/number-to-words', 'POST', { number });
 
 // Supplier APIs
 export const getSuppliers = (token: string) =>

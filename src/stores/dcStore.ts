@@ -1,14 +1,7 @@
 import { create } from 'zustand';
 import { useAuthStore } from './authStore';
 import { DeliveryChallanFormData, DeliveryChallan } from '../types/index';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const API_URL = `${API_BASE_URL}/api`;
-
-const getHeaders = (token: string) => ({
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-});
+import { getDCs, getDCById, createDCApi, updateDCApi, deleteDCApi } from '../utils/api';
 
 interface DCState {
     deliveryChallans: DeliveryChallan[];
@@ -33,12 +26,7 @@ export const useDCStore = create<DCState>((set) => ({
             const token = useAuthStore.getState().token;
             if (!token) throw new Error('Not authenticated');
 
-            const response = await fetch(`${API_URL}/dc/${year}`, {
-                headers: getHeaders(token)
-            });
-            if (!response.ok) throw new Error('Failed to fetch delivery challans');
-            const deliveryChallans = await response.json();
-
+            const deliveryChallans = await getDCs(year, token);
             set({ deliveryChallans, loading: false });
             return deliveryChallans;
         } catch (error: any) {
@@ -53,12 +41,7 @@ export const useDCStore = create<DCState>((set) => ({
             const token = useAuthStore.getState().token;
             if (!token) throw new Error('Not authenticated');
 
-            const response = await fetch(`${API_URL}/dc/id/${id}`, {
-                headers: getHeaders(token)
-            });
-            if (!response.ok) throw new Error('Failed to fetch delivery challan');
-            const dc = await response.json();
-
+            const dc = await getDCById(id, token);
             set({ loading: false });
             return dc;
         } catch (error: any) {
@@ -73,14 +56,7 @@ export const useDCStore = create<DCState>((set) => ({
             const token = useAuthStore.getState().token;
             if (!token) throw new Error('Not authenticated');
 
-            const response = await fetch(`${API_URL}/dc`, {
-                method: 'POST',
-                headers: getHeaders(token),
-                body: JSON.stringify(dcData)
-            });
-            if (!response.ok) throw new Error('Failed to create delivery challan');
-            const newDC = await response.json();
-
+            const newDC = await createDCApi(dcData, token);
             set((state) => ({
                 deliveryChallans: [...state.deliveryChallans, newDC],
                 loading: false,
@@ -98,14 +74,7 @@ export const useDCStore = create<DCState>((set) => ({
             const token = useAuthStore.getState().token;
             if (!token) throw new Error('Not authenticated');
 
-            const response = await fetch(`${API_URL}/dc/${id}`, {
-                method: 'PUT',
-                headers: getHeaders(token),
-                body: JSON.stringify(dcData)
-            });
-            if (!response.ok) throw new Error('Failed to update delivery challan');
-            const updatedDC = await response.json();
-
+            const updatedDC = await updateDCApi(id, dcData, token);
             set((state) => ({
                 deliveryChallans: state.deliveryChallans.map((d) => (d._id === id ? updatedDC : d)),
                 loading: false,
@@ -122,12 +91,7 @@ export const useDCStore = create<DCState>((set) => ({
             const token = useAuthStore.getState().token;
             if (!token) throw new Error('Not authenticated');
 
-            const response = await fetch(`${API_URL}/dc/${id}`, {
-                method: 'DELETE',
-                headers: getHeaders(token)
-            });
-            if (!response.ok) throw new Error('Failed to delete delivery challan');
-
+            await deleteDCApi(id, token);
             set((state) => ({
                 deliveryChallans: state.deliveryChallans.filter((d) => d._id !== id),
                 loading: false,

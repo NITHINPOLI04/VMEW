@@ -23,3 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Lint / debug output artifacts
+lint_output.txt
+eslint.json
+
+# Agent config
+.agent/
