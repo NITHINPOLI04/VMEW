@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Package, PlusCircle, Search, Edit, Trash2, Download, ArrowUpDown, PackagePlus, PackageMinus, IndianRupee, ChevronDown, X, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Package, PlusCircle, Search, Edit, Trash2, Download, ArrowUpDown, PackagePlus, PackageMinus, IndianRupee, ChevronDown, X, Clock, AlertTriangle, CheckCircle2, Building2 } from 'lucide-react';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { useFinancialYearStore } from '../stores/financialYearStore';
+import { useAuthStore } from '../stores/authStore';
 import CustomSelect from '../components/CustomSelect';
 import { InventoryItem } from '../types';
 import { toast } from 'react-hot-toast';
-import { usePopper } from 'react-popper';
 import * as XLSX from 'xlsx';
 import TableSkeleton from '../components/TableSkeleton';
 import { MetricSkeleton } from '../components/Skeleton';
+import { getProductBuyers } from '../utils/api';
 
 const MetricCard: React.FC<{ label: string; value: string | number; icon: any; iconBg: string; iconColor: string; sub?: string }> = ({ label, value, icon: Icon, iconBg, iconColor, sub }) => (
   <div className="card p-4 flex items-start gap-3 min-w-0">
@@ -24,25 +25,21 @@ const MetricCard: React.FC<{ label: string; value: string | number; icon: any; i
   </div>
 );
 
-const StatusBadge: React.FC<{ status: string; onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void; showCaret?: boolean }> = ({ status, onClick, showCaret }) => {
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const map: Record<string, { label: string; cls: string; icon: any }> = {
-    'In Stock': { label: 'In Stock', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/50', icon: CheckCircle2 },
-    'Low Stock': { label: 'Low Stock', cls: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100/50', icon: Clock },
-    'Out of Stock': { label: 'Out of Stock', cls: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100/50', icon: AlertTriangle },
+    'In Stock': { label: 'In Stock', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
+    'Low Stock': { label: 'Low Stock', cls: 'bg-amber-50 text-amber-700 border-amber-200', icon: Clock },
+    'Out of Stock': { label: 'Out of Stock', cls: 'bg-rose-50 text-rose-700 border-rose-200', icon: AlertTriangle },
   };
 
   const config = map[status] || map['In Stock'];
   const Icon = config.icon;
 
   return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${config.cls}`}
-    >
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${config.cls}`}>
       <Icon className="h-3 w-3" />
       {config.label}
-      {showCaret && <ChevronDown className="h-3 w-3 opacity-60" />}
-    </button>
+    </span>
   );
 };
 
@@ -62,6 +59,16 @@ const Inventory: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentItem, setCurrentItem] = useState<InventoryItem | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
+
+  // View Buyers State
+  const [buyersModalOpen, setBuyersModalOpen] = useState(false);
+  const [selectedProductForBuyers, setSelectedProductForBuyers] = useState<InventoryItem | null>(null);
+  const [productBuyers, setProductBuyers] = useState<any[]>([]);
+  const [loadingBuyers, setLoadingBuyers] = useState(false);
+
+  const token = useAuthStore(state => state.token);
+
 
   const [formData, setFormData] = useState({
     description: '',
@@ -74,21 +81,26 @@ const Inventory: React.FC = () => {
     financialYear: '',
   });
 
-  const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null);
-  const [dropdownRefEl, setDropdownRefEl] = useState<Element | null>(null);
-  const [popperEl, setPopperEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (isModalOpen && !isEditing && formData.description.trim() !== '') {
+      const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+      const descNorm = normalize(formData.description);
+      
+      const exists = inventory.some(item => 
+        normalize(item.description) === descNorm &&
+        item.transactionType === formData.transactionType &&
+        item.hsnSacCode === (formData.hsnSacCode || '') &&
+        item.unit === formData.unit &&
+        Number(item.rate) === Number(formData.rate)
+      );
+      setDuplicateWarning(exists);
+    } else {
+      setDuplicateWarning(false);
+    }
+  }, [formData, isModalOpen, isEditing, inventory]);
 
   const sortRef = useRef<HTMLDivElement>(null);
   const sortBtnRef = useRef<HTMLButtonElement>(null);
-
-  const { styles: popperStyles, attributes: popperAttrs } = usePopper(dropdownRefEl, popperEl, {
-    placement: 'bottom-start',
-    modifiers: [
-      { name: 'offset', options: { offset: [0, 4] } },
-      { name: 'preventOverflow', options: { padding: 8 } },
-      { name: 'flip', options: { fallbackPlacements: ['top-start'] } },
-    ],
-  });
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -96,13 +108,10 @@ const Inventory: React.FC = () => {
       if (sortRef.current && sortBtnRef.current && !sortRef.current.contains(target) && !sortBtnRef.current.contains(target)) {
         setSortOpen(false);
       }
-      if (dropdownOpenId && popperEl && !popperEl.contains(target)) {
-        setDropdownOpenId(null);
-      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [sortOpen, dropdownOpenId, popperEl]);
+  }, [sortOpen]);
 
   // Removed automatic calculation of tax fields
 
@@ -133,7 +142,6 @@ const Inventory: React.FC = () => {
         setIsModalOpen(false);
         setDeleteModalOpen(null);
         setSortOpen(false);
-        setDropdownOpenId(null);
       }
     };
 
@@ -163,7 +171,25 @@ const Inventory: React.FC = () => {
     }
   };
 
-
+  const handleViewBuyers = async (item: InventoryItem) => {
+    if (!token) return;
+    setSelectedProductForBuyers(item);
+    setBuyersModalOpen(true);
+    setLoadingBuyers(true);
+    setProductBuyers([]);
+    
+    try {
+      const normalizeProductKey = (desc: string) => desc.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      const productKey = (item as any).productKey || normalizeProductKey(item.description);
+      const buyers = await getProductBuyers(selectedYear, productKey, token);
+      setProductBuyers(buyers);
+    } catch (error) {
+      console.error('Error fetching buyers:', error);
+      toast.error('Failed to fetch buyers');
+    } finally {
+      setLoadingBuyers(false);
+    }
+  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -219,15 +245,12 @@ const Inventory: React.FC = () => {
     try {
       if (isEditing && currentItem) {
         await updateInventoryItem(currentItem.id, formData);
-        setInventory(inventory.map(item =>
-          item.id === currentItem.id ? { ...item, ...formData } : item
-        ));
         toast.success('Item updated successfully');
       } else {
-        const newItem = await addInventoryItem(formData);
-        setInventory([...inventory, newItem]);
+        await addInventoryItem(formData);
         toast.success('Item added successfully');
       }
+      await loadInventory();
       closeModal();
     } catch (error) {
       toast.error(isEditing ? 'Failed to update item' : 'Failed to add item');
@@ -263,20 +286,6 @@ const Inventory: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    try {
-      const item = inventory.find(i => i.id === id);
-      if (!item) return;
-      const updatedData = { ...item, status: newStatus };
-      await updateInventoryItem(id, updatedData);
-      setInventory(inventory.map(i => i.id === id ? { ...i, status: newStatus } : i));
-      toast.success('Status updated');
-      setDropdownOpenId(null);
-    } catch (error) {
-      toast.error('Failed to update status');
-    }
-  };
-
   const filteredItems = inventory
     .filter(item => item.transactionType === activeTab && item.financialYear === selectedYear)
     .filter(item =>
@@ -307,7 +316,6 @@ const Inventory: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-10">
-      {/* ── Page Header ── */}
       <div className="page-header items-center">
         <div>
           <h1 className="page-title">Inventory</h1>
@@ -321,7 +329,6 @@ const Inventory: React.FC = () => {
         </button>
       </div>
 
-      {/* ── FY selector ── */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">FY</span>
@@ -334,7 +341,6 @@ const Inventory: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Summary Metric Cards ── */}
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -349,9 +355,7 @@ const Inventory: React.FC = () => {
         </div>
       )}
 
-      {/* ── Main Card ── */}
       <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm overflow-visible">
-        {/* Tabs */}
         <div className="flex border-b border-slate-200 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setActiveTab('Sales')}
@@ -369,9 +373,7 @@ const Inventory: React.FC = () => {
           </button>
         </div>
 
-        {/* ── Search + Filter + Sort Toolbar ── */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-slate-100 bg-white">
-          {/* Search */}
           <div className="relative flex-1 min-w-[180px] max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
             <input
@@ -384,7 +386,6 @@ const Inventory: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 ml-auto">
-            {/* Sort dropdown */}
             <div className="relative">
               <button
                 ref={sortBtnRef}
@@ -416,14 +417,12 @@ const Inventory: React.FC = () => {
               )}
             </div>
 
-            {/* Export */}
             <button onClick={exportToExcel} className="btn btn-secondary btn-sm">
               <Download className="h-3.5 w-3.5" /> Export
             </button>
           </div>
         </div>
 
-        {/* ── Table ── */}
         {loading ? (
           <TableSkeleton columns={6} rows={10} hasTabs={false} />
         ) : filteredItems.length > 0 ? (
@@ -441,28 +440,18 @@ const Inventory: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredItems.map((item) => (
+                  {filteredItems.map((item, index) => (
                     <tr
-                      key={item.id}
+                      key={`${item.id}-${index}`}
                       onClick={() => openEditModal(item)}
                       className="cursor-pointer hover:bg-slate-50 transition-colors"
                     >
                       <td data-label="Product Name" className="md:pl-6 font-medium text-slate-900">{item.description}</td>
                       <td data-label="HSN Code" className="text-slate-500">{item.hsnSacCode}</td>
                       <td data-label="Price" className="font-medium text-slate-700">₹{item.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                      <td data-label="Stock" className="text-slate-600">{item.quantity} {item.unit}</td>
+                      <td data-label="Stock" className="text-slate-600">{item.transactionType === 'Purchase' && item.currentStock !== undefined ? item.currentStock : item.quantity} {item.unit}</td>
                       <td data-label="Status">
-                        <div className="relative inline-block">
-                          <StatusBadge
-                            status={item.status || 'In Stock'}
-                            showCaret
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDropdownRefEl(e.currentTarget);
-                              setDropdownOpenId(dropdownOpenId === item.id ? null : item.id);
-                            }}
-                          />
-                        </div>
+                        <StatusBadge status={item.status || 'In Stock'} />
                       </td>
                       <td data-label="Actions">
                         <div className="flex items-center justify-center gap-1">
@@ -473,6 +462,15 @@ const Inventory: React.FC = () => {
                           >
                             <Edit className="h-4 w-4" />
                           </button>
+                          {activeTab === 'Sales' && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleViewBuyers(item); }}
+                              className="text-slate-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                              title="View Buyers"
+                            >
+                              <Building2 className="h-4 w-4" />
+                            </button>
+                          )}
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeleteModalOpen(item.id); }}
                             className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors"
@@ -521,7 +519,6 @@ const Inventory: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="p-8 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
-              {/* Subtle Segmented Toggle */}
               <div className="flex bg-[#F1F5F9] p-1 rounded-[10px] mb-2">
                 <button
                   type="button"
@@ -542,7 +539,6 @@ const Inventory: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {/* Description */}
                 <div>
                   <label className="block text-[13px] font-medium text-[#475569] mb-1.5 ml-0.5">Description</label>
                   <input
@@ -557,7 +553,6 @@ const Inventory: React.FC = () => {
                   />
                 </div>
 
-                {/* HSN/SAC */}
                 <div>
                   <label className="block text-[13px] font-medium text-[#475569] mb-1.5 ml-0.5">HSN/SAC Code</label>
                   <input
@@ -571,7 +566,6 @@ const Inventory: React.FC = () => {
                   />
                 </div>
 
-                {/* Quantity & Unit Row */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[13px] font-medium text-[#475569] mb-1.5 ml-0.5">Quantity</label>
@@ -606,7 +600,6 @@ const Inventory: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Rate */}
                 <div>
                   <label className="block text-[13px] font-medium text-[#475569] mb-1.5 ml-0.5">Rate (₹)</label>
                   <input
@@ -621,7 +614,16 @@ const Inventory: React.FC = () => {
                 </div>
               </div>
 
-              {/* Centered Action Buttons */}
+              {duplicateWarning && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Item already exists.</p>
+                    <p className="opacity-90 mt-0.5">Quantity will be updated on the existing record instead of creating a duplicate.</p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-center items-center gap-4 pt-6">
                 <button
                   type="button"
@@ -667,27 +669,82 @@ const Inventory: React.FC = () => {
         document.body
       )}
 
-      {/* ── Status Change Dropdown (Popper) ── */}
-      {dropdownOpenId && (
-        <div
-          ref={setPopperEl}
-          style={popperStyles.popper}
-          {...popperAttrs.popper}
-          className="dropdown-panel w-52 z-[60]"
-        >
-          {['In Stock', 'Low Stock', 'Out of Stock'].map(status => (
-            <button
-              key={status}
-              onClick={() => handleStatusChange(dropdownOpenId, status)}
-              className="dropdown-item"
-            >
-              {status === 'In Stock' && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-              {status === 'Low Stock' && <Clock className="h-4 w-4 text-amber-500" />}
-              {status === 'Out of Stock' && <AlertTriangle className="h-4 w-4 text-rose-500" />}
-              {status}
-            </button>
-          ))}
-        </div>
+      {buyersModalOpen && createPortal(
+        <div className="fixed inset-0 bg-slate-900/25 backdrop-blur-[6px] flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-200 transition-all w-screen h-screen">
+          <div className="bg-white rounded-[16px] shadow-[0_24px_48px_rgba(0,0,0,0.16)] w-full max-w-[800px] overflow-hidden flex flex-col">
+            <div className="px-8 py-5 flex items-center justify-between bg-[#0F172A] relative">
+              <div>
+                <h3 className="text-[18px] font-semibold text-white tracking-tight">
+                  Buyers of {selectedProductForBuyers?.description}
+                </h3>
+                <p className="text-white/60 text-sm mt-0.5">{selectedYear}</p>
+              </div>
+              <button
+                onClick={() => setBuyersModalOpen(false)}
+                className="text-white/70 hover:text-white transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
+              {loadingBuyers ? (
+                <div className="flex justify-center items-center py-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : productBuyers.length > 0 ? (
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full text-left text-sm text-slate-600">
+                    <thead className="bg-slate-50 text-slate-700 border-b border-slate-200">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Company Name</th>
+                        <th className="px-4 py-3 font-medium">GST</th>
+                        <th className="px-4 py-3 font-medium">Invoice #</th>
+                        <th className="px-4 py-3 font-medium">Date</th>
+                        <th className="px-4 py-3 font-medium">Qty Sold</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {productBuyers.map((invoice, idx) => {
+                        const normalizeProductKey = (desc: string) => desc.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+                        const targetKey = (selectedProductForBuyers as any)?.productKey || normalizeProductKey(selectedProductForBuyers?.description || '');
+                        const matchedItem = invoice.items.find((i: any) => (i.productKey || normalizeProductKey(i.description)) === targetKey);
+
+                        return (
+                          <tr key={invoice._id || idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors last:border-0">
+                            <td className="px-4 py-3 font-medium text-slate-900">{invoice.buyerName}</td>
+                            <td className="px-4 py-3 text-slate-500">{invoice.buyerGst}</td>
+                            <td className="px-4 py-3 text-slate-500">{invoice.invoiceNumber}</td>
+                            <td className="px-4 py-3 text-slate-500">{new Date(invoice.date).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-slate-700 font-medium">{matchedItem ? matchedItem.quantity : '-'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="py-12 flex flex-col items-center justify-center text-center">
+                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                    <Building2 className="h-6 w-6 text-slate-400" />
+                  </div>
+                  <h4 className="text-base font-semibold text-slate-700">No sales records found</h4>
+                  <p className="text-sm text-slate-500 mt-1">This product has not been sold to any company in {selectedYear}.</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button
+                onClick={() => setBuyersModalOpen(false)}
+                className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 text-[14px] font-semibold rounded-[10px] hover:bg-slate-50 transition-all shadow-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -118,6 +118,18 @@ const GenerateBills: React.FC = () => {
 
         if (result && result._id) {
           toast.success(`${billType.toUpperCase()} created successfully!`);
+
+          // Show stock warnings if any (invoice only)
+          if (billType === 'invoice' && result.stockWarnings && result.stockWarnings.length > 0) {
+            result.stockWarnings.forEach((warning: any) => {
+              toast(`⚠️ "${warning.description}" — stock is now ${warning.currentStock} (was ${warning.previousStock})`, {
+                icon: '📦',
+                duration: 5000,
+                style: { background: '#FFFBEB', border: '1px solid #FCD34D', color: '#92400E' },
+              });
+            });
+          }
+
           navigate(`/${billType}-preview/${result._id}`);
         } else {
           throw new Error('Document creation failed or ID is missing');

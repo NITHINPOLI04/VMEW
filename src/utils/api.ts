@@ -1,4 +1,4 @@
-import { Invoice, InvoiceFormData, DeliveryChallan, DeliveryChallanFormData, Quotation, QuotationFormData, InventoryItem, Letterhead, DefaultInfo, Supplier, Customer, PurchaseOrder, PurchaseOrderFormData } from '../types/index';
+import { Invoice, InvoiceFormData, DeliveryChallan, DeliveryChallanFormData, Quotation, QuotationFormData, InventoryItem, ProductSuggestion, Letterhead, DefaultInfo, Supplier, Customer, PurchaseOrder, PurchaseOrderFormData } from '../types/index';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -174,6 +174,17 @@ export const updateInventoryItem = (
 
 export const deleteInventoryItem = (id: string, token: string) =>
   apiRequest<void>('/api/inventory/' + id, 'DELETE', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+// Product Suggestions API
+export const getProductSuggestions = (financialYear: string, token: string) =>
+  apiRequest<ProductSuggestion[]>(`/api/inventory/products/suggestions?financialYear=${financialYear}`, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const getProductBuyers = (financialYear: string, productKey: string, token: string) =>
+  apiRequest<any[]>(`/api/invoices/${financialYear}/product/${productKey}`, 'GET', undefined, {
     Authorization: `Bearer ${token}`,
   });
 

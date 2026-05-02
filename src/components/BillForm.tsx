@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FileText, PlusCircle, Eye, Zap, RefreshCw } from 'lucide-react';
 import { useContactStore } from '../stores/contactStore';
 import CustomSelect from './CustomSelect';
@@ -14,6 +14,9 @@ import {
     ItemTotalsSummary,
 } from '../engines/tableEngine';
 import { computeItemTotals, computeDocumentTotals, makeDiscountConfig, type TaxType } from '../utils/calcEngine';
+import { useInventoryStore } from '../stores/inventoryStore';
+import { useFinancialYearStore } from '../stores/financialYearStore';
+import { ProductSuggestion } from '../types/index';
 
 interface BillFormProps {
     billType: 'invoice' | 'dc' | 'quotation';
@@ -39,20 +42,42 @@ const BillForm: React.FC<BillFormProps> = ({
     loading
 }) => {
     const { customers } = useContactStore();
+    const { productSuggestions, fetchProductSuggestions } = useInventoryStore();
     const [entitySearchOptions, setEntitySearchOptions] = useState<any[]>([]);
     const [showEntityDropdown, setShowEntityDropdown] = useState(false);
     const entityDropdownRef = useRef<HTMLDivElement>(null);
 
-    // Close dropdown on click outside
+    // Product suggestion state (per item index)
+    const [activeProductIndex, setActiveProductIndex] = useState<number | null>(null);
+    const [productSearchResults, setProductSearchResults] = useState<ProductSuggestion[]>([]);
+    const productDropdownRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+
+    const { selectedFY } = useFinancialYearStore();
+
+    // Fetch product suggestions on mount or when FY changes
+    useEffect(() => {
+        if (selectedFY) {
+            fetchProductSuggestions(selectedFY);
+        }
+    }, [fetchProductSuggestions, selectedFY]);
+
+    // Close dropdowns on click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (entityDropdownRef.current && !entityDropdownRef.current.contains(event.target as Node)) {
                 setShowEntityDropdown(false);
             }
+            // Close product dropdown
+            if (activeProductIndex !== null) {
+                const ref = productDropdownRefs.current[activeProductIndex];
+                if (ref && !ref.contains(event.target as Node)) {
+                    setActiveProductIndex(null);
+                }
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [activeProductIndex]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name: prefixedName, value } = e.target;
@@ -106,6 +131,21 @@ const BillForm: React.FC<BillFormProps> = ({
     const handleItemChange = (index: number, field: string, value: string | number) => {
         const updatedItems = [...formData.items];
 
+        // Product suggestion filtering on description change
+        if (field === 'description') {
+            const query = String(value).toLowerCase().trim();
+            if (query.length > 0 && productSuggestions.length > 0) {
+                const matches = productSuggestions.filter(p =>
+                    p.description.toLowerCase().includes(query) ||
+                    p.hsnSacCode.toLowerCase().includes(query)
+                );
+                setProductSearchResults(matches);
+                setActiveProductIndex(matches.length > 0 ? index : null);
+            } else {
+                setActiveProductIndex(null);
+                setProductSearchResults([]);
+            }
+        }
         if (billType === 'invoice' || billType === 'quotation') {
             if (field === 'quantity' || field === 'rate') {
                 let qty = field === 'quantity' ? (parseFloat(String(value)) || 0) : updatedItems[index].quantity;
@@ -172,6 +212,24 @@ const BillForm: React.FC<BillFormProps> = ({
         [updatedItems[index], updatedItems[newIndex]] = [updatedItems[newIndex], updatedItems[index]];
         setFormData((prev: any) => ({ ...prev, items: updatedItems }));
     };
+
+    const handleProductSelect = useCallback((index: number, product: ProductSuggestion) => {
+        const updatedItems = [...formData.items];
+        updatedItems[index] = {
+            ...updatedItems[index],
+            description: product.description,
+            hsnSacCode: product.hsnSacCode,
+            unit: product.unit,
+        };
+        if (billType === 'invoice' || billType === 'quotation') {
+            updatedItems[index] = computeItemTotals(updatedItems[index], formData.taxType as TaxType);
+            calculateTaxTotals(updatedItems, formData.taxType, formData.discountEnabled, formData.discountPercentage);
+        } else {
+            setFormData((prev: any) => ({ ...prev, items: updatedItems }));
+        }
+        setActiveProductIndex(null);
+        setProductSearchResults([]);
+    }, [formData.items, formData.taxType, formData.discountEnabled, formData.discountPercentage, billType, calculateTaxTotals, setFormData]);
 
     // Pick sections based on document type
     const sections = billType === 'invoice'
@@ -250,18 +308,57 @@ const BillForm: React.FC<BillFormProps> = ({
                                 <div key={item.id || index} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:border-blue-200 transition-all">
                                     {/* Row 1: Description + Controls */}
                                     <div className="flex items-start gap-3 mb-3">
-                                        <div className="flex-1">
+                                        <div className="flex-1 relative" ref={(el) => { productDropdownRefs.current[index] = el; }}>
                                             <label htmlFor={`item_desc_${index}`} className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Description</label>
                                             <textarea
                                                 id={`item_desc_${index}`}
                                                 value={item.description}
                                                 onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                                                onFocus={() => {
+                                                    if (item.description && productSuggestions.length > 0) {
+                                                        const matches = productSuggestions.filter((p: ProductSuggestion) =>
+                                                            p.description.toLowerCase().includes(item.description.toLowerCase())
+                                                        );
+                                                        if (matches.length > 0) {
+                                                            setProductSearchResults(matches);
+                                                            setActiveProductIndex(index);
+                                                        }
+                                                    }
+                                                }}
                                                 required
                                                 rows={2}
                                                 autoComplete="off"
                                                 name={`field_v_item_desc_${index}`}
                                                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400 bg-white resize-none"
+                                                placeholder="Start typing to search products..."
                                             />
+                                            {/* Product Suggestions Dropdown */}
+                                            {activeProductIndex === index && productSearchResults.length > 0 && (
+                                                <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                                                    {productSearchResults.map((product) => (
+                                                        <button
+                                                            key={product.productKey}
+                                                            type="button"
+                                                            onClick={() => handleProductSelect(index, product)}
+                                                            className="w-full px-4 py-2.5 text-left hover:bg-blue-50 transition-colors flex items-center justify-between gap-2 border-b border-slate-50 last:border-0"
+                                                        >
+                                                            <div className="min-w-0">
+                                                                <p className="text-sm font-medium text-slate-800 truncate">{product.description}</p>
+                                                                <p className="text-xs text-slate-400">HSN: {product.hsnSacCode} · {product.unit}</p>
+                                                            </div>
+                                                            {formData.invoiceType !== 'Service' && (
+                                                                product.currentStock <= 0 ? (
+                                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-600 whitespace-nowrap">Out of Stock</span>
+                                                                ) : product.currentStock < 10 ? (
+                                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 whitespace-nowrap">Low: {product.currentStock}</span>
+                                                                ) : (
+                                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 whitespace-nowrap">Stock: {product.currentStock}</span>
+                                                                )
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="pt-5 flex-shrink-0">
                                             <ItemRowControls
@@ -381,6 +478,29 @@ const BillForm: React.FC<BillFormProps> = ({
                         </div>
                     </div>
 
+                    {/* Service Bill Toggle */}
+                    {billType === 'invoice' && (
+                        <div className="flex items-start gap-3 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                            <div className="flex items-center h-5 mt-0.5">
+                                <input
+                                    type="checkbox"
+                                    id="service_bill_toggle"
+                                    checked={formData.invoiceType === 'Service'}
+                                    onChange={(e) => setFormData((prev: any) => ({ ...prev, invoiceType: e.target.checked ? 'Service' : 'Product' }))}
+                                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer transition-colors"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="service_bill_toggle" className="text-sm font-bold text-slate-700 cursor-pointer select-none block">
+                                    This is a Service Bill
+                                </label>
+                                <p className="text-xs text-slate-500 mt-0.5 select-none">
+                                    Service bill: Inventory will not be affected
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Form Actions - placed right after line items */}
                     <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2 pb-2">
                         <button
@@ -444,11 +564,10 @@ const BillForm: React.FC<BillFormProps> = ({
                                                         onClick={() => {
                                                             calculateTaxTotals(formData.items, formData.taxType, true, 0, 'percentage', 0);
                                                         }}
-                                                        className={`px-2.5 py-1 text-xs font-bold transition-all ${
-                                                            (formData.discountType || 'percentage') === 'percentage'
+                                                        className={`px-2.5 py-1 text-xs font-bold transition-all ${(formData.discountType || 'percentage') === 'percentage'
                                                                 ? 'bg-emerald-500 text-white'
                                                                 : 'bg-white text-slate-500 hover:bg-slate-50'
-                                                        }`}
+                                                            }`}
                                                         aria-label="Percentage discount"
                                                     >
                                                         %
@@ -458,11 +577,10 @@ const BillForm: React.FC<BillFormProps> = ({
                                                         onClick={() => {
                                                             calculateTaxTotals(formData.items, formData.taxType, true, 0, 'fixed', 0);
                                                         }}
-                                                        className={`px-2.5 py-1 text-xs font-bold transition-all border-l border-slate-200 ${
-                                                            formData.discountType === 'fixed'
+                                                        className={`px-2.5 py-1 text-xs font-bold transition-all border-l border-slate-200 ${formData.discountType === 'fixed'
                                                                 ? 'bg-emerald-500 text-white'
                                                                 : 'bg-white text-slate-500 hover:bg-slate-50'
-                                                        }`}
+                                                            }`}
                                                         aria-label="Fixed amount discount"
                                                     >
                                                         ₹

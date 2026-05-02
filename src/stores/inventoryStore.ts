@@ -1,21 +1,24 @@
 import { create } from 'zustand';
-import { getInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem } from '../utils/api';
+import { getInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem, getProductSuggestions } from '../utils/api';
 import { useAuthStore } from './authStore';
-import { InventoryItem } from '../types/index';
+import { InventoryItem, ProductSuggestion } from '../types/index';
 
 interface InventoryState {
   inventory: InventoryItem[];
+  productSuggestions: ProductSuggestion[];
   loading: boolean;
   error: string | null;
   fetchInventory: (financialYear: string) => Promise<InventoryItem[]>;
   addInventoryItem: (item: Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<InventoryItem>;
   updateInventoryItem: (id: string, item: Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   deleteInventoryItem: (id: string) => Promise<void>;
+  fetchProductSuggestions: (financialYear: string) => Promise<ProductSuggestion[]>;
   clearInventory: () => void;
 }
 
 export const useInventoryStore = create<InventoryState>((set) => ({
   inventory: [],
+  productSuggestions: [],
   loading: false,
   error: null,
   
@@ -44,10 +47,16 @@ export const useInventoryStore = create<InventoryState>((set) => ({
       
       const newItem = await createInventoryItem(item, token);
       
-      set((state) => ({
-        inventory: [...state.inventory, newItem],
-        loading: false,
-      }));
+      set((state) => {
+        const existingIndex = state.inventory.findIndex(i => i.id === newItem.id);
+        if (existingIndex >= 0) {
+          const newInventory = [...state.inventory];
+          newInventory[existingIndex] = newItem;
+          return { inventory: newInventory, loading: false };
+        } else {
+          return { inventory: [...state.inventory, newItem], loading: false };
+        }
+      });
       
       return newItem;
     } catch (error: any) {
@@ -97,7 +106,21 @@ export const useInventoryStore = create<InventoryState>((set) => ({
     }
   },
   
+  fetchProductSuggestions: async (financialYear: string) => {
+    try {
+      const token = useAuthStore.getState().token;
+      if (!token) throw new Error('Not authenticated');
+      
+      const suggestions = await getProductSuggestions(financialYear, token);
+      set({ productSuggestions: suggestions });
+      return suggestions;
+    } catch (error: any) {
+      console.error('Failed to fetch product suggestions:', error.message);
+      return [];
+    }
+  },
+  
   clearInventory: () => {
-    set({ inventory: [], error: null });
+    set({ inventory: [], productSuggestions: [], error: null });
   },
 }));

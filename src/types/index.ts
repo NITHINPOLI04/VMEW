@@ -150,8 +150,20 @@ export interface InventoryItem {
   transactionType: 'Sales' | 'Purchase';
   status: string; // 'In Stock' | 'Low Stock' | 'Out of Stock'
   financialYear: string; // e.g., '2024-2025'
+  productKey?: string;
+  currentStock?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProductSuggestion {
+  productKey: string;
+  description: string;
+  hsnSacCode: string;
+  rate: number;
+  unit: string;
+  currentStock: number;
+  status: string;
 }
 
 // Template Types

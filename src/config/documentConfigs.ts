@@ -30,7 +30,8 @@ export const getInitialInvoice = (defaultInfo: any = null) => ({
     totalInWords: '',
     paymentStatus: 'Unpaid',
     discountType: 'percentage' as const,
-    discountFixedAmount: 0
+    discountFixedAmount: 0,
+    invoiceType: 'Product' as 'Product' | 'Service'
 });
 
 export const getInitialDC = () => ({

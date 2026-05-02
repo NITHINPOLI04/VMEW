@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { PlusCircle, Eye, Zap, RefreshCw, ShoppingBag } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -14,6 +14,9 @@ import {
 } from '../engines/tableEngine';
 import { computeItemTotals, computeDocumentTotals, makeDiscountConfig, type TaxType } from '../utils/calcEngine';
 import CustomSelect from './CustomSelect';
+import { useInventoryStore } from '../stores/inventoryStore';
+import { useFinancialYearStore } from '../stores/financialYearStore';
+import { ProductSuggestion } from '../types/index';
 
 interface PurchaseOrderFormProps {
     onSaveSuccess?: () => void;
@@ -36,11 +39,23 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
     const [showEntityDropdown, setShowEntityDropdown] = useState(false);
     const entityDropdownRef = useRef<HTMLDivElement>(null);
 
+    const { productSuggestions, fetchProductSuggestions } = useInventoryStore();
+    const { selectedFY } = useFinancialYearStore();
+    const [activeProductIndex, setActiveProductIndex] = useState<number | null>(null);
+    const [productSearchResults, setProductSearchResults] = useState<ProductSuggestion[]>([]);
+    const productDropdownRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+
     const [formData, setFormData] = useState<any>(getInitialPO());
 
     useEffect(() => {
         fetchSuppliers();
     }, [fetchSuppliers]);
+
+    useEffect(() => {
+        if (selectedFY) {
+            fetchProductSuggestions(selectedFY);
+        }
+    }, [fetchProductSuggestions, selectedFY]);
 
     useEffect(() => {
         const loadPOForEdit = async () => {
@@ -100,10 +115,16 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
             if (entityDropdownRef.current && !entityDropdownRef.current.contains(event.target as Node)) {
                 setShowEntityDropdown(false);
             }
+            if (activeProductIndex !== null) {
+                const ref = productDropdownRefs.current[activeProductIndex];
+                if (ref && !ref.contains(event.target as Node)) {
+                    setActiveProductIndex(null);
+                }
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [activeProductIndex]);
 
     const calculateTaxTotals = (items: any[] = formData.items, taxType: string = formData.taxType, discountEnabled: boolean = formData.discountEnabled, discountPercentage: any = formData.discountPercentage, discountType: string = formData.discountType || 'percentage', discountFixedAmount: number = formData.discountFixedAmount || 0) => {
         const discountConfig = makeDiscountConfig(
@@ -168,6 +189,22 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
     const handleItemChange = (index: number, field: string, value: string | number) => {
         const updatedItems = [...formData.items];
 
+        // Product suggestion filtering
+        if (field === 'description') {
+            const query = String(value).toLowerCase().trim();
+            if (query.length > 0 && productSuggestions.length > 0) {
+                const matches = productSuggestions.filter(p =>
+                    p.description.toLowerCase().includes(query) ||
+                    p.hsnSacCode.toLowerCase().includes(query)
+                );
+                setProductSearchResults(matches);
+                setActiveProductIndex(matches.length > 0 ? index : null);
+            } else {
+                setActiveProductIndex(null);
+                setProductSearchResults([]);
+            }
+        }
+
         if (field === 'quantity' || field === 'rate') {
             let qty = field === 'quantity' ? (parseFloat(String(value)) || 0) : updatedItems[index].quantity;
             if (field === 'quantity' && updatedItems[index].unit === 'Nos') {
@@ -224,6 +261,20 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
         [updatedItems[index], updatedItems[newIndex]] = [updatedItems[newIndex], updatedItems[index]];
         setFormData((prev: any) => ({ ...prev, items: updatedItems }));
     };
+
+    const handleProductSelect = useCallback((index: number, product: ProductSuggestion) => {
+        const updatedItems = [...formData.items];
+        updatedItems[index] = {
+            ...updatedItems[index],
+            description: product.description,
+            hsnSacCode: product.hsnSacCode,
+            unit: product.unit,
+        };
+        updatedItems[index] = computeItemTotals(updatedItems[index], formData.taxType as TaxType);
+        calculateTaxTotals(updatedItems, formData.taxType, formData.discountEnabled, formData.discountPercentage);
+        setActiveProductIndex(null);
+        setProductSearchResults([]);
+    }, [formData.items, formData.taxType, formData.discountEnabled, formData.discountPercentage, calculateTaxTotals]);
 
     const validateForm = () => {
         if (!formData.poNumber.trim()) {
@@ -359,17 +410,54 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                 <div key={item.id || index} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:border-blue-200 transition-all">
                                     {/* Row 1: Description + Controls */}
                                     <div className="flex items-start gap-3 mb-3">
-                                        <div className="flex-1">
+                                        <div className="flex-1 relative" ref={(el) => { productDropdownRefs.current[index] = el; }}>
                                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Description</label>
                                             <textarea
                                                 value={item.description}
                                                 onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                                                onFocus={() => {
+                                                    if (item.description && productSuggestions.length > 0) {
+                                                        const matches = productSuggestions.filter((p: ProductSuggestion) =>
+                                                            p.description.toLowerCase().includes(item.description.toLowerCase())
+                                                        );
+                                                        if (matches.length > 0) {
+                                                            setProductSearchResults(matches);
+                                                            setActiveProductIndex(index);
+                                                        }
+                                                    }
+                                                }}
                                                 required
                                                 rows={2}
                                                 autoComplete="off"
                                                 name={`field_v_item_desc_${index}`}
                                                 className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400 bg-white resize-none"
+                                                placeholder="Start typing to search products..."
                                             />
+                                            {/* Product Suggestions Dropdown */}
+                                            {activeProductIndex === index && productSearchResults.length > 0 && (
+                                                <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                                                    {productSearchResults.map((product) => (
+                                                        <button
+                                                            key={product.productKey}
+                                                            type="button"
+                                                            onClick={() => handleProductSelect(index, product)}
+                                                            className="w-full px-4 py-2.5 text-left hover:bg-blue-50 transition-colors flex items-center justify-between gap-2 border-b border-slate-50 last:border-0"
+                                                        >
+                                                            <div className="min-w-0">
+                                                                <p className="text-sm font-medium text-slate-800 truncate">{product.description}</p>
+                                                                <p className="text-xs text-slate-400">HSN: {product.hsnSacCode} · {product.unit}</p>
+                                                            </div>
+                                                            {product.currentStock <= 0 ? (
+                                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-600 whitespace-nowrap">Out of Stock</span>
+                                                            ) : product.currentStock < 10 ? (
+                                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 whitespace-nowrap">Low: {product.currentStock}</span>
+                                                            ) : (
+                                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 whitespace-nowrap">Stock: {product.currentStock}</span>
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="pt-5 flex-shrink-0">
                                             <ItemRowControls
