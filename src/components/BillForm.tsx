@@ -108,7 +108,7 @@ const BillForm: React.FC<BillFormProps> = ({
         setFormData((prev: any) => ({ ...prev, date: date.toISOString() }));
     };
 
-    const calculateTaxTotals = (items: any[], taxType: string, discountEnabled: boolean = formData.discountEnabled, discountPercentage: number = formData.discountPercentage || 0, discountType: string = formData.discountType || 'percentage', discountFixedAmount: number = formData.discountFixedAmount || 0) => {
+    const calculateTaxTotals = useCallback((items: any[], taxType: string, discountEnabled: boolean = formData.discountEnabled, discountPercentage: number = formData.discountPercentage || 0, discountType: string = formData.discountType || 'percentage', discountFixedAmount: number = formData.discountFixedAmount || 0) => {
         const discountConfig = makeDiscountConfig(
             discountEnabled,
             discountPercentage,
@@ -126,7 +126,7 @@ const BillForm: React.FC<BillFormProps> = ({
         } = computeDocumentTotals(items, discountConfig, taxType as TaxType);
 
         setFormData((prev: any) => ({ ...prev, items, grandTotal, subTotal, discountAmount, discountEnabled, discountPercentage, discountType, discountFixedAmount, taxableAmount: totalTaxableValue, totalSgst, totalCgst, totalIgst, taxType }));
-    };
+    }, [formData.discountEnabled, formData.discountPercentage, formData.discountType, formData.discountFixedAmount, setFormData]);
 
     const handleItemChange = (index: number, field: string, value: string | number) => {
         const updatedItems = [...formData.items];
@@ -309,9 +309,9 @@ const BillForm: React.FC<BillFormProps> = ({
                                     {/* Row 1: Description + Controls */}
                                     <div className="flex items-start gap-3 mb-3">
                                         <div className="flex-1 relative" ref={(el) => { productDropdownRefs.current[index] = el; }}>
-                                            <label htmlFor={`item_desc_${index}`} className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Description</label>
+                                            <label htmlFor={`desc_${index}`} className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Description</label>
                                             <textarea
-                                                id={`item_desc_${index}`}
+                                                id={`desc_${index}`}
                                                 value={item.description}
                                                 onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                                 onFocus={() => {

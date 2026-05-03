@@ -179,7 +179,7 @@ const Inventory: React.FC = () => {
     setProductBuyers([]);
     
     try {
-      const normalizeProductKey = (desc: string) => desc.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      const normalizeProductKey = (desc: string) => desc.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9._]/g, '');
       const productKey = (item as any).productKey || normalizeProductKey(item.description);
       const buyers = await getProductBuyers(selectedYear, productKey, token);
       setProductBuyers(buyers);
@@ -451,7 +451,11 @@ const Inventory: React.FC = () => {
                       <td data-label="Price" className="font-medium text-slate-700">₹{item.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                       <td data-label="Stock" className="text-slate-600">{item.transactionType === 'Purchase' && item.currentStock !== undefined ? item.currentStock : item.quantity} {item.unit}</td>
                       <td data-label="Status">
-                        <StatusBadge status={item.status || 'In Stock'} />
+                        {item.transactionType === 'Purchase' ? (
+                          <StatusBadge status={item.status || 'In Stock'} />
+                        ) : (
+                          <span className="text-slate-400 text-sm">—</span>
+                        )}
                       </td>
                       <td data-label="Actions">
                         <div className="flex items-center justify-center gap-1">
@@ -706,7 +710,7 @@ const Inventory: React.FC = () => {
                     </thead>
                     <tbody>
                       {productBuyers.map((invoice, idx) => {
-                        const normalizeProductKey = (desc: string) => desc.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+                        const normalizeProductKey = (desc: string) => desc.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9._]/g, '');
                         const targetKey = (selectedProductForBuyers as any)?.productKey || normalizeProductKey(selectedProductForBuyers?.description || '');
                         const matchedItem = invoice.items.find((i: any) => (i.productKey || normalizeProductKey(i.description)) === targetKey);
 

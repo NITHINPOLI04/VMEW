@@ -126,7 +126,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [activeProductIndex]);
 
-    const calculateTaxTotals = (items: any[] = formData.items, taxType: string = formData.taxType, discountEnabled: boolean = formData.discountEnabled, discountPercentage: any = formData.discountPercentage, discountType: string = formData.discountType || 'percentage', discountFixedAmount: number = formData.discountFixedAmount || 0) => {
+    const calculateTaxTotals = useCallback((items: any[] = formData.items, taxType: string = formData.taxType, discountEnabled: boolean = formData.discountEnabled, discountPercentage: any = formData.discountPercentage, discountType: string = formData.discountType || 'percentage', discountFixedAmount: number = formData.discountFixedAmount || 0) => {
         const discountConfig = makeDiscountConfig(
             discountEnabled,
             parseFloat(discountPercentage) || 0,
@@ -149,17 +149,17 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
             grandTotal,
             subTotal,
             discountAmount,
-            taxableAmount: totalTaxableValue,
-            totalSgst,
-            totalCgst,
-            totalIgst,
             discountEnabled,
             discountPercentage,
             discountType,
             discountFixedAmount,
+            taxableAmount: totalTaxableValue,
+            totalSgst,
+            totalCgst,
+            totalIgst,
             taxType
         }));
-    };
+    }, [formData.items, formData.taxType, formData.discountEnabled, formData.discountPercentage, formData.discountType, formData.discountFixedAmount]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name: prefixedName, value } = e.target;
@@ -411,8 +411,9 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                     {/* Row 1: Description + Controls */}
                                     <div className="flex items-start gap-3 mb-3">
                                         <div className="flex-1 relative" ref={(el) => { productDropdownRefs.current[index] = el; }}>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Description</label>
+                                            <label htmlFor={`po_desc_${index}`} className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Description</label>
                                             <textarea
+                                                id={`po_desc_${index}`}
                                                 value={item.description}
                                                 onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                                 onFocus={() => {
@@ -473,8 +474,9 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                     {/* Row 2: HSN/SAC + Qty & Unit */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">HSN / SAC</label>
+                                            <label htmlFor={`po_hsn_${index}`} className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">HSN / SAC</label>
                                             <input
+                                                id={`po_hsn_${index}`}
                                                 type="text"
                                                 value={item.hsnSacCode || ''}
                                                 onChange={(e) => handleItemChange(index, 'hsnSacCode', e.target.value)}
@@ -483,9 +485,10 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                             />
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Qty & Unit</label>
+                                            <label htmlFor={`po_qty_${index}`} className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Qty & Unit</label>
                                             <div className="flex gap-2">
                                                 <input
+                                                    id={`po_qty_${index}`}
                                                     type="number"
                                                     value={item.quantity}
                                                     onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
@@ -515,10 +518,11 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                                     {/* Row 3: Rate + Taxable Amount */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Rate (₹)</label>
+                                            <label htmlFor={`po_rate_${index}`} className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Rate (₹)</label>
                                             <div className="relative">
                                                 <span className="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
                                                 <input
+                                                    id={`po_rate_${index}`}
                                                     type="number"
                                                     value={item.rate}
                                                     onChange={(e) => handleItemChange(index, 'rate', e.target.value)}
