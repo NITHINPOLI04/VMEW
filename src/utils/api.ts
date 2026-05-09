@@ -45,10 +45,16 @@ export const login = (email: string, password: string) =>
   );
 
 // Invoice APIs
-export const getInvoices = (year: string, token: string) =>
-  apiRequest<Invoice[]>('/api/invoices/' + year, 'GET', undefined, {
+export const getInvoices = (year: string, token: string, documentType: string = 'invoice') =>
+  apiRequest<Invoice[]>(`/api/invoices/${year}?documentType=${documentType}`, 'GET', undefined, {
     Authorization: `Bearer ${token}`,
   });
+
+export const getCreditNotes = (year: string, token: string) =>
+  getInvoices(year, token, 'credit_note');
+
+export const getDebitNotes = (year: string, token: string) =>
+  getInvoices(year, token, 'debit_note');
 
 export const getInvoiceById = (id: string, token: string) =>
   apiRequest<Invoice>('/api/invoices/id/' + id, 'GET', undefined, {

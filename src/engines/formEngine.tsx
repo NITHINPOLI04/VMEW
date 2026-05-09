@@ -35,11 +35,11 @@ export interface SectionDef {
 
 // ─── Document section configs ──────────────────────────────────────────────────
 
-export const invoiceSections = (): SectionDef[] => [
+export const invoiceSections = (numberLabel = 'Invoice Number'): SectionDef[] => [
   {
     title: 'Document Details',
     fields: [
-      { name: 'invoiceNumber', label: 'Invoice Number', type: 'text', required: true },
+      { name: 'invoiceNumber', label: numberLabel, type: 'text', required: true },
       { name: 'date', label: 'Date', type: 'date', required: true },
     ],
   },

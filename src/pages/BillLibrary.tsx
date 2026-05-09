@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import {
   FileText, Search, ChevronDown, Trash2, FileCheck,
   Clock, AlertTriangle, Download, Truck, FileSpreadsheet, PlusCircle,
-  ReceiptText, ArrowUpDown, X, Calendar, CheckCircle2, XCircle, SlidersHorizontal, Edit
+  ReceiptText, ArrowUpDown, X, Calendar, CheckCircle2, XCircle, SlidersHorizontal, Edit,
+  ArrowDownLeft, ArrowUpRight
 } from 'lucide-react';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useDCStore } from '../stores/dcStore';
@@ -11,6 +12,7 @@ import { useQuotationStore } from '../stores/quotationStore';
 import { useContactStore } from '../stores/contactStore';
 import { useFinancialYearStore } from '../stores/financialYearStore';
 import { Invoice, DeliveryChallan, Quotation } from '../types';
+import { DOCUMENT_TYPE_CONFIG, BillingDocumentType } from '../config/documentConfigs';
 import { toast } from 'react-hot-toast';
 import { usePopper } from 'react-popper';
 import CustomSelect from '../components/CustomSelect';
@@ -20,19 +22,23 @@ import { parseISO, format } from 'date-fns';
 import TableSkeleton from '../components/TableSkeleton';
 import { exportStandardExcel, exportGroupedExcel } from '../utils/excelExport';
 
-type TabType = 'invoice' | 'dc' | 'quotation';
+type TabType = 'invoice' | 'dc' | 'quotation' | 'credit_note' | 'debit_note';
 type SortKey = 'newest' | 'oldest' | 'amount-high' | 'amount-low';
 
-const TABS: { key: TabType; label: string; icon: React.ElementType; color: string }[] = [
-  { key: 'invoice', label: 'Tax Invoices', icon: FileText, color: 'blue' },
-  { key: 'dc', label: 'Delivery Challans', icon: Truck, color: 'amber' },
-  { key: 'quotation', label: 'Quotations', icon: FileSpreadsheet, color: 'emerald' },
+const TABS: { key: TabType; label: string; icon: React.ElementType; color: string; group: 'core' | 'adjustment' }[] = [
+  { key: 'invoice',     label: 'Tax Invoices',      icon: FileText,       color: 'blue',    group: 'core' },
+  { key: 'dc',          label: 'Delivery Challans', icon: Truck,          color: 'amber',   group: 'core' },
+  { key: 'quotation',   label: 'Quotations',        icon: FileSpreadsheet,color: 'emerald', group: 'core' },
+  { key: 'credit_note', label: 'Credit Notes',      icon: ArrowDownLeft,  color: 'rose',    group: 'adjustment' },
+  { key: 'debit_note',  label: 'Debit Notes',       icon: ArrowUpRight,   color: 'orange',  group: 'adjustment' },
 ];
 
 const TAB_COLORS: Record<string, string> = {
-  blue: 'border-blue-600 text-blue-700 bg-blue-50/60',
-  amber: 'border-amber-500 text-amber-700 bg-amber-50/60',
+  blue:    'border-blue-600 text-blue-700 bg-blue-50/60',
+  amber:   'border-amber-500 text-amber-700 bg-amber-50/60',
   emerald: 'border-emerald-500 text-emerald-700 bg-emerald-50/60',
+  rose:    'border-rose-500 text-rose-700 bg-rose-50/60',
+  orange:  'border-orange-500 text-orange-700 bg-orange-50/60',
 };
 
 const months = [
@@ -108,6 +114,8 @@ const BillLibrary: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [dcs, setDcs] = useState<DeliveryChallan[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [creditNotes, setCreditNotes] = useState<Invoice[]>([]);
+  const [debitNotes, setDebitNotes] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ── Primary filters (FY/Month) ──────────────────────────────────────────────
@@ -239,10 +247,16 @@ const BillLibrary: React.FC = () => {
       } else if (activeTab === 'quotation') {
         const data = await quotationStore.fetchQuotations(selectedYear);
         setQuotations(data);
+      } else if (activeTab === 'credit_note') {
+        const data = await invoiceStore.fetchCreditNotes(selectedYear);
+        setCreditNotes(data);
+      } else if (activeTab === 'debit_note') {
+        const data = await invoiceStore.fetchDebitNotes(selectedYear);
+        setDebitNotes(data);
       }
       setCurrentPage(1);
     } catch {
-      toast.error(`Failed to load ${activeTab}s`);
+      toast.error(`Failed to load documents`);
     } finally {
       setLoading(false);
     }
@@ -254,6 +268,8 @@ const BillLibrary: React.FC = () => {
       if (type === 'invoice') { await invoiceStore.deleteInvoice(id); setInvoices(inv => inv.filter(i => i._id !== id)); }
       else if (type === 'dc') { await dcStore.deleteDC(id); setDcs(d => d.filter(d => d._id !== id)); }
       else if (type === 'quotation') { await quotationStore.deleteQuotation(id); setQuotations(q => q.filter(q => q._id !== id)); }
+      else if (type === 'credit_note') { await invoiceStore.deleteInvoice(id); setCreditNotes(cn => cn.filter(c => c._id !== id)); }
+      else if (type === 'debit_note') { await invoiceStore.deleteInvoice(id); setDebitNotes(dn => dn.filter(d => d._id !== id)); }
       toast.success('Document deleted');
     } catch { toast.error('Failed to delete document'); }
     finally { setDeleteModalOpen(null); }
@@ -274,6 +290,7 @@ const BillLibrary: React.FC = () => {
     if (activeTab === 'invoice') navigate(`/invoice-preview/${item._id}?action=download`);
     else if (activeTab === 'dc') navigate(`/dc-preview/${item._id}?action=download`);
     else if (activeTab === 'quotation') navigate(`/quotation-preview/${item._id}?action=download`);
+    else if (activeTab === 'credit_note' || activeTab === 'debit_note') navigate(`/invoice-preview/${item._id}?action=download`);
   };
 
   // ── Apply filters ───────────────────────────────────────────────────────────
@@ -300,6 +317,8 @@ const BillLibrary: React.FC = () => {
     if (activeTab === 'invoice') items = invoices;
     else if (activeTab === 'dc') items = dcs;
     else if (activeTab === 'quotation') items = quotations;
+    else if (activeTab === 'credit_note') items = creditNotes;
+    else if (activeTab === 'debit_note') items = debitNotes;
 
     return items
       .filter(item => {
@@ -326,7 +345,7 @@ const BillLibrary: React.FC = () => {
         if (sortKey === 'amount-low') return (a.grandTotal || 0) - (b.grandTotal || 0);
         return 0;
       });
-  }, [activeTab, invoices, dcs, quotations, searchQuery, selectedMonth, filterCustomer, filterStatus, filterFromDate, filterToDate, sortKey]);
+  }, [activeTab, invoices, dcs, quotations, creditNotes, debitNotes, searchQuery, selectedMonth, filterCustomer, filterStatus, filterFromDate, filterToDate, sortKey]);
 
   const sortedItems = getProcessedItems();
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -359,11 +378,29 @@ const BillLibrary: React.FC = () => {
     { label: 'This Month', value: quotations.filter(q => new Date(q.date).getMonth() === new Date().getMonth()).length, icon: Calendar, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', sub: new Date().toLocaleString('default', { month: 'long' }) },
   ];
 
-  const currentMetrics = activeTab === 'invoice' ? invoiceMetrics : activeTab === 'dc' ? dcMetrics : quotationMetrics;
+  const creditNoteMetrics = [
+    { label: 'Total Credit Notes', value: creditNotes.length, icon: ArrowDownLeft, iconBg: 'bg-rose-50', iconColor: 'text-rose-600', sub: `FY ${selectedYear}` },
+    { label: 'Total Value', value: fmt(creditNotes.reduce((s, i) => s + (i.grandTotal || 0), 0)), icon: ReceiptText, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', sub: 'Grand total' },
+    { label: 'This Month', value: creditNotes.filter(i => new Date(i.date).getMonth() === new Date().getMonth()).length, icon: Calendar, iconBg: 'bg-slate-50', iconColor: 'text-slate-600', sub: new Date().toLocaleString('default', { month: 'long' }) },
+  ];
+
+  const debitNoteMetrics = [
+    { label: 'Total Debit Notes', value: debitNotes.length, icon: ArrowUpRight, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', sub: `FY ${selectedYear}` },
+    { label: 'Total Value', value: fmt(debitNotes.reduce((s, i) => s + (i.grandTotal || 0), 0)), icon: ReceiptText, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', sub: 'Grand total' },
+    { label: 'This Month', value: debitNotes.filter(i => new Date(i.date).getMonth() === new Date().getMonth()).length, icon: Calendar, iconBg: 'bg-slate-50', iconColor: 'text-slate-600', sub: new Date().toLocaleString('default', { month: 'long' }) },
+  ];
+
+  const currentMetrics = activeTab === 'invoice' ? invoiceMetrics
+    : activeTab === 'dc' ? dcMetrics
+    : activeTab === 'quotation' ? quotationMetrics
+    : activeTab === 'credit_note' ? creditNoteMetrics
+    : debitNoteMetrics;
 
   // ── Export ──────────────────────────────────────────────────────────────────
   const handleStandardExport = () => {
-    if (activeTab !== 'invoice') return toast.error('Export supported for invoices only');
+    const isInvoiceLike = activeTab === 'invoice' || activeTab === 'credit_note' || activeTab === 'debit_note';
+    if (!isInvoiceLike) return toast.error('Export supported for invoice-type documents only');
+    const docLabel = activeTab === 'credit_note' ? 'Credit Notes' : activeTab === 'debit_note' ? 'Debit Notes' : 'Invoices';
     const exportData = sortedItems.map((invoice: any, index) => {
       const totalTaxable = invoice.items.reduce((s: number, item: any) => s + (item.taxableAmount || 0), 0);
       const isIgst = invoice.taxType === 'igst';
@@ -383,19 +420,17 @@ const BillLibrary: React.FC = () => {
         'Grand Total': invoice.grandTotal,
       };
     });
-    
-    exportStandardExcel(exportData, 'Invoices', `Invoices_${selectedYear.replace('-', '_')}.xlsx`);
+    exportStandardExcel(exportData, docLabel, `${docLabel.replace(' ', '_')}_${selectedYear.replace('-', '_')}.xlsx`);
     toast.success('Exported successfully!');
   };
 
   const handleGroupedExport = () => {
-    if (activeTab !== 'invoice') return toast.error('Export supported for invoices only');
-    
+    const isInvoiceLike = activeTab === 'invoice' || activeTab === 'credit_note' || activeTab === 'debit_note';
+    if (!isInvoiceLike) return toast.error('Export supported for invoice-type documents only');
+    const docLabel = activeTab === 'credit_note' ? 'Credit_Notes' : activeTab === 'debit_note' ? 'Debit_Notes' : 'Invoices';
     const allItems: any[] = [];
-    
     sortedItems.forEach((invoice: any) => {
       const isIgst = invoice.taxType === 'igst';
-      
       invoice.items.forEach((item: any, itemIndex: number) => {
         allItems.push({
           'Invoice No': invoice.invoiceNumber,
@@ -419,12 +454,17 @@ const BillLibrary: React.FC = () => {
         });
       });
     });
-
-    exportGroupedExcel(allItems, 'HSN Summary', `HSN_Summary_Sheet_Invoices_${selectedYear.replace('-', '_')}.xlsx`);
+    exportGroupedExcel(allItems, 'HSN Summary', `HSN_Summary_${docLabel}_${selectedYear.replace('-', '_')}.xlsx`);
     toast.success('Exported successfully!');
   };
 
-  const linkTypeMap: Record<TabType, string> = { invoice: 'invoice', dc: 'dc', quotation: 'quotation' };
+  const linkTypeMap: Record<TabType, string> = {
+    invoice: 'invoice',
+    dc: 'dc',
+    quotation: 'quotation',
+    credit_note: 'invoice',
+    debit_note: 'invoice',
+  };
   const activeTabMeta = TABS.find(t => t.key === activeTab)!;
   const EmptyIcon = activeTabMeta.icon;
   const currentSortLabel = SORT_OPTIONS.find(s => s.value === sortKey)?.label || 'Newest First';
@@ -449,6 +489,7 @@ const BillLibrary: React.FC = () => {
 
           {createMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 py-2 z-50">
+              <p className="px-4 pt-1 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Documents</p>
               <button
                 onClick={() => { navigate('/generate-bills?type=invoice'); setCreateMenuOpen(false); }}
                 className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-slate-50 text-sm font-medium text-slate-700 transition-colors"
@@ -469,6 +510,22 @@ const BillLibrary: React.FC = () => {
               >
                 <FileSpreadsheet size={18} className="text-slate-500" />
                 Quotation
+              </button>
+              <div className="mx-4 my-1.5 border-t border-slate-100" />
+              <p className="px-4 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Adjustment Notes</p>
+              <button
+                onClick={() => { navigate('/generate-bills?type=credit_note'); setCreateMenuOpen(false); }}
+                className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-rose-50 text-sm font-medium text-rose-700 transition-colors"
+              >
+                <ArrowDownLeft size={18} className="text-rose-500" />
+                Credit Note
+              </button>
+              <button
+                onClick={() => { navigate('/generate-bills?type=debit_note'); setCreateMenuOpen(false); }}
+                className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-orange-50 text-sm font-medium text-orange-700 transition-colors"
+              >
+                <ArrowUpRight size={18} className="text-orange-500" />
+                Debit Note
               </button>
             </div>
           )}
@@ -499,7 +556,11 @@ const BillLibrary: React.FC = () => {
 
       {/* ── Summary Metric Cards ── */}
       {!loading && (
-        <div className={`grid gap-3 ${activeTab === 'invoice' ? 'grid-cols-2 xl:grid-cols-4' : 'grid-cols-2'}`}>
+        <div className={`grid gap-3 ${
+          activeTab === 'invoice' ? 'grid-cols-2 xl:grid-cols-4' :
+          (activeTab === 'credit_note' || activeTab === 'debit_note') ? 'grid-cols-3' :
+          'grid-cols-2'
+        }`}>
           {currentMetrics.map(m => (
             <MetricCard key={m.label} {...m} />
           ))}
@@ -508,13 +569,27 @@ const BillLibrary: React.FC = () => {
 
       {/* ── Main Card ── */}
       <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm overflow-visible">
-        {/* Tabs */}
+        {/* Tabs — core + divider + adjustment notes */}
         <div className="flex border-b border-slate-200 overflow-x-auto scrollbar-hide">
-          {TABS.map(({ key, label, icon: Icon, color }) => (
+          {TABS.filter(t => t.group === 'core').map(({ key, label, icon: Icon, color }) => (
             <button
               key={key}
               onClick={() => { setActiveTab(key); setCurrentPage(1); }}
               className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-5 text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap min-w-[140px] ${activeTab === key ? TAB_COLORS[color] : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+          {/* Divider */}
+          <div className="flex items-center px-1 border-b-2 border-transparent">
+            <div className="w-px h-5 bg-slate-200" />
+          </div>
+          {TABS.filter(t => t.group === 'adjustment').map(({ key, label, icon: Icon, color }) => (
+            <button
+              key={key}
+              onClick={() => { setActiveTab(key); setCurrentPage(1); }}
+              className={`flex items-center justify-center gap-2 py-3.5 px-5 text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap min-w-[130px] ${activeTab === key ? TAB_COLORS[color] : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
             >
               <Icon className="w-4 h-4" />
               {label}
@@ -642,7 +717,7 @@ const BillLibrary: React.FC = () => {
             </div>
 
             {/* Export */}
-            {activeTab === 'invoice' && (
+            {(activeTab === 'invoice' || activeTab === 'credit_note' || activeTab === 'debit_note') && (
               <div className="relative">
                 <button
                   ref={exportBtnRef}
@@ -693,7 +768,9 @@ const BillLibrary: React.FC = () => {
                 </thead>
                 <tbody>
                   {currentItems.map((item: any) => {
-                    const num = activeTab === 'invoice' ? item.invoiceNumber : activeTab === 'dc' ? item.dcNumber : item.quotationNumber;
+                    const num = activeTab === 'invoice' || activeTab === 'credit_note' || activeTab === 'debit_note'
+                      ? item.invoiceNumber
+                      : activeTab === 'dc' ? item.dcNumber : item.quotationNumber;
                     const linkType = linkTypeMap[activeTab];
                     return (
                       <tr key={item._id} onClick={() => navigate(`/${linkType}-preview/${item._id}`)} className="cursor-pointer hover:bg-slate-50 transition-colors">

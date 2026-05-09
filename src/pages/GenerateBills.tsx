@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FileText, Truck, FileSpreadsheet, ChevronLeft } from 'lucide-react';
+import { FileText, Truck, FileSpreadsheet, ChevronLeft, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useDCStore } from '../stores/dcStore';
 import { useQuotationStore } from '../stores/quotationStore';
@@ -9,13 +9,17 @@ import { useContactStore } from '../stores/contactStore';
 import BillForm from '../components/BillForm';
 import FormSkeleton from '../components/FormSkeleton';
 import { toast } from 'react-hot-toast';
-import { getInitialInvoice, getInitialDC, getInitialQuotation } from '../config/documentConfigs';
+import { getInitialInvoice, getInitialDC, getInitialQuotation, getInitialCreditNote, getInitialDebitNote } from '../config/documentConfigs';
 import { convertToWords } from '../utils/numberToWords';
 
-const DOC_TYPES = [
-  { value: 'invoice' as const, label: 'Tax Invoice', icon: FileText, activeColor: 'border-blue-600 text-blue-700 bg-blue-50/60' },
-  { value: 'dc' as const, label: 'Delivery Challan', icon: Truck, activeColor: 'border-amber-500 text-amber-700 bg-amber-50/60' },
-  { value: 'quotation' as const, label: 'Quotation', icon: FileSpreadsheet, activeColor: 'border-emerald-500 text-emerald-700 bg-emerald-50/60' },
+type BillType = 'invoice' | 'dc' | 'quotation' | 'credit_note' | 'debit_note';
+
+const DOC_TYPES: { value: BillType; label: string; icon: React.ElementType; activeColor: string; group?: 'core' | 'adjustment' }[] = [
+  { value: 'invoice',     label: 'Tax Invoice',      icon: FileText,       activeColor: 'border-blue-600 text-blue-700 bg-blue-50/60',   group: 'core' },
+  { value: 'dc',          label: 'Delivery Challan', icon: Truck,          activeColor: 'border-amber-500 text-amber-700 bg-amber-50/60', group: 'core' },
+  { value: 'quotation',   label: 'Quotation',        icon: FileSpreadsheet,activeColor: 'border-emerald-500 text-emerald-700 bg-emerald-50/60', group: 'core' },
+  { value: 'credit_note', label: 'Credit Note',      icon: ArrowDownLeft,  activeColor: 'border-rose-500 text-rose-700 bg-rose-50/60',   group: 'adjustment' },
+  { value: 'debit_note',  label: 'Debit Note',       icon: ArrowUpRight,   activeColor: 'border-orange-500 text-orange-700 bg-orange-50/60', group: 'adjustment' },
 ];
 
 const GenerateBills: React.FC = () => {
@@ -24,7 +28,7 @@ const GenerateBills: React.FC = () => {
   const editId = searchParams.get('edit');
   const typeParam = searchParams.get('type') || 'invoice';
 
-  const [billType, setBillType] = useState<'invoice' | 'dc' | 'quotation'>(typeParam as any);
+  const [billType, setBillType] = useState<BillType>(typeParam as BillType);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isEditing, setIsEditing] = useState(!!editId);
   const [loading, setLoading] = useState(false);
@@ -37,11 +41,20 @@ const GenerateBills: React.FC = () => {
 
   const [formData, setFormData] = useState<any>({});
 
+  // Returns the initial form data for a given bill type
+  const getInitialData = (type: BillType) => {
+    switch (type) {
+      case 'invoice':     return getInitialInvoice(defaultInfo);
+      case 'dc':          return getInitialDC();
+      case 'quotation':   return getInitialQuotation();
+      case 'credit_note': return getInitialCreditNote(defaultInfo);
+      case 'debit_note':  return getInitialDebitNote(defaultInfo);
+    }
+  };
+
   useEffect(() => {
     if (!isEditing && !editId) {
-      if (billType === 'invoice') setFormData(getInitialInvoice(defaultInfo));
-      if (billType === 'dc') setFormData(getInitialDC());
-      if (billType === 'quotation') setFormData(getInitialQuotation());
+      setFormData(getInitialData(billType));
       setSelectedDate(new Date());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -55,18 +68,22 @@ const GenerateBills: React.FC = () => {
         setLoading(true);
         try {
           let data;
-          if (billType === 'invoice') data = await fetchInvoice(editId);
-          else if (billType === 'dc') data = await fetchDC(editId);
-          else if (billType === 'quotation') data = await fetchQuotation(editId);
+          if (billType === 'invoice' || billType === 'credit_note' || billType === 'debit_note') {
+            data = await fetchInvoice(editId);
+          } else if (billType === 'dc') {
+            data = await fetchDC(editId);
+          } else if (billType === 'quotation') {
+            data = await fetchQuotation(editId);
+          }
 
           if (!data) throw new Error('Data not found');
 
           setFormData(data);
           setSelectedDate(new Date(data.date));
           setIsEditing(true);
-          toast.success(`${billType.toUpperCase()} loaded for editing`);
+          toast.success(`Document loaded for editing`);
         } catch (error) {
-          toast.error(`Failed to load ${billType} for editing`);
+          toast.error(`Failed to load document for editing`);
           navigate('/generate-bills');
         } finally {
           setLoading(false);
@@ -75,6 +92,14 @@ const GenerateBills: React.FC = () => {
     };
     loadEntityForEdit();
   }, [editId, billType, fetchInvoice, fetchDC, fetchQuotation, navigate]);
+
+  // Determines which preview route to use for a given bill type
+  const getPreviewRoute = (type: BillType, id: string) => {
+    if (type === 'invoice' || type === 'credit_note' || type === 'debit_note') {
+      return `/invoice-preview/${id}`;
+    }
+    return `/${type}-preview/${id}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,26 +125,35 @@ const GenerateBills: React.FC = () => {
         }
       }
 
-      if (billType === 'invoice' || billType === 'quotation') {
+      // Compute totalInWords for all document types with a grandTotal
+      if (billType !== 'dc') {
         finalData.totalInWords = convertToWords(finalData.grandTotal);
       }
 
       if (isEditing && editId) {
-        if (billType === 'invoice') await updateInvoice(editId, finalData);
-        if (billType === 'dc') await updateDC(editId, finalData);
-        if (billType === 'quotation') await updateQuotation(editId, finalData);
-        toast.success(`${billType.toUpperCase()} updated successfully!`);
-        navigate(`/${billType}-preview/${editId}`);
+        if (billType === 'invoice' || billType === 'credit_note' || billType === 'debit_note') {
+          await updateInvoice(editId, finalData);
+        } else if (billType === 'dc') {
+          await updateDC(editId, finalData);
+        } else if (billType === 'quotation') {
+          await updateQuotation(editId, finalData);
+        }
+        toast.success(`Document updated successfully!`);
+        navigate(getPreviewRoute(billType, editId));
       } else {
         let result: any;
-        if (billType === 'invoice') result = await createInvoice(finalData);
-        else if (billType === 'dc') result = await createDC(finalData);
-        else if (billType === 'quotation') result = await createQuotation(finalData);
+        if (billType === 'invoice' || billType === 'credit_note' || billType === 'debit_note') {
+          result = await createInvoice(finalData);
+        } else if (billType === 'dc') {
+          result = await createDC(finalData);
+        } else if (billType === 'quotation') {
+          result = await createQuotation(finalData);
+        }
 
         if (result && result._id) {
-          toast.success(`${billType.toUpperCase()} created successfully!`);
+          toast.success(`Document created successfully!`);
 
-          // Show stock warnings if any (invoice only)
+          // Show stock warnings (invoices only)
           if (billType === 'invoice' && result.stockWarnings && result.stockWarnings.length > 0) {
             result.stockWarnings.forEach((warning: any) => {
               toast(`⚠️ "${warning.description}" — stock is now ${warning.currentStock} (was ${warning.previousStock})`, {
@@ -130,13 +164,13 @@ const GenerateBills: React.FC = () => {
             });
           }
 
-          navigate(`/${billType}-preview/${result._id}`);
+          navigate(getPreviewRoute(billType, result._id));
         } else {
           throw new Error('Document creation failed or ID is missing');
         }
       }
     } catch (error) {
-      toast.error(isEditing ? `Failed to update ${billType}` : `Failed to create ${billType}`);
+      toast.error(isEditing ? 'Failed to update document' : 'Failed to create document');
     } finally {
       setLoading(false);
     }
@@ -148,14 +182,28 @@ const GenerateBills: React.FC = () => {
       return;
     }
     const finalData = { ...formData, date: selectedDate.toISOString() };
-    if (billType === 'invoice' || billType === 'quotation') finalData.totalInWords = convertToWords(finalData.grandTotal);
-    localStorage.setItem(`${billType}PreviewData`, JSON.stringify(finalData));
-    navigate(`/${billType}-preview/temp`);
+    if (billType !== 'dc') finalData.totalInWords = convertToWords(finalData.grandTotal);
+
+    // For CN/DN, reuse the invoice preview data key
+    const storageKey = (billType === 'credit_note' || billType === 'debit_note')
+      ? 'invoicePreviewData'
+      : `${billType}PreviewData`;
+
+    localStorage.setItem(storageKey, JSON.stringify(finalData));
+
+    // Route CN/DN to invoice-preview with /temp
+    if (billType === 'credit_note' || billType === 'debit_note') {
+      navigate('/invoice-preview/temp');
+    } else {
+      navigate(`/${billType}-preview/temp`);
+    }
   };
 
   if ((loading && isEditing) || !formData.items) {
     return <FormSkeleton />;
   }
+
+  const isAdjustmentNote = billType === 'credit_note' || billType === 'debit_note';
 
   return (
     <div className="space-y-4 pb-0 bg-slate-50/80 min-h-screen">
@@ -173,22 +221,24 @@ const GenerateBills: React.FC = () => {
             </button>
           )}
           <h1 className="page-title">
-            {isEditing ? `Edit ${billType.charAt(0).toUpperCase() + billType.slice(1)}` : 'Generate New Bill'}
+            {isEditing ? 'Edit Document' : 'Generate New Bill'}
           </h1>
         </div>
       </div>
 
-      {/* Document Type Tabs - matches Bill Library tab strip */}
+      {/* Document Type Tabs */}
       {!isEditing && (
         <div className="flex border-b border-slate-200 mb-6 overflow-x-auto scrollbar-hide">
-          {DOC_TYPES.map(({ value, label, icon: Icon, activeColor }) => (
+          {/* Core document types */}
+          {DOC_TYPES.filter(d => d.group === 'core').map(({ value, label, icon: Icon, activeColor }) => (
             <button
               key={value}
               onClick={() => setBillType(value)}
-              className={`flex items-center gap-2 py-3 px-5 text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${billType === value
-                ? activeColor
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                }`}
+              className={`flex items-center gap-2 py-3 px-5 text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${
+                billType === value
+                  ? activeColor
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              }`}
               aria-label={`Select ${label} type`}
               aria-pressed={billType === value}
             >
@@ -196,6 +246,43 @@ const GenerateBills: React.FC = () => {
               {label}
             </button>
           ))}
+
+          {/* Visual divider before adjustment notes */}
+          <div className="flex items-center px-2">
+            <div className="w-px h-5 bg-slate-200" />
+          </div>
+
+          {/* Adjustment note types */}
+          {DOC_TYPES.filter(d => d.group === 'adjustment').map(({ value, label, icon: Icon, activeColor }) => (
+            <button
+              key={value}
+              onClick={() => setBillType(value)}
+              className={`flex items-center gap-2 py-3 px-5 text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${
+                billType === value
+                  ? activeColor
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              }`}
+              aria-label={`Select ${label} type`}
+              aria-pressed={billType === value}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Contextual hint for adjustment notes */}
+      {!isEditing && isAdjustmentNote && (
+        <div className={`mx-0 mb-2 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 ${
+          billType === 'credit_note'
+            ? 'bg-rose-50 text-rose-700 border border-rose-100'
+            : 'bg-orange-50 text-orange-700 border border-orange-100'
+        }`}>
+          {billType === 'credit_note' ? <ArrowDownLeft className="w-4 h-4 flex-shrink-0" /> : <ArrowUpRight className="w-4 h-4 flex-shrink-0" />}
+          {billType === 'credit_note'
+            ? 'Credit Note — issued to reduce the buyer\'s payable amount. Inventory is not affected.'
+            : 'Debit Note — issued to increase the buyer\'s payable amount. Inventory is not affected.'}
         </div>
       )}
 

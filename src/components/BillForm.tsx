@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FileText, PlusCircle, Eye, Zap, RefreshCw } from 'lucide-react';
 import { useContactStore } from '../stores/contactStore';
 import CustomSelect from './CustomSelect';
+import { DOCUMENT_TYPE_CONFIG, BillingDocumentType } from '../config/documentConfigs';
 import {
     FormSections,
     invoiceSections,
@@ -19,7 +20,7 @@ import { useFinancialYearStore } from '../stores/financialYearStore';
 import { ProductSuggestion } from '../types/index';
 
 interface BillFormProps {
-    billType: 'invoice' | 'dc' | 'quotation';
+    billType: 'invoice' | 'dc' | 'quotation' | 'credit_note' | 'debit_note';
     formData: any;
     setFormData: React.Dispatch<React.SetStateAction<any>>;
     selectedDate: Date;
@@ -146,7 +147,7 @@ const BillForm: React.FC<BillFormProps> = ({
                 setProductSearchResults([]);
             }
         }
-        if (billType === 'invoice' || billType === 'quotation') {
+        if (billType === 'invoice' || billType === 'credit_note' || billType === 'debit_note' || billType === 'quotation') {
             if (field === 'quantity' || field === 'rate') {
                 let qty = field === 'quantity' ? (parseFloat(String(value)) || 0) : updatedItems[index].quantity;
                 if (field === 'quantity' && updatedItems[index].unit === 'Nos') {
@@ -186,7 +187,7 @@ const BillForm: React.FC<BillFormProps> = ({
     const handleAddItem = () => {
         let newItem: any = { id: Date.now().toString(), description: '', quantity: 1 };
 
-        if (billType === 'invoice' || billType === 'quotation') {
+        if (billType === 'invoice' || billType === 'credit_note' || billType === 'debit_note' || billType === 'quotation') {
             newItem = { ...newItem, hsnSacCode: '', unit: 'Nos', rate: 0, taxableAmount: 0, sgstPercentage: 9, sgstAmount: 0, cgstPercentage: 9, cgstAmount: 0, igstPercentage: 18, igstAmount: 0 };
         } else if (billType === 'dc') {
             newItem = { ...newItem, hsnSacCode: '', unit: 'Nos' };
@@ -198,7 +199,7 @@ const BillForm: React.FC<BillFormProps> = ({
     const handleRemoveItem = (index: number) => {
         if (formData.items.length === 1) return;
         const updatedItems = formData.items.filter((_: any, i: number) => i !== index);
-        if (billType === 'invoice' || billType === 'quotation') {
+        if (billType === 'invoice' || billType === 'credit_note' || billType === 'debit_note' || billType === 'quotation') {
             calculateTaxTotals(updatedItems, formData.taxType, formData.discountEnabled, formData.discountPercentage);
         } else {
             setFormData((prev: any) => ({ ...prev, items: updatedItems }));
@@ -221,7 +222,7 @@ const BillForm: React.FC<BillFormProps> = ({
             hsnSacCode: product.hsnSacCode,
             unit: product.unit,
         };
-        if (billType === 'invoice' || billType === 'quotation') {
+        if (billType === 'invoice' || billType === 'credit_note' || billType === 'debit_note' || billType === 'quotation') {
             updatedItems[index] = computeItemTotals(updatedItems[index], formData.taxType as TaxType);
             calculateTaxTotals(updatedItems, formData.taxType, formData.discountEnabled, formData.discountPercentage);
         } else {
@@ -231,14 +232,18 @@ const BillForm: React.FC<BillFormProps> = ({
         setProductSearchResults([]);
     }, [formData.items, formData.taxType, formData.discountEnabled, formData.discountPercentage, billType, calculateTaxTotals, setFormData]);
 
-    // Pick sections based on document type
-    const sections = billType === 'invoice'
-        ? invoiceSections()
+    // Pick sections based on document type (CN/DN reuse invoice sections with custom number label)
+    const isInvoiceLike = billType === 'invoice' || billType === 'credit_note' || billType === 'debit_note';
+    const numberLabel = isInvoiceLike
+        ? DOCUMENT_TYPE_CONFIG[billType as BillingDocumentType].numberLabel
+        : 'Invoice Number';
+    const sections = isInvoiceLike
+        ? invoiceSections(numberLabel)
         : billType === 'quotation'
             ? quotationSections()
             : dcSections();
 
-    const hasTax = billType === 'invoice' || billType === 'quotation';
+    const hasTax = billType !== 'dc';
 
     return (
         <form onSubmit={onSubmit} className="relative">

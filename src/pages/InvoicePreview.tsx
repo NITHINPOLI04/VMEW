@@ -8,6 +8,7 @@ import jsPDF from 'jspdf';
 import { InvoiceFormData } from '../types';
 import { toast } from 'react-hot-toast';
 import LetterheadPreview from '../engines/previewComponents';
+import { DOCUMENT_TYPE_CONFIG, BillingDocumentType } from '../config/documentConfigs';
 import {
   loadImages,
   PDF_MARGIN,
@@ -77,6 +78,10 @@ const InvoicePreview: React.FC = () => {
   const handleGeneratePDF = async () => {
     if (!invoice) return;
 
+    // Resolve document type config for labels / title
+    const docType = (invoice.documentType || 'invoice') as BillingDocumentType;
+    const docConfig = DOCUMENT_TYPE_CONFIG[docType];
+
     try {
       const [img, qrImg] = await loadImages(['/logo.png', '/Payment_QR.png']);
 
@@ -92,7 +97,7 @@ const InvoicePreview: React.FC = () => {
       let headerEndY = 0;
 
       const drawHeader = (currentY: number): number => {
-        let y = drawDocTitle(pdf, pageWidth, letterhead, img, 'INVOICE', currentY);
+        let y = drawDocTitle(pdf, pageWidth, letterhead, img, docConfig.docTitle, currentY);
 
         const panValue = defaultInfo?.panNo || 'AGIPP2674H';
         const msmeValue = defaultInfo?.msmeNo || 'UDYAM-AP-10-000719';
@@ -102,7 +107,7 @@ const InvoicePreview: React.FC = () => {
           margin,
           pageWidth,
           y,
-          'Invoice No: ',
+          `${docConfig.numberLabel}: `,
           invoice.invoiceNumber,
           new Date(invoice.date).toLocaleDateString('en-GB'),
           panValue,
@@ -254,7 +259,7 @@ const InvoicePreview: React.FC = () => {
 
       drawPageNumbers(pdf, pageWidth, pageHeight, margin);
 
-      const fileName = `INV_${invoice.invoiceNumber.replace(/[/\\\\]/g, '-')}.pdf`;
+      const fileName = `${docConfig.pdfPrefix}${invoice.invoiceNumber.replace(/[/\\\\]/g, '-')}.pdf`;
       pdf.save(fileName);
       toast.success('PDF generated successfully!');
 
@@ -370,11 +375,22 @@ const InvoicePreview: React.FC = () => {
           </div>
         </div>
 
-        {/* Center Section */}
+        {/* Center Section — document type badge */}
         <div className="absolute left-1/2 -translate-x-1/2 hidden md:block">
-          <span className="px-3.5 py-1.5 bg-blue-50/80 text-blue-700 border border-blue-100/80 rounded-xl text-xs font-semibold tracking-wide">
-            Invoice
-          </span>
+          {(() => {
+            const docType = (invoice.documentType || 'invoice') as BillingDocumentType;
+            const docConfig = DOCUMENT_TYPE_CONFIG[docType];
+            const badgeColors: Record<BillingDocumentType, string> = {
+              invoice:     'bg-blue-50/80 text-blue-700 border-blue-100/80',
+              credit_note: 'bg-rose-50/80 text-rose-700 border-rose-100/80',
+              debit_note:  'bg-orange-50/80 text-orange-700 border-orange-100/80',
+            };
+            return (
+              <span className={`px-3.5 py-1.5 border rounded-xl text-xs font-semibold tracking-wide ${badgeColors[docType]}`}>
+                {docConfig.label}
+              </span>
+            );
+          })()}
         </div>
 
         {/* Right Section */}
@@ -427,8 +443,16 @@ const InvoicePreview: React.FC = () => {
 
           <div className="flex justify-between mb-6">
             <div>
-              <h2 className="text-xl font-bold mb-1">TAX INVOICE</h2>
-              <p className="text-sm"><span className="font-semibold">Invoice No:</span> <span className="font-medium">{invoice.invoiceNumber}</span></p>
+              {(() => {
+                const docType = (invoice.documentType || 'invoice') as BillingDocumentType;
+                const docConfig = DOCUMENT_TYPE_CONFIG[docType];
+                return (
+                  <>
+                    <h2 className="text-xl font-bold mb-1">{docConfig.docTitle}</h2>
+                    <p className="text-sm"><span className="font-semibold">{docConfig.numberLabel}:</span> <span className="font-medium">{invoice.invoiceNumber}</span></p>
+                  </>
+                );
+              })()}
               <p className="text-sm"><span className="font-semibold">Date:</span> <span className="font-medium">{new Date(invoice.date).toLocaleDateString('en-IN')}</span></p>
             </div>
             <div className="text-right">

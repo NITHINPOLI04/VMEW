@@ -42,6 +42,8 @@ export interface InvoiceFormData {
   grandTotal: number;
   totalInWords: string;
   paymentStatus: string; // 'Payment Complete' | 'Partially Paid' | 'Unpaid'
+  invoiceType?: 'Product' | 'Service';
+  documentType?: 'invoice' | 'credit_note' | 'debit_note';
   createdAt?: string;
   updatedAt?: string;
 }
