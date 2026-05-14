@@ -3,7 +3,7 @@ import { Building2, FileText, Save, Download, Loader2, FileCheck, File as FileIc
 import { useTemplateStore } from '../stores/templateStore';
 import { generateLetterheadPDF, generateLetterheadPDFBlob } from '../engines/generateLetterheadPDF';
 import { generateLetterheadDOCX } from '../engines/generateLetterheadDOCX';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
 
 const TemplateSetup: React.FC = () => {
   const { letterhead, defaultInfo, updateLetterhead, updateDefaultInfo } = useTemplateStore();
@@ -113,18 +113,18 @@ const TemplateSetup: React.FC = () => {
   const handleSaveLetterhead = async () => {
     try {
       await updateLetterhead(letterheadForm);
-      toast.success('Letterhead saved successfully');
+      notify.success('Letterhead saved');
     } catch {
-      toast.error('Failed to save letterhead');
+      notify.error('Could not save letterhead');
     }
   };
 
   const handleSaveDefaultInfo = async () => {
     try {
       await updateDefaultInfo(defaultInfoForm);
-      toast.success('Default information saved successfully');
+      notify.success('Defaults saved');
     } catch {
-      toast.error('Failed to save default information');
+      notify.error('Could not save defaults');
     }
   };
 
@@ -135,9 +135,9 @@ const TemplateSetup: React.FC = () => {
       setDownloading(true);
       setDownloadMenuOpen(false);
       await generateLetterheadPDF(letterheadForm);
-      toast.success('Letterhead PDF downloaded');
+      notify.success('PDF downloaded');
     } catch {
-      toast.error('Failed to generate letterhead PDF');
+      notify.error('PDF generation failed');
     } finally {
       setDownloading(false);
     }
@@ -148,10 +148,10 @@ const TemplateSetup: React.FC = () => {
       setDownloadingWord(true);
       setDownloadMenuOpen(false);
       await generateLetterheadDOCX(letterheadForm);
-      toast.success('Letterhead Word doc downloaded');
+      notify.success('Word doc downloaded');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to generate letterhead Word document');
+      notify.error('Word doc generation failed');
     } finally {
       setDownloadingWord(false);
     }

@@ -5,7 +5,7 @@ import { useQuotationStore } from '../stores/quotationStore';
 import { useTemplateStore } from '../stores/templateStore';
 import { Quotation } from '../types';
 import jsPDF from 'jspdf';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
 import LetterheadPreview from '../engines/previewComponents';
 import {
     loadImages,
@@ -47,7 +47,7 @@ const QuotationPreview: React.FC = () => {
                     setQuotationData(JSON.parse(tempData));
                     setIsTemp(true);
                 } else {
-                    toast.error('No preview data found');
+                    notify.error('No preview data found');
                     navigate('/generate-bills?type=quotation');
                 }
                 setLoading(false);
@@ -58,7 +58,7 @@ const QuotationPreview: React.FC = () => {
                     const data = await fetchQuotation(id);
                     setQuotationData(data);
                 } catch (error) {
-                    toast.error('Failed to load Quotation');
+                    notify.error('Could not load Quotation');
                     navigate('/generate-bills?type=quotation');
                 } finally {
                     setLoading(false);
@@ -232,11 +232,11 @@ const QuotationPreview: React.FC = () => {
 
             const fileName = `Q_${quotationData.quotationNumber.replace(/[/\\\\]/g, '-')}.pdf`;
             pdf.save(fileName);
-            toast.success('PDF generated successfully!');
+            notify.success('PDF downloaded');
 
         } catch (error) {
             console.error('Error generating PDF:', error);
-            toast.error('Failed to generate PDF. Please try again.');
+            notify.error('PDF generation failed');
         }
     };
 
@@ -287,7 +287,7 @@ const QuotationPreview: React.FC = () => {
 
     const verified = getVerifiedTotals(quotationData);
     if (verified.verification.severity === 'material') {
-        toast.error(`Calculation mismatch detected (₹${verified.verification.totalDrift.toFixed(2)} drift). Values have been auto-corrected.`);
+        notify.warning(`Calculation mismatch detected (₹${verified.verification.totalDrift.toFixed(2)} drift). Values have been auto-corrected.`);
     }
     const {
         subTotal,

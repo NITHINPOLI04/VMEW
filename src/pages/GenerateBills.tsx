@@ -8,7 +8,7 @@ import { useTemplateStore } from '../stores/templateStore';
 import { useContactStore } from '../stores/contactStore';
 import BillForm from '../components/BillForm';
 import FormSkeleton from '../components/FormSkeleton';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
 import { getInitialInvoice, getInitialDC, getInitialQuotation, getInitialCreditNote, getInitialDebitNote } from '../config/documentConfigs';
 import { convertToWords } from '../utils/numberToWords';
 
@@ -81,9 +81,9 @@ const GenerateBills: React.FC = () => {
           setFormData(data);
           setSelectedDate(new Date(data.date));
           setIsEditing(true);
-          toast.success(`Document loaded for editing`);
+          // Page state ("Edit Document" title + populated form) is confirmation enough
         } catch (error) {
-          toast.error(`Failed to load document for editing`);
+          notify.error('Document not found');
           navigate('/generate-bills');
         } finally {
           setLoading(false);
@@ -103,8 +103,9 @@ const GenerateBills: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.items.some((item: any) => !item.description)) {
-      toast.error('Please fill in all item descriptions');
+    const emptyIdx = formData.items.findIndex((item: any) => !item.description);
+    if (emptyIdx !== -1) {
+      notify.error(`Add description to item ${emptyIdx + 1}`);
       return;
     }
 
@@ -138,7 +139,7 @@ const GenerateBills: React.FC = () => {
         } else if (billType === 'quotation') {
           await updateQuotation(editId, finalData);
         }
-        toast.success(`Document updated successfully!`);
+        notify.success(`${DOC_TYPES.find(d => d.value === billType)?.label || 'Document'} updated`);
         navigate(getPreviewRoute(billType, editId));
       } else {
         let result: any;
@@ -151,16 +152,12 @@ const GenerateBills: React.FC = () => {
         }
 
         if (result && result._id) {
-          toast.success(`Document created successfully!`);
+          notify.success(`${DOC_TYPES.find(d => d.value === billType)?.label || 'Document'} created`);
 
           // Show stock warnings (invoices only)
           if (billType === 'invoice' && result.stockWarnings && result.stockWarnings.length > 0) {
             result.stockWarnings.forEach((warning: any) => {
-              toast(`⚠️ "${warning.description}" — stock is now ${warning.currentStock} (was ${warning.previousStock})`, {
-                icon: '📦',
-                duration: 5000,
-                style: { background: '#FFFBEB', border: '1px solid #FCD34D', color: '#92400E' },
-              });
+              notify.warning(`"${warning.description}" stock: ${warning.currentStock} remaining`);
             });
           }
 
@@ -169,16 +166,18 @@ const GenerateBills: React.FC = () => {
           throw new Error('Document creation failed or ID is missing');
         }
       }
-    } catch (error) {
-      toast.error(isEditing ? 'Failed to update document' : 'Failed to create document');
+    } catch (error: any) {
+      const errMsg = error.response?.data?.message || error.message || 'Could not save — check your connection';
+      notify.error(errMsg);
     } finally {
       setLoading(false);
     }
   };
 
   const handlePreview = () => {
-    if (formData.items.some((item: any) => !item.description)) {
-      toast.error('Please fill in all item descriptions');
+    const previewEmptyIdx = formData.items.findIndex((item: any) => !item.description);
+    if (previewEmptyIdx !== -1) {
+      notify.error(`Add description to item ${previewEmptyIdx + 1}`);
       return;
     }
     const finalData = { ...formData, date: selectedDate.toISOString() };

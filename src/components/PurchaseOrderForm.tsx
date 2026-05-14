@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { PlusCircle, Eye, Zap, RefreshCw, ShoppingBag } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
 import { usePOStore } from '../stores/poStore';
 import { useContactStore } from '../stores/contactStore';
 import { convertToWords } from '../utils/numberToWords';
@@ -99,7 +99,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                         setIsEditing(true);
                     }
                 } catch (error) {
-                    toast.error('Failed to load PO for editing');
+                    notify.error('Failed to load PO for editing');
                     console.error("Error fetching PO for edit:", error);
                 } finally {
                     setLoading(false);
@@ -278,15 +278,15 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
 
     const validateForm = () => {
         if (!formData.poNumber.trim()) {
-            toast.error('PO Number is required');
+            notify.warning('PO Number is required');
             return false;
         }
         if (!formData.supplierName.trim()) {
-            toast.error('Supplier Name is required');
+            notify.warning('Supplier Name is required');
             return false;
         }
         if (formData.items.some((item: any) => !item.description.trim())) {
-            toast.error('Please fill in all item descriptions');
+            notify.warning('Please fill in all item descriptions');
             return false;
         }
         return true;
@@ -312,12 +312,12 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
 
             if (isEditing && effectiveEditId) {
                 await updatePO(effectiveEditId, finalData);
-                toast.success('PO updated successfully!');
+                notify.success('PO updated');
                 navigate(`/po-preview/${effectiveEditId}`);
             } else {
                 const result: any = await createPO(finalData);
                 if (result && result._id) {
-                    toast.success('PO created successfully!');
+                    notify.success('PO created');
                     if (onSaveSuccess) {
                         onSaveSuccess();
                     } else {
@@ -326,7 +326,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                 }
             }
         } catch (error) {
-            toast.error('Failed to save Purchase Order');
+            notify.error('Failed to save Purchase Order');
         } finally {
             setLoading(false);
         }

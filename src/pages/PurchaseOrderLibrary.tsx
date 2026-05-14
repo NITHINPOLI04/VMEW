@@ -7,7 +7,8 @@ import {
 import { usePOStore } from '../stores/poStore';
 import { useFinancialYearStore } from '../stores/financialYearStore';
 import { PurchaseOrder } from '../types';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
+import { useConfirm } from '../components/ConfirmDialog';
 import CustomSelect from '../components/CustomSelect';
 import TableSkeleton from '../components/TableSkeleton';
 import { MetricSkeleton } from '../components/Skeleton';
@@ -56,6 +57,7 @@ const MetricCard: React.FC<MetricCardProps> = ({ label, value, icon: Icon, iconB
 
 const PurchaseOrderLibrary: React.FC = () => {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { fetchPOs, deletePO } = usePOStore();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +67,6 @@ const PurchaseOrderLibrary: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
-  const [deleteModalOpen, setDeleteModalOpen] = useState<{ id: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [sortKey, setSortKey] = useState<SortKey>('newest');
@@ -120,21 +121,27 @@ const PurchaseOrderLibrary: React.FC = () => {
       setCurrentPage(1);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load Purchase Orders');
+      notify.error('Failed to load Purchase Orders');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    const isConfirmed = await confirm({
+      title: 'Delete Purchase Order',
+      description: 'Are you sure? This action cannot be undone.',
+      variant: 'danger',
+      confirmLabel: 'Delete'
+    });
+    if (!isConfirmed) return;
+
     try {
       await deletePO(id);
       setPurchaseOrders(purchaseOrders.filter(p => p._id !== id));
-      toast.success('Purchase Order deleted successfully');
+      notify.success('Purchase Order deleted');
     } catch (error) {
-      toast.error('Failed to delete Purchase Order');
-    } finally {
-      setDeleteModalOpen(null);
+      notify.error('Failed to delete Purchase Order');
     }
   };
 
@@ -186,7 +193,7 @@ const PurchaseOrderLibrary: React.FC = () => {
     });
     
     exportStandardExcel(exportData, 'Purchase Orders', `Purchase_Orders_${selectedYear.replace('-', '_')}.xlsx`);
-    toast.success('Exported successfully!');
+    notify.success('Exported successfully!');
   };
 
   const handleGroupedExport = () => {
@@ -217,7 +224,7 @@ const PurchaseOrderLibrary: React.FC = () => {
     });
 
     exportGroupedExcel(allItems, 'HSN Summary', `HSN_Summary_Sheet_PO_${selectedYear.replace('-', '_')}.xlsx`);
-    toast.success('Exported successfully!');
+    notify.success('Exported successfully!');
   };
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -402,7 +409,7 @@ const PurchaseOrderLibrary: React.FC = () => {
                             <Download className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={(e) => { e.stopPropagation(); setDeleteModalOpen({ id: item._id }); }}
+                            onClick={(e) => { e.stopPropagation(); handleDelete(item._id); }}
                             className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors"
                             title="Delete PO"
                           >
@@ -463,24 +470,6 @@ const PurchaseOrderLibrary: React.FC = () => {
         )}
       </div>
 
-      {/* Delete Modal */}
-      {deleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
-            <div className="flex justify-center mb-4">
-              <div className="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center">
-                <Trash2 className="h-6 w-6 text-rose-600" />
-              </div>
-            </div>
-            <h2 className="text-lg font-bold text-slate-900 text-center mb-1">Delete Purchase Order</h2>
-            <p className="text-sm text-slate-500 text-center mb-6">Are you sure? This action cannot be undone.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteModalOpen(null)} className="btn btn-secondary flex-1">Cancel</button>
-              <button onClick={() => handleDelete(deleteModalOpen.id)} className="btn btn-danger flex-1">Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

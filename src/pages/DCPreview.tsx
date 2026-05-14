@@ -6,7 +6,7 @@ import { useTemplateStore } from '../stores/templateStore';
 import { DeliveryChallan } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
 import LetterheadPreview from '../engines/previewComponents';
 import { DocumentItemsTable, buildDCColumns } from '../engines/tableEngine';
 import {
@@ -41,7 +41,7 @@ const DCPreview: React.FC = () => {
                     setDcData(JSON.parse(tempData));
                     setIsTemp(true);
                 } else {
-                    toast.error('No preview data found');
+                    notify.error('No preview data found');
                     navigate('/generate-bills?type=dc');
                 }
                 setLoading(false);
@@ -52,7 +52,7 @@ const DCPreview: React.FC = () => {
                     const data = await fetchDC(id);
                     setDcData(data);
                 } catch (error) {
-                    toast.error('Failed to load Delivery Challan');
+                    notify.error('Could not load Delivery Challan');
                     navigate('/generate-bills?type=dc');
                 } finally {
                     setLoading(false);
@@ -238,11 +238,11 @@ const DCPreview: React.FC = () => {
 
             const fileName = `DC_${dcData.dcNumber.replace(/[/\\\\]/g, '-')}.pdf`;
             pdf.save(fileName);
-            toast.success('PDF generated successfully!');
+            notify.success('PDF downloaded');
 
         } catch (error) {
             console.error('Error generating PDF:', error);
-            toast.error('Failed to generate PDF. Please try again.');
+            notify.error('PDF generation failed');
         }
     };
 

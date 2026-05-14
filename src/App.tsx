@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster, toast } from 'react-hot-toast';
+import { notify } from './utils/notify';
+import NotificationHost from './components/Sonner';
+import { ConfirmProvider } from './components/ConfirmDialog';
 import { useAuthStore } from './stores/authStore';
 import AppSkeleton from './components/AppSkeleton';
 import { useTemplateStore } from './stores/templateStore';
@@ -67,41 +69,7 @@ function App() {
   // Network status detection
   useEffect(() => {
     const handleNetworkChange = () => {
-      if (!navigator.onLine) {
-        toast.error('No network connected :(', {
-          id: 'network-offline',
-          duration: Infinity,
-          position: 'top-center',
-          className: '!bg-red-50 !text-red-900 !border !border-red-200',
-          iconTheme: {
-            primary: '#dc2626',
-            secondary: '#fff',
-          },
-          style: {
-            padding: '16px',
-            borderRadius: '12px',
-            background: '#fff',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-          },
-        });
-      } else {
-        toast.dismiss('network-offline');
-        toast.success('Back online!', {
-          duration: 3000,
-          position: 'top-center',
-          className: '!bg-emerald-50 !text-emerald-900 !border !border-emerald-200',
-          iconTheme: {
-            primary: '#059669',
-            secondary: '#fff',
-          },
-          style: {
-            padding: '16px',
-            borderRadius: '12px',
-            background: '#fff',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-          },
-        });
-      }
+      notify.network(navigator.onLine);
     };
 
     handleNetworkChange();
@@ -128,7 +96,7 @@ function App() {
   }
 
   return (
-    <>
+    <ConfirmProvider>
       <Router>
         <ScrollToTop />
         <Routes>
@@ -155,51 +123,8 @@ function App() {
         </Routes>
       </Router>
 
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          success: {
-            className: '!bg-emerald-50 !text-emerald-900 !border !border-emerald-200',
-            iconTheme: {
-              primary: '#059669',
-              secondary: '#fff',
-            },
-            style: {
-              padding: '16px',
-              borderRadius: '12px',
-              background: '#fff',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            },
-          },
-          error: {
-            className: '!bg-red-50 !text-red-900 !border !border-red-200',
-            iconTheme: {
-              primary: '#dc2626',
-              secondary: '#fff',
-            },
-            style: {
-              padding: '16px',
-              borderRadius: '12px',
-              background: '#fff',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            },
-          },
-          loading: {
-            className: '!bg-blue-50 !text-blue-900 !border !border-blue-200',
-            iconTheme: {
-              primary: '#2563eb',
-              secondary: '#fff',
-            },
-            style: {
-              padding: '16px',
-              borderRadius: '12px',
-              background: '#fff',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            },
-          },
-        }}
-      />
-    </>
+      <NotificationHost />
+    </ConfirmProvider>
   );
 }
 

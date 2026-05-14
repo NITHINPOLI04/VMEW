@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Building2, Search, X, Users, Truck, Filter, ChevronDown, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { useContactStore } from '../stores/contactStore';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
+import { useConfirm } from '../components/ConfirmDialog';
 import TableSkeleton from '../components/TableSkeleton';
 import { MetricSkeleton } from '../components/Skeleton';
 
@@ -56,8 +57,7 @@ const Companies: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Delete State
-  const [deleteModalOpen, setDeleteModalOpen] = useState<CompanyRow | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const confirm = useConfirm();
 
   const filterRef = useRef<HTMLDivElement>(null);
   const filterBtnRef = useRef<HTMLButtonElement>(null);
@@ -68,7 +68,7 @@ const Companies: React.FC = () => {
       try {
         await Promise.all([fetchCustomers(), fetchSuppliers()]);
       } catch {
-        toast.error('Failed to load companies');
+        notify.error('Failed to load companies');
       } finally {
         setPageLoading(false);
       }
@@ -83,7 +83,6 @@ const Companies: React.FC = () => {
       if (e.key === 'Escape') {
         setIsModalOpen(false);
         setFilterOpen(false);
-        setDeleteModalOpen(null);
       }
     };
     
@@ -94,7 +93,7 @@ const Companies: React.FC = () => {
       }
     };
 
-    if (isModalOpen || deleteModalOpen) {
+    if (isModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -107,7 +106,7 @@ const Companies: React.FC = () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isModalOpen, filterOpen, deleteModalOpen]);
+  }, [isModalOpen, filterOpen]);
 
   const companies: CompanyRow[] = useMemo(() => {
     const mapped: CompanyRow[] = [
@@ -185,30 +184,33 @@ const Companies: React.FC = () => {
       } else {
         await updateSupplier(editingCompany.originalId, updateData);
       }
-      toast.success('Company updated successfully');
+      notify.success('Company updated');
       setIsModalOpen(false);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to update company');
+      notify.error(error.message || 'Failed to update company');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteModalOpen) return;
-    setIsDeleting(true);
+  const handleDelete = async (company: CompanyRow) => {
+    const isConfirmed = await confirm({
+      title: `Delete ${company.type}?`,
+      description: `Are you sure you want to delete ${company.name}? This action cannot be undone.`,
+      variant: 'danger',
+      confirmLabel: 'Yes, Delete'
+    });
+    if (!isConfirmed) return;
+
     try {
-      if (deleteModalOpen.type === 'Customer') {
-        await deleteCustomer(deleteModalOpen.originalId);
+      if (company.type === 'Customer') {
+        await deleteCustomer(company.originalId);
       } else {
-        await deleteSupplier(deleteModalOpen.originalId);
+        await deleteSupplier(company.originalId);
       }
-      toast.success(`${deleteModalOpen.type} deleted successfully`);
-      setDeleteModalOpen(null);
+      notify.success(`${company.type} deleted`);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to delete company');
-    } finally {
-      setIsDeleting(false);
+      notify.error(err.message || 'Failed to delete company');
     }
   };
 
@@ -344,7 +346,7 @@ const Companies: React.FC = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setDeleteModalOpen(company);
+                              handleDelete(company);
                             }}
                             className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors"
                             title="Delete"
@@ -486,47 +488,6 @@ const Companies: React.FC = () => {
           document.body
         )}
 
-      {/* Delete Confirmation Modal */}
-      {deleteModalOpen &&
-        createPortal(
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[1100] p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="p-6">
-                <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mb-4 mx-auto">
-                  <AlertTriangle className="h-6 w-6 text-rose-600" />
-                </div>
-                <h3 className="text-xl font-bold text-center text-slate-900 mb-2">Delete {deleteModalOpen.type}?</h3>
-                <p className="text-center text-slate-500 mb-6 px-4">
-                  Are you sure you want to delete <span className="font-semibold text-slate-700">{deleteModalOpen.name}</span>? This action cannot be undone.
-                </p>
-                <div className="flex justify-center gap-3">
-                  <button
-                    onClick={() => setDeleteModalOpen(null)}
-                    disabled={isDeleting}
-                    className="px-5 py-2.5 rounded-xl font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="px-5 py-2.5 rounded-xl font-medium text-white bg-rose-600 hover:bg-rose-700 transition-colors shadow-sm shadow-rose-200 disabled:opacity-70 flex items-center justify-center gap-2 min-w-[120px]"
-                  >
-                    {isDeleting ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      'Yes, Delete'
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
     </div>
   );
 };

@@ -6,7 +6,8 @@ import { useFinancialYearStore } from '../stores/financialYearStore';
 import { useAuthStore } from '../stores/authStore';
 import CustomSelect from '../components/CustomSelect';
 import { InventoryItem } from '../types';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
+import { useConfirm } from '../components/ConfirmDialog';
 import * as XLSX from 'xlsx';
 import TableSkeleton from '../components/TableSkeleton';
 import { MetricSkeleton } from '../components/Skeleton';
@@ -58,8 +59,8 @@ const Inventory: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentItem, setCurrentItem] = useState<InventoryItem | null>(null);
-  const [deleteModalOpen, setDeleteModalOpen] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState(false);
+  const confirm = useConfirm();
 
   // View Buyers State
   const [buyersModalOpen, setBuyersModalOpen] = useState(false);
@@ -140,12 +141,11 @@ const Inventory: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsModalOpen(false);
-        setDeleteModalOpen(null);
         setSortOpen(false);
       }
     };
 
-    if (isModalOpen || deleteModalOpen) {
+    if (isModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -156,7 +156,7 @@ const Inventory: React.FC = () => {
       document.body.style.overflow = 'unset';
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isModalOpen, deleteModalOpen]);
+  }, [isModalOpen]);
 
   const loadInventory = async () => {
     setLoading(true);
@@ -165,7 +165,7 @@ const Inventory: React.FC = () => {
       setInventory(data);
     } catch (error) {
       console.error('Error fetching inventory:', error);
-      toast.error('Failed to load inventory');
+      notify.error('Failed to load inventory');
     } finally {
       setLoading(false);
     }
@@ -185,7 +185,7 @@ const Inventory: React.FC = () => {
       setProductBuyers(buyers);
     } catch (error) {
       console.error('Error fetching buyers:', error);
-      toast.error('Failed to fetch buyers');
+      notify.error('Failed to fetch buyers');
     } finally {
       setLoadingBuyers(false);
     }
@@ -245,15 +245,15 @@ const Inventory: React.FC = () => {
     try {
       if (isEditing && currentItem) {
         await updateInventoryItem(currentItem.id, formData);
-        toast.success('Item updated successfully');
+        notify.success('Item updated');
       } else {
         await addInventoryItem(formData);
-        toast.success('Item added successfully');
+        notify.success('Item added');
       }
       await loadInventory();
       closeModal();
     } catch (error) {
-      toast.error(isEditing ? 'Failed to update item' : 'Failed to add item');
+      notify.error(isEditing ? 'Failed to update item' : 'Failed to add item');
     }
   };
 
@@ -275,14 +275,20 @@ const Inventory: React.FC = () => {
   };
 
   const handleDeleteItem = async (id: string) => {
+    const isConfirmed = await confirm({
+      title: 'Delete Item',
+      description: 'This action cannot be undone.',
+      variant: 'danger',
+      confirmLabel: 'Delete'
+    });
+    if (!isConfirmed) return;
+
     try {
       await deleteInventoryItem(id);
       setInventory(inventory.filter(item => item.id !== id));
-      toast.success('Item deleted successfully');
+      notify.success('Item deleted');
     } catch (error) {
-      toast.error('Failed to delete item');
-    } finally {
-      setDeleteModalOpen(null);
+      notify.error('Failed to delete item');
     }
   };
 
@@ -476,7 +482,7 @@ const Inventory: React.FC = () => {
                             </button>
                           )}
                           <button
-                            onClick={(e) => { e.stopPropagation(); setDeleteModalOpen(item.id); }}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }}
                             className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors"
                             title="Delete"
                           >
@@ -649,29 +655,6 @@ const Inventory: React.FC = () => {
         document.body
       )}
 
-      {deleteModalOpen && createPortal(
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4 w-screen h-screen">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
-            <div className="flex justify-center mb-4">
-              <div className="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center">
-                <Trash2 className="h-6 w-6 text-rose-600" />
-              </div>
-            </div>
-            <h2 className="text-lg font-bold text-slate-900 text-center mb-1">Delete Item</h2>
-            <p className="text-sm text-slate-500 text-center mb-6">This action cannot be undone.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteModalOpen(null)} className="btn btn-secondary flex-1">Cancel</button>
-              <button
-                onClick={() => deleteModalOpen && handleDeleteItem(deleteModalOpen)}
-                className="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-xl flex-1 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
 
       {buyersModalOpen && createPortal(
         <div className="fixed inset-0 bg-slate-900/25 backdrop-blur-[6px] flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-200 transition-all w-screen h-screen">

@@ -608,3 +608,120 @@
   background-size: 1000px 100%;
 }
 
+/* ═══════════════════════════════════════════════
+   NOTIFICATION PILLS (Light Style)
+   ═══════════════════════════════════════════════ */
+
+.notify-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  min-height: 44px;
+  max-width: 360px;
+  width: 100%;
+}
+
+.notify-text {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  line-height: 1.4;
+}
+
+.notify-close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: #94a3b8;
+  transition: all 150ms;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+
+.notify-close:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* Enter animation */
+.notify-enter {
+  animation: notifySlideIn 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Exit animation */
+.notify-exit {
+  animation: notifySlideOut 180ms ease-in forwards;
+}
+
+@keyframes notifySlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes notifySlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(16px) scale(0.95);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   CONFIRM DIALOG ANIMATIONS
+   ═══════════════════════════════════════════════ */
+
+.confirm-overlay {
+  animation: confirmFadeIn 200ms ease-out;
+}
+
+.confirm-content {
+  animation: confirmZoomIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes confirmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes confirmZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .notify-enter,
+  .notify-exit,
+  .confirm-overlay,
+  .confirm-content {
+    animation: none !important;
+  }
+}
+

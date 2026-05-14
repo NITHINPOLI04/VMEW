@@ -6,7 +6,7 @@ import { useInvoiceStore } from '../stores/invoiceStore';
 import { useTemplateStore } from '../stores/templateStore';
 import jsPDF from 'jspdf';
 import { InvoiceFormData } from '../types';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
 import LetterheadPreview from '../engines/previewComponents';
 import { DOCUMENT_TYPE_CONFIG, BillingDocumentType } from '../config/documentConfigs';
 import {
@@ -55,7 +55,7 @@ const InvoicePreview: React.FC = () => {
             setInvoice(JSON.parse(tempData));
             setIsTemp(true);
           } else {
-            toast.error('No preview data found');
+            notify.error('No preview data found');
             navigate('/generate-bills');
           }
         } else {
@@ -65,7 +65,7 @@ const InvoicePreview: React.FC = () => {
         }
       } catch (error) {
         console.error('Error loading invoice:', error);
-        toast.error('Failed to load invoice');
+        notify.error('Could not load invoice');
         navigate('/invoice-library');
       } finally {
         setLoading(false);
@@ -261,11 +261,11 @@ const InvoicePreview: React.FC = () => {
 
       const fileName = `${docConfig.pdfPrefix}${invoice.invoiceNumber.replace(/[/\\\\]/g, '-')}.pdf`;
       pdf.save(fileName);
-      toast.success('PDF generated successfully!');
+      notify.success('PDF downloaded');
 
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error('Failed to generate PDF. Please try again.');
+      notify.error('PDF generation failed');
     }
   };
 
@@ -300,14 +300,14 @@ const InvoicePreview: React.FC = () => {
       if (isTemp) {
         const result = await createInvoice(invoice);
         localStorage.removeItem('invoicePreviewData');
-        toast.success('Invoice saved successfully');
+        notify.success('Invoice saved');
         navigate(`/invoice-preview/${result._id}`);
       } else {
         await updateInvoice(id as string, invoice);
-        toast.success('Invoice updated successfully');
+        notify.success('Invoice updated');
       }
     } catch (error) {
-      toast.error('Failed to save invoice');
+      notify.error('Could not save invoice');
     }
   };
 
@@ -344,7 +344,7 @@ const InvoicePreview: React.FC = () => {
 
   const verified = getVerifiedTotals(invoice);
   if (verified.verification.severity === 'material') {
-    toast.error(`Calculation mismatch detected (₹${verified.verification.totalDrift.toFixed(2)} drift). Values have been auto-corrected.`);
+    notify.warning(`Calculation mismatch detected (₹${verified.verification.totalDrift.toFixed(2)} drift). Values have been auto-corrected.`);
   }
   const {
     subTotal: calculatedSubTotal,

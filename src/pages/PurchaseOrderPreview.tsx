@@ -6,7 +6,7 @@ import { useTemplateStore } from '../stores/templateStore';
 import jsPDF from 'jspdf';
 import { PurchaseOrder } from '../types';
 import { getVerifiedTotals } from '../utils/calcVerifier';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
 import LetterheadPreview from '../engines/previewComponents';
 import { DocumentItemsTable, buildPOColumns } from '../engines/tableEngine';
 import {
@@ -42,7 +42,7 @@ const PurchaseOrderPreview: React.FC = () => {
                     setPoData(JSON.parse(tempData));
                     setIsTemp(true);
                 } else {
-                    toast.error('No preview data found');
+                    notify.error('No preview data found');
                     navigate('/purchase-order');
                 }
                 setLoading(false);
@@ -53,7 +53,7 @@ const PurchaseOrderPreview: React.FC = () => {
                     const data = await fetchPurchaseOrder(id);
                     setPoData(data);
                 } catch (error) {
-                    toast.error('Failed to load Purchase Order');
+                    notify.error('Could not load Purchase Order');
                     navigate('/purchase-order');
                 } finally {
                     setLoading(false);
@@ -238,11 +238,11 @@ const PurchaseOrderPreview: React.FC = () => {
 
             const fileName = `PO_${poData.poNumber.replace(/[/\\\\]/g, '-')}.pdf`;
             pdf.save(fileName);
-            toast.success('PDF generated successfully!');
+            notify.success('PDF downloaded');
 
         } catch (error) {
             console.error('Error generating PDF:', error);
-            toast.error('Failed to generate PDF. Please try again.');
+            notify.error('PDF generation failed');
         }
     };
 
@@ -287,7 +287,7 @@ const PurchaseOrderPreview: React.FC = () => {
 
     const verified = getVerifiedTotals(poData);
     if (verified.verification.severity === 'material') {
-        toast.error(`Calculation mismatch detected (₹${verified.verification.totalDrift.toFixed(2)} drift). Values have been auto-corrected.`);
+        notify.warning(`Calculation mismatch detected (₹${verified.verification.totalDrift.toFixed(2)} drift). Values have been auto-corrected.`);
     }
     const {
         subTotal,

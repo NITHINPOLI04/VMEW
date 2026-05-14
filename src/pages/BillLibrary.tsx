@@ -13,7 +13,8 @@ import { useContactStore } from '../stores/contactStore';
 import { useFinancialYearStore } from '../stores/financialYearStore';
 import { Invoice, DeliveryChallan, Quotation } from '../types';
 import { DOCUMENT_TYPE_CONFIG, BillingDocumentType } from '../config/documentConfigs';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
+import { useConfirm } from '../components/ConfirmDialog';
 import { usePopper } from 'react-popper';
 import CustomSelect from '../components/CustomSelect';
 import CustomDatePicker from '../components/CustomDatePicker';
@@ -141,8 +142,6 @@ const BillLibrary: React.FC = () => {
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [sortOpen, setSortOpen] = useState(false);
 
-  // ── Delete modal ───────────────────────────────────────────────────────────
-  const [deleteModalOpen, setDeleteModalOpen] = useState<{ id: string; type: TabType } | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const exportBtnRef = useRef<HTMLButtonElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -155,6 +154,7 @@ const BillLibrary: React.FC = () => {
   const sortBtnRef = useRef<HTMLButtonElement>(null);
 
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null);
   const [dropdownRefEl, setDropdownRefEl] = useState<Element | null>(null);
   const [popperEl, setPopperEl] = useState<HTMLDivElement | null>(null);
@@ -256,7 +256,7 @@ const BillLibrary: React.FC = () => {
       }
       setCurrentPage(1);
     } catch {
-      toast.error(`Failed to load documents`);
+      notify.error(`Failed to load documents`);
     } finally {
       setLoading(false);
     }
@@ -264,15 +264,23 @@ const BillLibrary: React.FC = () => {
 
   // ── Delete handler ──────────────────────────────────────────────────────────
   const handleDelete = async (id: string, type: TabType) => {
+    const isConfirmed = await confirm({
+      title: 'Delete Document',
+      description: 'Are you sure? This action cannot be undone.',
+      variant: 'danger',
+      confirmLabel: 'Delete'
+    });
+    if (!isConfirmed) return;
+
     try {
       if (type === 'invoice') { await invoiceStore.deleteInvoice(id); setInvoices(inv => inv.filter(i => i._id !== id)); }
       else if (type === 'dc') { await dcStore.deleteDC(id); setDcs(d => d.filter(d => d._id !== id)); }
       else if (type === 'quotation') { await quotationStore.deleteQuotation(id); setQuotations(q => q.filter(q => q._id !== id)); }
       else if (type === 'credit_note') { await invoiceStore.deleteInvoice(id); setCreditNotes(cn => cn.filter(c => c._id !== id)); }
       else if (type === 'debit_note') { await invoiceStore.deleteInvoice(id); setDebitNotes(dn => dn.filter(d => d._id !== id)); }
-      toast.success('Document deleted');
-    } catch { toast.error('Failed to delete document'); }
-    finally { setDeleteModalOpen(null); }
+      const typeLabel = TABS.find(t => t.key === type)?.label.replace(/s$/, '') || 'Document';
+      notify.success(`${typeLabel} deleted`);
+    } catch { notify.error('Failed to delete document'); }
   };
 
   // ── Payment status change ───────────────────────────────────────────────────
@@ -281,9 +289,9 @@ const BillLibrary: React.FC = () => {
     try {
       await invoiceStore.updateInvoicePaymentStatus(id, status);
       setInvoices(inv => inv.map(i => i._id === id ? { ...i, paymentStatus: status } : i));
-      toast.success('Payment status updated');
+      notify.success('Payment status updated');
       setDropdownOpenId(null);
-    } catch { toast.error('Failed to update payment status'); }
+    } catch { notify.error('Failed to update payment status'); }
   };
 
   const handleDownload = (item: any) => {
@@ -399,7 +407,7 @@ const BillLibrary: React.FC = () => {
   // ── Export ──────────────────────────────────────────────────────────────────
   const handleStandardExport = () => {
     const isInvoiceLike = activeTab === 'invoice' || activeTab === 'credit_note' || activeTab === 'debit_note';
-    if (!isInvoiceLike) return toast.error('Export supported for invoice-type documents only');
+    if (!isInvoiceLike) return notify.error('Export supported for invoice-type documents only');
     const docLabel = activeTab === 'credit_note' ? 'Credit Notes' : activeTab === 'debit_note' ? 'Debit Notes' : 'Invoices';
     const exportData = sortedItems.map((invoice: any, index) => {
       const totalTaxable = invoice.items.reduce((s: number, item: any) => s + (item.taxableAmount || 0), 0);
@@ -421,12 +429,12 @@ const BillLibrary: React.FC = () => {
       };
     });
     exportStandardExcel(exportData, docLabel, `${docLabel.replace(' ', '_')}_${selectedYear.replace('-', '_')}.xlsx`);
-    toast.success('Exported successfully!');
+    notify.success('Exported successfully!');
   };
 
   const handleGroupedExport = () => {
     const isInvoiceLike = activeTab === 'invoice' || activeTab === 'credit_note' || activeTab === 'debit_note';
-    if (!isInvoiceLike) return toast.error('Export supported for invoice-type documents only');
+    if (!isInvoiceLike) return notify.error('Export supported for invoice-type documents only');
     const docLabel = activeTab === 'credit_note' ? 'Credit_Notes' : activeTab === 'debit_note' ? 'Debit_Notes' : 'Invoices';
     const allItems: any[] = [];
     sortedItems.forEach((invoice: any) => {
@@ -455,7 +463,7 @@ const BillLibrary: React.FC = () => {
       });
     });
     exportGroupedExcel(allItems, 'HSN Summary', `HSN_Summary_${docLabel}_${selectedYear.replace('-', '_')}.xlsx`);
-    toast.success('Exported successfully!');
+    notify.success('Exported successfully!');
   };
 
   const linkTypeMap: Record<TabType, string> = {
@@ -853,7 +861,7 @@ const BillLibrary: React.FC = () => {
                              >
                                <Download className="h-4 w-4" />
                              </button>
-                            <button onClick={(e) => { e.stopPropagation(); setDeleteModalOpen({ id: item._id, type: activeTab }); }} className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors" title="Delete">
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(item._id, activeTab); }} className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors" title="Delete">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
@@ -941,24 +949,6 @@ const BillLibrary: React.FC = () => {
         </>
       )}
 
-      {/* ── Delete Modal ── */}
-      {deleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
-            <div className="flex justify-center mb-4">
-              <div className="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center">
-                <Trash2 className="h-6 w-6 text-rose-600" />
-              </div>
-            </div>
-            <h2 className="text-lg font-bold text-slate-900 text-center mb-1">Delete Document</h2>
-            <p className="text-sm text-slate-500 text-center mb-6">Are you sure? This action cannot be undone.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteModalOpen(null)} className="btn btn-secondary flex-1">Cancel</button>
-              <button onClick={() => handleDelete(deleteModalOpen.id, deleteModalOpen.type)} className="btn btn-danger flex-1">Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

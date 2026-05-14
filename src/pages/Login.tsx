@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { useTemplateStore } from '../stores/templateStore';
-import { toast } from 'react-hot-toast';
+import { notify } from '../utils/notify';
 import { ArrowRight, ArrowLeft } from 'lucide-react';
 import { Skeleton } from '../components/Skeleton';
 
@@ -28,10 +28,10 @@ const Login: React.FC = () => {
     try {
       if (isSignUp) {
         await signup(email, password);
-        toast.success('Account created successfully!');
+        notify.success('Welcome!');
       } else {
         await login(email, password);
-        toast.success('Logged in successfully!');
+        // Redirect to dashboard is the confirmation
       }
       const currentYear = new Date().getFullYear();
       const financialYear = new Date().getMonth() >= 3 ? `${currentYear}-${currentYear + 1}` : `${currentYear - 1}-${currentYear}`;
@@ -42,7 +42,7 @@ const Login: React.FC = () => {
       ]);
       navigate('/');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Authentication failed');
+      notify.error(error instanceof Error ? error.message : 'Invalid credentials');
     } finally {
       setLoading(false);
     }
