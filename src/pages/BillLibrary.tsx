@@ -264,23 +264,26 @@ const BillLibrary: React.FC = () => {
 
   // ── Delete handler ──────────────────────────────────────────────────────────
   const handleDelete = async (id: string, type: TabType) => {
-    const isConfirmed = await confirm({
-      title: 'Delete Document',
+    const typeLabel = TABS.find(t => t.key === type)?.label.replace(/s$/, '') || 'Document';
+    await confirm({
+      title: `Delete ${typeLabel}`,
       description: 'Are you sure? This action cannot be undone.',
       variant: 'danger',
-      confirmLabel: 'Delete'
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        try {
+          if (type === 'invoice') { await invoiceStore.deleteInvoice(id); setInvoices(inv => inv.filter(i => i._id !== id)); }
+          else if (type === 'dc') { await dcStore.deleteDC(id); setDcs(d => d.filter(d => d._id !== id)); }
+          else if (type === 'quotation') { await quotationStore.deleteQuotation(id); setQuotations(q => q.filter(q => q._id !== id)); }
+          else if (type === 'credit_note') { await invoiceStore.deleteInvoice(id); setCreditNotes(cn => cn.filter(c => c._id !== id)); }
+          else if (type === 'debit_note') { await invoiceStore.deleteInvoice(id); setDebitNotes(dn => dn.filter(d => d._id !== id)); }
+          notify.success(`${typeLabel} deleted`);
+        } catch (error: any) {
+          notify.error(error.message || `Failed to delete ${typeLabel.toLowerCase()}`);
+          throw error;
+        }
+      }
     });
-    if (!isConfirmed) return;
-
-    try {
-      if (type === 'invoice') { await invoiceStore.deleteInvoice(id); setInvoices(inv => inv.filter(i => i._id !== id)); }
-      else if (type === 'dc') { await dcStore.deleteDC(id); setDcs(d => d.filter(d => d._id !== id)); }
-      else if (type === 'quotation') { await quotationStore.deleteQuotation(id); setQuotations(q => q.filter(q => q._id !== id)); }
-      else if (type === 'credit_note') { await invoiceStore.deleteInvoice(id); setCreditNotes(cn => cn.filter(c => c._id !== id)); }
-      else if (type === 'debit_note') { await invoiceStore.deleteInvoice(id); setDebitNotes(dn => dn.filter(d => d._id !== id)); }
-      const typeLabel = TABS.find(t => t.key === type)?.label.replace(/s$/, '') || 'Document';
-      notify.success(`${typeLabel} deleted`);
-    } catch { notify.error('Failed to delete document'); }
   };
 
   // ── Payment status change ───────────────────────────────────────────────────

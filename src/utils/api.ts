@@ -19,9 +19,22 @@ const apiRequest = async <T>(
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    const data = await response.json();
+    let data: any;
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
+
     if (!response.ok) {
-      throw new Error(data.message || `API request failed: ${response.statusText}`);
+      let errMsg = data.message || `API request failed: ${response.statusText}`;
+      if (data.errors && Array.isArray(data.errors)) {
+        const details = data.errors.map((e: any) => 
+          typeof e === 'string' ? e : `${e.field}: ${e.message}`
+        ).join(' | ');
+        errMsg = `${errMsg} — ${details}`;
+      }
+      throw new Error(errMsg);
     }
     return data;
   } catch (error: any) {

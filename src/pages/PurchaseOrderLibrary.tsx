@@ -128,21 +128,25 @@ const PurchaseOrderLibrary: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    const isConfirmed = await confirm({
-      title: 'Delete Purchase Order',
-      description: 'Are you sure? This action cannot be undone.',
-      variant: 'danger',
-      confirmLabel: 'Delete'
-    });
-    if (!isConfirmed) return;
+    const poToDelete = purchaseOrders.find(p => p._id === id);
+    const poLabel = poToDelete?.poNumber ? ` ${poToDelete.poNumber}` : '';
 
-    try {
-      await deletePO(id);
-      setPurchaseOrders(purchaseOrders.filter(p => p._id !== id));
-      notify.success('Purchase Order deleted');
-    } catch (error) {
-      notify.error('Failed to delete Purchase Order');
-    }
+    await confirm({
+      title: 'Delete Purchase Order',
+      description: `Are you sure you want to delete Purchase Order${poLabel}? This action cannot be undone.`,
+      variant: 'danger',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        try {
+          await deletePO(id);
+          setPurchaseOrders(purchaseOrders.filter(p => p._id !== id));
+          notify.success('Purchase Order deleted');
+        } catch (error: any) {
+          notify.error(error.message || 'Failed to delete Purchase Order');
+          throw error;
+        }
+      }
+    });
   };
 
   // Metrics

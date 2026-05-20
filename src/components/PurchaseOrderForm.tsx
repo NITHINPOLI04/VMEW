@@ -275,18 +275,24 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
         setActiveProductIndex(null);
         setProductSearchResults([]);
     }, [formData.items, formData.taxType, formData.discountEnabled, formData.discountPercentage, calculateTaxTotals]);
-
     const validateForm = () => {
         if (!formData.poNumber.trim()) {
             notify.warning('PO Number is required');
+            const el = document.getElementsByName('field_v_poNumber')[0] as HTMLInputElement | undefined;
+            el?.focus();
             return false;
         }
         if (!formData.supplierName.trim()) {
             notify.warning('Supplier Name is required');
+            const el = document.getElementsByName('field_v_supplierName')[0] as HTMLInputElement | undefined;
+            el?.focus();
             return false;
         }
-        if (formData.items.some((item: any) => !item.description.trim())) {
-            notify.warning('Please fill in all item descriptions');
+        const emptyIdx = formData.items.findIndex((item: any) => !item.description.trim());
+        if (emptyIdx !== -1) {
+            notify.warning(`Please fill in description for item ${emptyIdx + 1}`);
+            const el = document.getElementById(`po_desc_${emptyIdx}`);
+            el?.focus();
             return false;
         }
         return true;
@@ -306,7 +312,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                 await addSupplier({
                     name: finalData.supplierName,
                     address: finalData.supplierAddress,
-                    gstNo: finalData.supplierGst
+                    gstNo: finalData.supplierGst,
                 });
             }
 
@@ -325,8 +331,8 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                     }
                 }
             }
-        } catch (error) {
-            notify.error('Failed to save Purchase Order');
+        } catch (error: any) {
+            notify.error(error.message || 'Failed to save Purchase Order');
         } finally {
             setLoading(false);
         }

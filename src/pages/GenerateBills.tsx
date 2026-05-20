@@ -106,6 +106,8 @@ const GenerateBills: React.FC = () => {
     const emptyIdx = formData.items.findIndex((item: any) => !item.description);
     if (emptyIdx !== -1) {
       notify.error(`Add description to item ${emptyIdx + 1}`);
+      const el = document.getElementById(`desc_${emptyIdx}`);
+      el?.focus();
       return;
     }
 
@@ -178,6 +180,8 @@ const GenerateBills: React.FC = () => {
     const previewEmptyIdx = formData.items.findIndex((item: any) => !item.description);
     if (previewEmptyIdx !== -1) {
       notify.error(`Add description to item ${previewEmptyIdx + 1}`);
+      const el = document.getElementById(`desc_${previewEmptyIdx}`);
+      el?.focus();
       return;
     }
     const finalData = { ...formData, date: selectedDate.toISOString() };

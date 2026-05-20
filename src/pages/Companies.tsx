@@ -194,24 +194,25 @@ const Companies: React.FC = () => {
   };
 
   const handleDelete = async (company: CompanyRow) => {
-    const isConfirmed = await confirm({
+    await confirm({
       title: `Delete ${company.type}?`,
       description: `Are you sure you want to delete ${company.name}? This action cannot be undone.`,
       variant: 'danger',
-      confirmLabel: 'Yes, Delete'
-    });
-    if (!isConfirmed) return;
-
-    try {
-      if (company.type === 'Customer') {
-        await deleteCustomer(company.originalId);
-      } else {
-        await deleteSupplier(company.originalId);
+      confirmLabel: 'Yes, Delete',
+      onConfirm: async () => {
+        try {
+          if (company.type === 'Customer') {
+            await deleteCustomer(company.originalId);
+          } else {
+            await deleteSupplier(company.originalId);
+          }
+          notify.success(`${company.type} deleted`);
+        } catch (err: any) {
+          notify.error(err.message || 'Failed to delete company');
+          throw err;
+        }
       }
-      notify.success(`${company.type} deleted`);
-    } catch (err: any) {
-      notify.error(err.message || 'Failed to delete company');
-    }
+    });
   };
 
   return (

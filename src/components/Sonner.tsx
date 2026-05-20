@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { X, AlertTriangle, Info, WifiOff } from 'lucide-react';
+import { X, AlertTriangle, Info, WifiOff, CheckCircle2 } from 'lucide-react';
 import { notify, type NotificationPayload, type Severity } from '../utils/notify';
 
 const ACCENT: Record<Severity, string> = {
@@ -9,7 +9,8 @@ const ACCENT: Record<Severity, string> = {
   info: 'bg-blue-50 border border-blue-200',
 };
 
-const ICON_MAP: Partial<Record<Severity, React.ElementType>> = {
+const ICON_MAP: Record<Severity, React.ElementType> = {
+  success: CheckCircle2,
   error: AlertTriangle,
   warning: AlertTriangle,
   info: Info,
@@ -39,6 +40,7 @@ function Pill({ item, onDismiss }: { item: NotificationPayload; onDismiss: (id: 
         <Icon
           size={15}
           className={
+            item.severity === 'success' ? 'text-emerald-500 flex-shrink-0' :
             item.severity === 'error' ? 'text-rose-500 flex-shrink-0' :
             item.severity === 'warning' ? 'text-amber-500 flex-shrink-0' :
             'text-blue-500 flex-shrink-0'

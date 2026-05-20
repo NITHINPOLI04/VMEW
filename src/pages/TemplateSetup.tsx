@@ -114,8 +114,8 @@ const TemplateSetup: React.FC = () => {
     try {
       await updateLetterhead(letterheadForm);
       notify.success('Letterhead saved');
-    } catch {
-      notify.error('Could not save letterhead');
+    } catch (error: any) {
+      notify.error(error.message || 'Could not save letterhead');
     }
   };
 
@@ -123,8 +123,8 @@ const TemplateSetup: React.FC = () => {
     try {
       await updateDefaultInfo(defaultInfoForm);
       notify.success('Defaults saved');
-    } catch {
-      notify.error('Could not save defaults');
+    } catch (error: any) {
+      notify.error(error.message || 'Could not save defaults');
     }
   };
 
@@ -136,8 +136,8 @@ const TemplateSetup: React.FC = () => {
       setDownloadMenuOpen(false);
       await generateLetterheadPDF(letterheadForm);
       notify.success('PDF downloaded');
-    } catch {
-      notify.error('PDF generation failed');
+    } catch (error: any) {
+      notify.error(error.message || 'PDF generation failed');
     } finally {
       setDownloading(false);
     }
@@ -149,9 +149,9 @@ const TemplateSetup: React.FC = () => {
       setDownloadMenuOpen(false);
       await generateLetterheadDOCX(letterheadForm);
       notify.success('Word doc downloaded');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      notify.error('Word doc generation failed');
+      notify.error(err.message || 'Word doc generation failed');
     } finally {
       setDownloadingWord(false);
     }

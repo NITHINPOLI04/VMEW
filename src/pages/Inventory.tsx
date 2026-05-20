@@ -252,8 +252,8 @@ const Inventory: React.FC = () => {
       }
       await loadInventory();
       closeModal();
-    } catch (error) {
-      notify.error(isEditing ? 'Failed to update item' : 'Failed to add item');
+    } catch (error: any) {
+      notify.error(error.message || (isEditing ? 'Failed to update item' : 'Failed to add item'));
     }
   };
 
@@ -275,21 +275,25 @@ const Inventory: React.FC = () => {
   };
 
   const handleDeleteItem = async (id: string) => {
-    const isConfirmed = await confirm({
-      title: 'Delete Item',
-      description: 'This action cannot be undone.',
-      variant: 'danger',
-      confirmLabel: 'Delete'
-    });
-    if (!isConfirmed) return;
+    const itemToDelete = inventory.find(item => item.id === id);
+    const itemName = itemToDelete?.description ? ` "${itemToDelete.description}"` : '';
 
-    try {
-      await deleteInventoryItem(id);
-      setInventory(inventory.filter(item => item.id !== id));
-      notify.success('Item deleted');
-    } catch (error) {
-      notify.error('Failed to delete item');
-    }
+    await confirm({
+      title: 'Delete Item',
+      description: `Are you sure you want to delete${itemName}? This action cannot be undone.`,
+      variant: 'danger',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        try {
+          await deleteInventoryItem(id);
+          setInventory(inventory.filter(item => item.id !== id));
+          notify.success('Item deleted');
+        } catch (error: any) {
+          notify.error(error.message || 'Failed to delete item');
+          throw error;
+        }
+      }
+    });
   };
 
   const filteredItems = inventory

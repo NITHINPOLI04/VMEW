@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Trash2 } from 'lucide-react';
@@ -8,6 +9,7 @@ interface ConfirmOptions {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'danger' | 'warning';
+  onConfirm?: () => Promise<void> | void;
 }
 
 type ConfirmFn = (opts: ConfirmOptions) => Promise<boolean>;
@@ -31,13 +33,27 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const handleConfirm = () => {
-    state?.resolve(true);
-    setState(null);
-    setLoading(false);
+  const handleConfirm = async () => {
+    if (state?.onConfirm) {
+      setLoading(true);
+      try {
+        await state.onConfirm();
+        state.resolve(true);
+        setState(null);
+      } catch (err: any) {
+        state.resolve(false);
+        setState(null);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      state?.resolve(true);
+      setState(null);
+    }
   };
 
   const handleCancel = () => {
+    if (loading) return;
     state?.resolve(false);
     setState(null);
     setLoading(false);
