@@ -21,6 +21,7 @@ import CustomDatePicker from '../components/CustomDatePicker';
 import { useNavigate } from 'react-router-dom';
 import { parseISO, format } from 'date-fns';
 import TableSkeleton from '../components/TableSkeleton';
+import { MetricSkeleton } from '../components/Skeleton';
 import { exportStandardExcel, exportGroupedExcel } from '../utils/excelExport';
 
 type TabType = 'invoice' | 'dc' | 'quotation' | 'credit_note' | 'debit_note';
@@ -566,7 +567,21 @@ const BillLibrary: React.FC = () => {
       </div>
 
       {/* ── Summary Metric Cards ── */}
-      {!loading && (
+      {loading ? (
+        <div className={`grid gap-3 ${
+          activeTab === 'invoice' ? 'grid-cols-2 xl:grid-cols-4' :
+          (activeTab === 'credit_note' || activeTab === 'debit_note') ? 'grid-cols-3' :
+          'grid-cols-2'
+        }`}>
+          {Array.from({
+            length: activeTab === 'invoice' ? 4 :
+                    (activeTab === 'credit_note' || activeTab === 'debit_note') ? 3 :
+                    2
+          }).map((_, i) => (
+            <MetricSkeleton key={i} />
+          ))}
+        </div>
+      ) : (
         <div className={`grid gap-3 ${
           activeTab === 'invoice' ? 'grid-cols-2 xl:grid-cols-4' :
           (activeTab === 'credit_note' || activeTab === 'debit_note') ? 'grid-cols-3' :
@@ -838,12 +853,18 @@ const BillLibrary: React.FC = () => {
                                         <input
                                           type="number"
                                           value={invoiceStore.getReceivedAmount(item._id) || ''}
-                                          onChange={(e) => invoiceStore.setReceivedAmount(item._id, Number(e.target.value))}
+                                          onChange={(e) => {
+                                            const rawVal = Number(e.target.value);
+                                            const clamped = Math.max(0, Math.min(item.grandTotal || 0, rawVal));
+                                            invoiceStore.setReceivedAmount(item._id, clamped);
+                                          }}
+                                          min={0}
+                                          max={item.grandTotal}
                                           className="w-full border border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-800 transition-shadow outline-none"
                                         />
                                       </div>
                                       <p className="text-sm text-slate-700">
-                                        Balance Amount: <span className="font-semibold text-slate-900">₹{((item.grandTotal || 0) - (invoiceStore.getReceivedAmount(item._id) || 0)).toFixed(2)}</span>
+                                        Balance Amount: <span className="font-semibold text-slate-900">₹{Math.max(0, (item.grandTotal || 0) - Math.max(0, invoiceStore.getReceivedAmount(item._id) || 0)).toFixed(2)}</span>
                                       </p>
                                     </div>
                                   )}

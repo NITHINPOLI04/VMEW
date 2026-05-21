@@ -37,7 +37,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const Icon = config.icon;
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${config.cls}`}>
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${config.cls}`}>
       <Icon className="h-3 w-3" />
       {config.label}
     </span>
@@ -55,6 +55,12 @@ const Inventory: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortKey, setSortKey] = useState<'newest' | 'oldest' | 'price-high' | 'price-low'>('newest');
   const [sortOpen, setSortOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchQuery, selectedYear, sortKey]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -310,6 +316,11 @@ const Inventory: React.FC = () => {
       return 0;
     });
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
   const metrics = (() => {
     const totalItems = inventory.length;
     const totalValue = inventory.reduce((acc, item) => acc + (item.rate * item.quantity), 0);
@@ -441,26 +452,26 @@ const Inventory: React.FC = () => {
               <table className="saas-table min-w-full">
                 <thead>
                   <tr>
-                    <th className="pl-6">Product Name</th>
-                    <th>HSN Code</th>
-                    <th>Price</th>
-                    <th>Stock</th>
-                    <th>Status</th>
-                    <th className="text-center">Actions</th>
+                    <th className="pl-6 w-[45%]">Product Name</th>
+                    <th className="whitespace-nowrap">HSN Code</th>
+                    <th className="whitespace-nowrap">Price</th>
+                    <th className="whitespace-nowrap">Stock</th>
+                    <th className="whitespace-nowrap">Status</th>
+                    <th className="text-center whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredItems.map((item, index) => (
+                  {currentItems.map((item, index) => (
                     <tr
                       key={`${item.id}-${index}`}
                       onClick={() => openEditModal(item)}
                       className="cursor-pointer hover:bg-slate-50 transition-colors"
                     >
-                      <td data-label="Product Name" className="md:pl-6 font-medium text-slate-900">{item.description}</td>
-                      <td data-label="HSN Code" className="text-slate-500">{item.hsnSacCode}</td>
-                      <td data-label="Price" className="font-medium text-slate-700">₹{item.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                      <td data-label="Stock" className="text-slate-600">{item.transactionType === 'Purchase' && item.currentStock !== undefined ? item.currentStock : item.quantity} {item.unit}</td>
-                      <td data-label="Status">
+                      <td data-label="Product Name" className="md:pl-6 font-medium text-slate-900 description-cell">{item.description}</td>
+                      <td data-label="HSN Code" className="text-slate-500 whitespace-nowrap">{item.hsnSacCode}</td>
+                      <td data-label="Price" className="font-medium text-slate-700 whitespace-nowrap">₹{item.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                      <td data-label="Stock" className="text-slate-600 whitespace-nowrap">{item.transactionType === 'Purchase' && item.currentStock !== undefined ? item.currentStock : item.quantity} {item.unit}</td>
+                      <td data-label="Status" className="whitespace-nowrap">
                         {item.transactionType === 'Purchase' ? (
                           <StatusBadge status={item.status || 'In Stock'} />
                         ) : (
@@ -499,6 +510,39 @@ const Inventory: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            {filteredItems.length > 0 && (
+              <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <span className="text-xs text-slate-500">
+                  Showing <span className="font-semibold text-slate-700">{indexOfFirstItem + 1}–{Math.min(indexOfLastItem, filteredItems.length)}</span> of <span className="font-semibold text-slate-700">{filteredItems.length}</span>
+                </span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}
+                    className="px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                    ← Prev
+                  </button>
+                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                    let pageNum = i + 1;
+                    if (totalPages > 7) {
+                      if (currentPage <= 4) pageNum = i + 1;
+                      else if (currentPage >= totalPages - 3) pageNum = totalPages - 6 + i;
+                      else pageNum = currentPage - 3 + i;
+                    }
+                    return (
+                      <button key={pageNum} onClick={() => setCurrentPage(pageNum)}
+                        className={`min-w-[32px] py-1.5 text-xs font-medium rounded-lg transition-colors ${currentPage === pageNum ? 'bg-blue-600 text-white' : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-600'}`}>
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages || totalPages === 0}
+                    className="px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="py-20 flex flex-col items-center justify-center text-center px-4">
@@ -664,15 +708,22 @@ const Inventory: React.FC = () => {
         <div className="fixed inset-0 bg-slate-900/25 backdrop-blur-[6px] flex items-center justify-center z-[1000] p-4 animate-in fade-in duration-200 transition-all w-screen h-screen">
           <div className="bg-white rounded-[16px] shadow-[0_24px_48px_rgba(0,0,0,0.16)] w-full max-w-[800px] overflow-hidden flex flex-col">
             <div className="px-8 py-5 flex items-center justify-between bg-[#0F172A] relative">
-              <div>
-                <h3 className="text-[18px] font-semibold text-white tracking-tight">
-                  Buyers of {selectedProductForBuyers?.description}
+              <div className="min-w-0 flex-1 pr-6">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-950/60 px-2 py-0.5 rounded border border-blue-900/50">
+                    Buyers Log
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    · FY {selectedYear}
+                  </span>
+                </div>
+                <h3 className="text-[15px] font-semibold text-white mt-2 leading-snug break-words" title={selectedProductForBuyers?.description}>
+                  {selectedProductForBuyers?.description}
                 </h3>
-                <p className="text-white/60 text-sm mt-0.5">{selectedYear}</p>
               </div>
               <button
                 onClick={() => setBuyersModalOpen(false)}
-                className="text-white/70 hover:text-white transition-colors p-1"
+                className="text-white/70 hover:text-white transition-colors p-1 flex-shrink-0"
               >
                 <X size={20} />
               </button>

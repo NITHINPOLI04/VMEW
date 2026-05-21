@@ -49,7 +49,13 @@ const Companies: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'All' | 'Customer' | 'Supplier'>('All');
   const [filterOpen, setFilterOpen] = useState(false);
-  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, typeFilter]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<CompanyRow | null>(null);
   const [formData, setFormData] = useState({ name: '', gstNo: '', address: '' });
@@ -145,6 +151,11 @@ const Companies: React.FC = () => {
       return a.name.localeCompare(b.name);
     });
   }, [companies, searchQuery, typeFilter]);
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentCompanies = filteredCompanies.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage);
 
   const metrics = useMemo(() => {
     return [
@@ -314,7 +325,7 @@ const Companies: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCompanies.map((company) => (
+                  {currentCompanies.map((company) => (
                     <tr
                       key={`${company.type}-${company.originalId}`}
                       onClick={() => openEditModal(company)}
@@ -361,6 +372,39 @@ const Companies: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            {filteredCompanies.length > 0 && (
+              <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <span className="text-xs text-slate-500">
+                  Showing <span className="font-semibold text-slate-700">{indexOfFirstItem + 1}–{Math.min(indexOfLastItem, filteredCompanies.length)}</span> of <span className="font-semibold text-slate-700">{filteredCompanies.length}</span>
+                </span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}
+                    className="px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                    ← Prev
+                  </button>
+                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                    let pageNum = i + 1;
+                    if (totalPages > 7) {
+                      if (currentPage <= 4) pageNum = i + 1;
+                      else if (currentPage >= totalPages - 3) pageNum = totalPages - 6 + i;
+                      else pageNum = currentPage - 3 + i;
+                    }
+                    return (
+                      <button key={pageNum} onClick={() => setCurrentPage(pageNum)}
+                        className={`min-w-[32px] py-1.5 text-xs font-medium rounded-lg transition-colors ${currentPage === pageNum ? 'bg-blue-600 text-white' : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-600'}`}>
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages || totalPages === 0}
+                    className="px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="py-20 flex flex-col items-center justify-center text-center px-4">

@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  TrendingUp, PlusCircle, Package,
+  TrendingUp, TrendingDown, PlusCircle, Package,
   AlertTriangle, ShoppingCart, BarChart3, Users, DollarSign, Activity,
+  Info, X,
 } from 'lucide-react';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useInventoryStore } from '../stores/inventoryStore';
@@ -15,6 +16,7 @@ const Dashboard: React.FC = () => {
   const selectedFY = useFinancialYearStore(state => state.selectedFY);
   const [error, setError] = useState<string | null>(null);
   const [chartMode, setChartMode] = useState<'monthly' | 'weekly'>('monthly');
+  const [activeInfoCard, setActiveInfoCard] = useState<'cash' | 'growth' | 'avg' | 'clients' | null>(null);
   const chartRef = useRef<Chart | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -55,13 +57,13 @@ const Dashboard: React.FC = () => {
 
   const totalPaid = useMemo(() => inv.reduce((s, i) => {
     if (i.paymentStatus === 'Payment Complete') return s + i.grandTotal;
-    if (i.paymentStatus === 'Partially Paid') return s + Math.min(getReceivedAmount(i._id) || 0, i.grandTotal);
+    if (i.paymentStatus === 'Partially Paid') return s + Math.max(0, Math.min(getReceivedAmount(i._id) || 0, i.grandTotal));
     return s;
   }, 0), [inv, getReceivedAmount]);
 
   const totalUnpaid = useMemo(() => inv.reduce((s, i) => {
     if (i.paymentStatus === 'Unpaid') return s + i.grandTotal;
-    if (i.paymentStatus === 'Partially Paid') return s + Math.max(0, i.grandTotal - (getReceivedAmount(i._id) || 0));
+    if (i.paymentStatus === 'Partially Paid') return s + Math.max(0, i.grandTotal - Math.max(0, getReceivedAmount(i._id) || 0));
     return s;
   }, 0), [inv, getReceivedAmount]);
 
@@ -251,11 +253,50 @@ const Dashboard: React.FC = () => {
       {/* ─── Smart Insight Cards (Compact View) ─────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
         {/* 1. Cash Health */}
-        <div className="insight-card insight-grad-green">
+        <div 
+          className="insight-card insight-grad-green"
+          onMouseEnter={() => setActiveInfoCard('cash')}
+          onMouseLeave={() => setActiveInfoCard(null)}
+        >
+          <div className={`kpi-info-overlay transition-all duration-300 ${
+            activeInfoCard === 'cash' 
+              ? 'opacity-100 pointer-events-auto translate-y-0 scale-100' 
+              : 'opacity-0 pointer-events-none translate-y-4 scale-95'
+          }`}>
+            <div className="flex-1">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-1 mb-1.5">
+                <span className="text-[9.5px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                  <Info size={10} />
+                  Cash Health Info
+                </span>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setActiveInfoCard(null); }} 
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+              <p className="text-[9px] text-slate-300 leading-normal mb-1.5">
+                Calculated as: <span className="font-semibold text-emerald-300">Paid Amount</span> divided by <span className="font-semibold text-slate-100">Total Billed Amount</span>.
+              </p>
+              <div className="text-[8.5px] text-slate-400 flex flex-wrap gap-x-2.5 gap-y-0.5 leading-tight pt-0.5 border-t border-slate-800/40">
+                <span>• <span className="text-emerald-400 font-medium">Excellent</span>: ≥90%</span>
+                <span>• <span className="text-amber-400 font-medium">Good</span>: ≥60%</span>
+                <span>• <span className="text-rose-400 font-medium">Risky</span>: &lt;60%</span>
+              </div>
+            </div>
+          </div>
           <div className="flex items-center justify-between mb-1">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <span className={`w-1.5 h-1.5 rounded-full ${cashHealth.dot}`} />
               Cash Health
+              <button
+                onClick={(e) => { e.stopPropagation(); setActiveInfoCard(activeInfoCard === 'cash' ? null : 'cash'); }}
+                className="text-slate-400 hover:text-slate-600 transition-colors inline-flex items-center"
+                title="How this is calculated"
+              >
+                <Info size={10} className="ml-1" />
+              </button>
             </h3>
             <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${cashHealth.bg} shadow-sm border border-white/40`}>
               <cashHealth.icon size={13} className={cashHealth.color} />
@@ -266,25 +307,107 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* 2. Business Growth */}
-        <div className="insight-card insight-grad-blue">
+        <div 
+          className="insight-card insight-grad-blue"
+          onMouseEnter={() => setActiveInfoCard('growth')}
+          onMouseLeave={() => setActiveInfoCard(null)}
+        >
+          <div className={`kpi-info-overlay transition-all duration-300 ${
+            activeInfoCard === 'growth' 
+              ? 'opacity-100 pointer-events-auto translate-y-0 scale-100' 
+              : 'opacity-0 pointer-events-none translate-y-4 scale-95'
+          }`}>
+            <div className="flex-1">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-1 mb-1.5">
+                <span className="text-[9.5px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                  <Info size={10} />
+                  Growth Info
+                </span>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setActiveInfoCard(null); }} 
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+              <p className="text-[9px] text-slate-300 leading-normal mb-1.5">
+                Calculated as the percentage change in revenue comparing the <span className="font-semibold text-blue-300">Current Month</span> to the <span className="font-semibold text-slate-100">Previous Month</span>.
+              </p>
+              <p className="text-[8px] text-slate-400 italic font-mono pt-1 border-t border-slate-800/40">
+                Formula: ((Current - Prev) / Prev) × 100
+              </p>
+            </div>
+          </div>
           <div className="flex items-center justify-between mb-1">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Growth</h3>
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shadow-sm border border-white/40 ${trend.pct >= 0 ? 'bg-emerald-100' : 'bg-rose-100'}`}>
-              <TrendingUp size={13} className={trend.pct >= 0 ? 'text-emerald-700' : 'text-rose-700'} />
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+              Growth
+              <button
+                onClick={(e) => { e.stopPropagation(); setActiveInfoCard(activeInfoCard === 'growth' ? null : 'growth'); }}
+                className="text-slate-400 hover:text-slate-600 transition-colors inline-flex items-center"
+                title="How this is calculated"
+              >
+                <Info size={10} className="ml-1" />
+              </button>
+            </h3>
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shadow-sm border border-white/40 ${trend.dir === 'up' ? 'bg-emerald-100' : 'bg-rose-100'}`}>
+              {trend.dir === 'up' ? (
+                <TrendingUp size={13} className="text-emerald-700" />
+              ) : (
+                <TrendingDown size={13} className="text-rose-700" />
+              )}
             </div>
           </div>
           <div className="flex items-baseline gap-1.5 leading-tight">
             <p className="text-lg font-bold text-slate-800">
-              {trend.dir === 'up' ? '+' : '-'}{trend.pct}%
+              {trend.dir === 'up' ? '+' : ''}{trend.pct}%
             </p>
           </div>
           <p className="text-[10px] text-slate-500 font-medium">vs last period</p>
         </div>
 
         {/* 3. Average Deal Size */}
-        <div className="insight-card insight-grad-orange">
+        <div 
+          className="insight-card insight-grad-orange"
+          onMouseEnter={() => setActiveInfoCard('avg')}
+          onMouseLeave={() => setActiveInfoCard(null)}
+        >
+          <div className={`kpi-info-overlay transition-all duration-300 ${
+            activeInfoCard === 'avg' 
+              ? 'opacity-100 pointer-events-auto translate-y-0 scale-100' 
+              : 'opacity-0 pointer-events-none translate-y-4 scale-95'
+          }`}>
+            <div className="flex-1">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-1 mb-1.5">
+                <span className="text-[9.5px] font-bold text-orange-400 uppercase tracking-wider flex items-center gap-1">
+                  <Info size={10} />
+                  Avg Deal Size Info
+                </span>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setActiveInfoCard(null); }} 
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+              <p className="text-[9px] text-slate-300 leading-normal mb-1.5">
+                Calculated as the <span className="font-semibold text-orange-300">Total Revenue</span> divided by the <span className="font-semibold text-slate-100">Total Number of Invoices</span> generated in the selected financial year.
+              </p>
+              <p className="text-[8px] text-slate-400 italic font-mono pt-1 border-t border-slate-800/40">
+                Formula: Total Revenue / Invoice Count
+              </p>
+            </div>
+          </div>
           <div className="flex items-center justify-between mb-1">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Avg Deal Size</h3>
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+              Avg Deal Size
+              <button
+                onClick={(e) => { e.stopPropagation(); setActiveInfoCard(activeInfoCard === 'avg' ? null : 'avg'); }}
+                className="text-slate-400 hover:text-slate-600 transition-colors inline-flex items-center"
+                title="How this is calculated"
+              >
+                <Info size={10} className="ml-1" />
+              </button>
+            </h3>
             <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-orange-100 shadow-sm border border-white/40">
               <DollarSign size={13} className="text-orange-700" />
             </div>
@@ -294,9 +417,45 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* 4. Active Clients */}
-        <div className="insight-card insight-grad-teal">
+        <div 
+          className="insight-card insight-grad-teal"
+          onMouseEnter={() => setActiveInfoCard('clients')}
+          onMouseLeave={() => setActiveInfoCard(null)}
+        >
+          <div className={`kpi-info-overlay transition-all duration-300 ${
+            activeInfoCard === 'clients' 
+              ? 'opacity-100 pointer-events-auto translate-y-0 scale-100' 
+              : 'opacity-0 pointer-events-none translate-y-4 scale-95'
+          }`}>
+            <div className="flex-1">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-1 mb-1.5">
+                <span className="text-[9.5px] font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1">
+                  <Info size={10} />
+                  Active Clients Info
+                </span>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setActiveInfoCard(null); }} 
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+              <p className="text-[9px] text-slate-300 leading-normal">
+                Represents the unique count of <span className="font-semibold text-teal-300">Buyer Names</span> across all invoices generated in the selected financial year.
+              </p>
+            </div>
+          </div>
           <div className="flex items-center justify-between mb-1">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active Clients</h3>
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+              Active Clients
+              <button
+                onClick={(e) => { e.stopPropagation(); setActiveInfoCard(activeInfoCard === 'clients' ? null : 'clients'); }}
+                className="text-slate-400 hover:text-slate-600 transition-colors inline-flex items-center"
+                title="How this is calculated"
+              >
+                <Info size={10} className="ml-1" />
+              </button>
+            </h3>
             <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-teal-50 shadow-sm border border-white/40">
               <Users size={13} className="text-teal-700" />
             </div>
@@ -318,7 +477,7 @@ const Dashboard: React.FC = () => {
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Revenue</p>
                 {trend.pct > 0 && (
                   <span className={`growth-badge ${trend.dir === 'up' ? 'growth-badge-up' : 'growth-badge-down'}`}>
-                    {trend.dir === 'up' ? '+' : '-'}{trend.pct}%
+                    {trend.dir === 'up' ? '+' : ''}{trend.pct}%
                   </span>
                 )}
               </div>

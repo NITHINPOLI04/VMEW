@@ -320,6 +320,30 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.02);
   }
 
+  /* ─── KPI Info Overlay ─────────────────────────── */
+  .kpi-info-overlay {
+    position: absolute !important;
+    @apply inset-0 bg-slate-900/95 backdrop-blur-[6px] text-white p-2.5 z-20 flex flex-col justify-between transition-all duration-300 rounded-2xl overflow-y-auto select-none;
+    box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.03);
+  }
+
+  .kpi-info-overlay::-webkit-scrollbar {
+    width: 3px;
+  }
+  
+  .kpi-info-overlay::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .kpi-info-overlay::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 9999px;
+  }
+
+  .kpi-info-overlay::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
   .insight-card::before {
     content: '';
     position: absolute;
@@ -329,7 +353,7 @@
     pointer-events: none;
   }
   
-  .insight-card > * {
+  .insight-card > *:not(.kpi-info-overlay) {
     position: relative;
     z-index: 1;
   }
