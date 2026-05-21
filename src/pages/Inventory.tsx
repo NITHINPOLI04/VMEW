@@ -90,15 +90,13 @@ const Inventory: React.FC = () => {
 
   useEffect(() => {
     if (isModalOpen && !isEditing && formData.description.trim() !== '') {
-      const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
-      const descNorm = normalize(formData.description);
+      const normalizeProductKey = (desc: string) => desc.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9._]/g, '');
+      const newProductKey = normalizeProductKey(formData.description);
       
       const exists = inventory.some(item => 
-        normalize(item.description) === descNorm &&
+        (item.productKey || normalizeProductKey(item.description)) === newProductKey &&
         item.transactionType === formData.transactionType &&
-        item.hsnSacCode === (formData.hsnSacCode || '') &&
-        item.unit === formData.unit &&
-        Number(item.rate) === Number(formData.rate)
+        item.financialYear === formData.financialYear
       );
       setDuplicateWarning(exists);
     } else {
@@ -223,7 +221,7 @@ const Inventory: React.FC = () => {
     setFormData({
       description: item.description,
       hsnSacCode: item.hsnSacCode,
-      quantity: item.quantity,
+      quantity: item.transactionType === 'Purchase' && item.currentStock !== undefined ? item.currentStock : item.quantity,
       unit: item.unit as 'Nos' | 'Mts' | 'Lts' | 'Pkt' | 'Kgs',
       rate: item.rate,
       transactionType: item.transactionType,
