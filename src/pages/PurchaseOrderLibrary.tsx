@@ -284,7 +284,7 @@ const PurchaseOrderLibrary: React.FC = () => {
               id="po-search"
               type="text"
               aria-label="Search Purchase Orders"
-              placeholder="Search Purchase Orders..."
+              placeholder="Search purchase orders by number or supplier..."
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               autoComplete="off"

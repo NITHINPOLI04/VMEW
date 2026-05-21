@@ -399,6 +399,7 @@ const Inventory: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
+              placeholder="Search products or HSN/SAC..."
               autoComplete="off"
               className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-slate-900"
             />

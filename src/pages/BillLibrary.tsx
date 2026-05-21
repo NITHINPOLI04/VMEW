@@ -632,6 +632,7 @@ const BillLibrary: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+              placeholder="Search bills by number or buyer..."
               autoComplete="off"
               className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-slate-900"
             />
@@ -697,12 +698,14 @@ const BillLibrary: React.FC = () => {
                       <CustomDatePicker
                         selected={stagedFromDate ? parseISO(stagedFromDate) : null}
                         onChange={(date) => setStagedFromDate(date ? format(date, 'yyyy-MM-dd') : '')}
+                        placeholderText="From"
                       />
                     </div>
                     <div className="relative flex-1 min-w-0">
                       <CustomDatePicker
                         selected={stagedToDate ? parseISO(stagedToDate) : null}
                         onChange={(date) => setStagedToDate(date ? format(date, 'yyyy-MM-dd') : '')}
+                        placeholderText="To"
                       />
                     </div>
                   </div>
