@@ -22,6 +22,7 @@ import {
     drawAmountInWords,
     drawPageNumbers,
 } from '../engines/pdfEngine';
+import { usePreviewStore } from '../stores/previewStore';
 
 const PurchaseOrderPreview: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -37,9 +38,9 @@ const PurchaseOrderPreview: React.FC = () => {
     useEffect(() => {
         const loadData = async () => {
             if (id === 'temp') {
-                const tempData = localStorage.getItem('poPreviewData');
+                const tempData = usePreviewStore.getState().getPreviewData('po');
                 if (tempData) {
-                    setPoData(JSON.parse(tempData));
+                    setPoData(tempData);
                     setIsTemp(true);
                 } else {
                     notify.error('No preview data found');

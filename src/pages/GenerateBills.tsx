@@ -11,6 +11,7 @@ import FormSkeleton from '../components/FormSkeleton';
 import { notify } from '../utils/notify';
 import { getInitialInvoice, getInitialDC, getInitialQuotation, getInitialCreditNote, getInitialDebitNote } from '../config/documentConfigs';
 import { convertToWords } from '../utils/numberToWords';
+import { usePreviewStore } from '../stores/previewStore';
 
 type BillType = 'invoice' | 'dc' | 'quotation' | 'credit_note' | 'debit_note';
 
@@ -188,11 +189,11 @@ const GenerateBills: React.FC = () => {
     if (billType !== 'dc') finalData.totalInWords = convertToWords(finalData.grandTotal);
 
     // For CN/DN, reuse the invoice preview data key
-    const storageKey = (billType === 'credit_note' || billType === 'debit_note')
-      ? 'invoicePreviewData'
-      : `${billType}PreviewData`;
+    const previewKey = (billType === 'credit_note' || billType === 'debit_note')
+      ? 'invoice' as const
+      : billType as 'invoice' | 'dc' | 'quotation';
 
-    localStorage.setItem(storageKey, JSON.stringify(finalData));
+    usePreviewStore.getState().setPreviewData(previewKey, finalData);
 
     // Route CN/DN to invoice-preview with /temp
     if (billType === 'credit_note' || billType === 'debit_note') {

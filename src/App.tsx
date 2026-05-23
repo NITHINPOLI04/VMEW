@@ -32,6 +32,7 @@ import PurchaseOrderPreview from './pages/PurchaseOrderPreview';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const { isAuthenticated, loading, isInitializing, checkAuth } = useAuthStore();
@@ -97,6 +98,7 @@ function App() {
 
   return (
     <ConfirmProvider>
+      <ErrorBoundary>
       <Router>
         <ScrollToTop />
         <Routes>
@@ -122,6 +124,7 @@ function App() {
           </Route>
         </Routes>
       </Router>
+      </ErrorBoundary>
 
       <NotificationHost />
     </ConfirmProvider>

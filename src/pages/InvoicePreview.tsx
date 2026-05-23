@@ -9,6 +9,7 @@ import { InvoiceFormData } from '../types';
 import { notify } from '../utils/notify';
 import LetterheadPreview from '../engines/previewComponents';
 import { DOCUMENT_TYPE_CONFIG, BillingDocumentType } from '../config/documentConfigs';
+import { usePreviewStore } from '../stores/previewStore';
 import {
   loadImages,
   PDF_MARGIN,
@@ -49,10 +50,10 @@ const InvoicePreview: React.FC = () => {
 
       try {
         if (id === 'temp') {
-          const tempData = localStorage.getItem('invoicePreviewData');
+          const tempData = usePreviewStore.getState().getPreviewData('invoice');
 
           if (tempData) {
-            setInvoice(JSON.parse(tempData));
+            setInvoice(tempData);
             setIsTemp(true);
           } else {
             notify.error('No preview data found');
@@ -299,7 +300,8 @@ const InvoicePreview: React.FC = () => {
     try {
       if (isTemp) {
         const result = await createInvoice(invoice);
-        localStorage.removeItem('invoicePreviewData');
+        localStorage.removeItem('invoicePreviewData'); // Clean up legacy data
+        usePreviewStore.getState().clearPreviewData('invoice');
         notify.success('Invoice saved');
         navigate(`/invoice-preview/${result._id}`);
       } else {

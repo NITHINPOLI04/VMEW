@@ -6,6 +6,7 @@ import { usePOStore } from '../stores/poStore';
 import { useContactStore } from '../stores/contactStore';
 import { convertToWords } from '../utils/numberToWords';
 import { getInitialPO } from '../config/documentConfigs';
+import { usePreviewStore } from '../stores/previewStore';
 import { FormSections, poSections } from '../engines/formEngine';
 import {
     ItemRowControls,
@@ -344,7 +345,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
         const finalData = { ...formData, date: selectedDate.toISOString() };
         finalData.totalInWords = convertToWords(finalData.grandTotal);
 
-        localStorage.setItem('poPreviewData', JSON.stringify(finalData));
+        usePreviewStore.getState().setPreviewData('po', finalData);
         navigate(`/po-preview/temp`);
     };
 

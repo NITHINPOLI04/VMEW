@@ -196,11 +196,7 @@ const Login: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex justify-start pt-1 pb-4">
-                <button type="button" className="text-[13px] font-medium text-blue-600 hover:text-blue-700 hover:underline">
-                  Having trouble in sign in?
-                </button>
-              </div>
+
 
               <button
                 type="submit"

@@ -9,6 +9,7 @@ import autoTable from 'jspdf-autotable';
 import { notify } from '../utils/notify';
 import LetterheadPreview from '../engines/previewComponents';
 import { DocumentItemsTable, buildDCColumns } from '../engines/tableEngine';
+import { usePreviewStore } from '../stores/previewStore';
 import {
     loadImages,
     PDF_MARGIN,
@@ -36,9 +37,9 @@ const DCPreview: React.FC = () => {
     useEffect(() => {
         const loadData = async () => {
             if (id === 'temp') {
-                const tempData = localStorage.getItem('dcPreviewData');
+                const tempData = usePreviewStore.getState().getPreviewData('dc');
                 if (tempData) {
-                    setDcData(JSON.parse(tempData));
+                    setDcData(tempData);
                     setIsTemp(true);
                 } else {
                     notify.error('No preview data found');

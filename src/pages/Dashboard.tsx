@@ -29,15 +29,7 @@ const Dashboard: React.FC = () => {
     const loadData = async () => {
       try {
         setError(null);
-        for (let attempt = 0; attempt < 3; attempt++) {
-          try {
-            await Promise.all([fetchInvoices(selectedFY), fetchInventory(selectedFY)]);
-            break;
-          } catch (err) {
-            if (attempt === 2) throw err;
-            await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
-          }
-        }
+        await Promise.all([fetchInvoices(selectedFY), fetchInventory(selectedFY)]);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError('Failed to load dashboard data. Please try again later.');
@@ -45,12 +37,6 @@ const Dashboard: React.FC = () => {
     };
     loadData();
   }, [fetchInvoices, fetchInventory, selectedFY]);
-
-  // Temporary required logs
-  useEffect(() => {
-    console.log("Selected FY:", selectedFY);
-    console.log("Dashboard Data Invoices length:", invoices.length);
-  }, [selectedFY, invoices.length]);
 
   // ─── Computed ──────────────────────────────────────────
   const inv = useMemo(() => (Array.isArray(invoices) ? invoices : []), [invoices]);
@@ -74,15 +60,8 @@ const Dashboard: React.FC = () => {
     return { now: d, todayStart: startOfDay(d) };
   }, []);
 
-  const overdueCount = useMemo(() => 
-    inv.filter(i => {
-      if (i.paymentStatus === 'Payment Complete') return false;
-      // Only count as overdue if dueDate explicitly exists and is in the past
-      if (!i.dueDate) return false;
-      const dueDate = parseISO(i.dueDate);
-      return !isNaN(dueDate.getTime()) && !isAfter(dueDate, todayStart);
-    }).length, 
-  [inv, todayStart]);
+  // No dueDate field exists — overdue tracking is not currently implemented
+  const overdueCount = 0;
 
   const trend = useMemo(() => {
     const cur = now.getMonth(), prevM = cur === 0 ? 11 : cur - 1, prevY = cur === 0 ? now.getFullYear() - 1 : now.getFullYear();

@@ -6,7 +6,7 @@
  * SINGLE SOURCE OF TRUTH for all financial calculations in VMEW Billing.
  *
  * Rules:
- *   1. All intermediate amounts are rounded to 2 decimal places (banker's rounding)
+ *   1. All intermediate amounts are rounded to 2 decimal places (standard rounding)
  *   2. Grand total uses threshold rounding (≥0.50 → ceil, <0.50 → floor)
  *   3. Discount-adjusted taxes use proportional scaling from the original tax amounts
  *   4. Supports both percentage-based and fixed-amount discounts
@@ -55,12 +55,12 @@ export interface DiscountConfig {
 // ─── Rounding ─────────────────────────────────────────────────────────────────
 
 /**
- * Rounds a number to 2 decimal places using banker's rounding (round half to even).
- * This minimizes cumulative rounding drift over many line items.
+ * Rounds a number to 2 decimal places using standard rounding (Math.round).
+ * Note: This is NOT banker's rounding — 0.5 always rounds up.
  */
 export const round2 = (value: number): number => {
   if (!Number.isFinite(value)) return 0;
-  // Use the built-in toFixed which implements banker's rounding in most engines
+  // Standard rounding via Math.round with epsilon to handle floating-point edge cases
   // For extra precision, we first handle the floating-point issue
   const factor = 100;
   const shifted = Math.round(value * factor + Number.EPSILON);

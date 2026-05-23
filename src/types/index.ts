@@ -24,7 +24,6 @@ export interface InvoiceFormData {
   buyerGst: string;
   buyerPan: string;
   buyerMsme: string;
-  dueDate?: string;
   vessel: string;
   poNumber: string;
   dcNumber: string;
@@ -36,6 +35,7 @@ export interface InvoiceFormData {
   discountType?: 'percentage' | 'fixed';
   discountFixedAmount?: number;
   taxType: string; // 'sgstcgst' | 'igst'
+  subTotal?: number;
   totalSgst?: number;
   totalCgst?: number;
   totalIgst?: number;

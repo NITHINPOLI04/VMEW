@@ -26,6 +26,7 @@ import {
 } from '../engines/pdfEngine';
 import { getVerifiedTotals } from '../utils/calcVerifier';
 import { DocumentItemsTable, buildInvoiceColumns } from '../engines/tableEngine';
+import { usePreviewStore } from '../stores/previewStore';
 
 const QuotationPreview: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -42,9 +43,9 @@ const QuotationPreview: React.FC = () => {
     useEffect(() => {
         const loadData = async () => {
             if (id === 'temp') {
-                const tempData = localStorage.getItem('quotationPreviewData');
+                const tempData = usePreviewStore.getState().getPreviewData('quotation');
                 if (tempData) {
-                    setQuotationData(JSON.parse(tempData));
+                    setQuotationData(tempData);
                     setIsTemp(true);
                 } else {
                     notify.error('No preview data found');

@@ -1,6 +1,34 @@
 import { create } from 'zustand';
 import { signup, login } from '../utils/api';
 
+/**
+ * Decodes a JWT payload without external libraries.
+ * Returns null if the token is malformed.
+ */
+function decodeJwtPayload(token: string): { exp?: number; userId?: string } | null {
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
+function isTokenExpired(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.exp) return true;
+  // Add 30-second buffer so we don't use a token that's about to expire
+  return Date.now() >= (payload.exp * 1000) - 30000;
+}
+
 interface AuthState {
   user: { userId: string; email: string } | null;
   token: string | null;
@@ -23,9 +51,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   error: null,
 
   checkAuth: () => {
-    const token = sessionStorage.getItem('token');
-    const userJson = sessionStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    const userJson = localStorage.getItem('user');
     if (token && userJson) {
+      // C4: Check if token has expired
+      if (isTokenExpired(token)) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        set({ isInitializing: false });
+        return;
+      }
       try {
         const user = JSON.parse(userJson);
         set({ 
@@ -34,9 +69,9 @@ export const useAuthStore = create<AuthState>((set) => ({
           isAuthenticated: true, 
           isInitializing: false 
         });
-      } catch (error) {
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('user');
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         set({ isInitializing: false });
       }
     } else {
@@ -49,8 +84,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ loading: true, error: null });
       const { token, userId, email: userEmail } = await signup(email, password);
       const user = { userId, email: userEmail };
-      sessionStorage.setItem('token', token);
-      sessionStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       set({ 
         user, 
         token,
@@ -65,36 +100,30 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   
   login: async (email, password) => {
-    for (let i = 0; i < 3; i++) {
-      try {
-        set({ loading: true, error: null });
-        const { token, userId, email: userEmail } = await login(email, password);
-        const user = { userId, email: userEmail };
-        sessionStorage.setItem('token', token);
-        sessionStorage.setItem('user', JSON.stringify(user));
-        set({ 
-          user, 
-          token,
-          isAuthenticated: true, 
-          loading: false 
-        });
-        return; // Exit on success
-      } catch (error: any) {
-        if (i === 2) {
-          const errorMessage = error.message || 'Failed to log in after retries';
-          set({ error: errorMessage, loading: false });
-          throw new Error(errorMessage);
-        }
-        await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1))); // 2, 4, 6 seconds
-      }
+    try {
+      set({ loading: true, error: null });
+      const { token, userId, email: userEmail } = await login(email, password);
+      const user = { userId, email: userEmail };
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      set({ 
+        user, 
+        token,
+        isAuthenticated: true, 
+        loading: false 
+      });
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to log in';
+      set({ error: errorMessage, loading: false });
+      throw new Error(errorMessage);
     }
   },
   
   logout: async () => {
     try {
       set({ loading: true, error: null });
-      sessionStorage.removeItem('token');
-      sessionStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       set({ 
         user: null, 
         token: null,
