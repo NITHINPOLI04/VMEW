@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useAuthStore } from './authStore';
+import { useFinancialYearStore } from './financialYearStore';
 import { DeliveryChallanFormData, DeliveryChallan } from '../types/index';
 import { getDCs, getDCById, createDCApi, updateDCApi, deleteDCApi } from '../utils/api';
 
@@ -27,10 +28,18 @@ export const useDCStore = create<DCState>((set) => ({
             if (!token) throw new Error('Not authenticated');
 
             const deliveryChallans = await getDCs(year, token);
-            set({ deliveryChallans, loading: false });
+            
+            const currentFY = useFinancialYearStore.getState().selectedFY;
+            if (year === currentFY) {
+                set({ deliveryChallans, loading: false });
+            }
             return deliveryChallans;
         } catch (error: any) {
-            set({ error: error.message, loading: false });
+            const errorMessage = error.message || 'Failed to fetch delivery challans';
+            const currentFY = useFinancialYearStore.getState().selectedFY;
+            if (year === currentFY) {
+                set({ error: errorMessage, loading: false });
+            }
             throw error;
         }
     },

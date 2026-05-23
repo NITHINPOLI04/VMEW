@@ -8,7 +8,7 @@ import CustomSelect from '../components/CustomSelect';
 import { InventoryItem } from '../types';
 import { notify } from '../utils/notify';
 import { useConfirm } from '../components/ConfirmDialog';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import TableSkeleton from '../components/TableSkeleton';
 import { MetricSkeleton } from '../components/Skeleton';
 import { getProductBuyers } from '../utils/api';
@@ -272,7 +272,78 @@ const Inventory: React.FC = () => {
       Total: item.rate * item.quantity,
     }));
 
+    if (filteredData.length === 0) {
+      notify.info('No data to export');
+      return;
+    }
+
     const worksheet = XLSX.utils.json_to_sheet(filteredData);
+
+    // Auto-adjust column widths
+    const colWidths: Record<string, number> = {};
+    const headers = Object.keys(filteredData[0] || {});
+    headers.forEach((header, i) => {
+      colWidths[i] = Math.max(12, header.length + 2);
+    });
+
+    filteredData.forEach((row) => {
+      headers.forEach((header, i) => {
+        const value = row[header as keyof typeof row];
+        if (value !== null && value !== undefined && value !== '') {
+          const valueLength = value.toString().length;
+          if (valueLength + 2 > colWidths[i]) {
+            colWidths[i] = Math.min(valueLength + 2, 50);
+          }
+        }
+      });
+    });
+
+    worksheet['!cols'] = Object.keys(colWidths).map((i) => ({ wch: colWidths[i as any] }));
+
+    // Apply Styles and Number Formats
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!worksheet[addr]) continue;
+
+        const isHeader = R === 0;
+        const cell = worksheet[addr];
+        const cellValue = cell.v;
+        const isNumeric = typeof cellValue === 'number' && !isNaN(cellValue);
+        const headerName = headers[C];
+
+        // Format currency for Rate and Total columns
+        if (!isHeader && isNumeric) {
+          if (headerName === 'Rate (₹)' || headerName === 'Total') {
+            cell.z = '"₹"#,##0.00';
+          } else if (headerName === 'Quantity') {
+            cell.z = '#,##0';
+          }
+        }
+
+        cell.s = {
+          font: {
+            bold: isHeader,
+            sz: isHeader ? 12 : 11,
+            color: isHeader ? { rgb: "FFFFFF" } : { rgb: "334155" }, // slate-700
+          },
+          fill: isHeader ? { fgColor: { rgb: "0F172A" } } : undefined, // slate-900 header
+          alignment: {
+            vertical: 'center',
+            horizontal: isHeader ? 'center' : (isNumeric ? 'right' : 'left'),
+            wrapText: true,
+          },
+          border: {
+            top: { style: 'thin', color: { rgb: "E2E8F0" } },
+            bottom: { style: 'thin', color: { rgb: "E2E8F0" } },
+            left: { style: 'thin', color: { rgb: "E2E8F0" } },
+            right: { style: 'thin', color: { rgb: "E2E8F0" } }
+          }
+        };
+      }
+    }
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, type);
     XLSX.writeFile(workbook, `${type}_Inventory_${selectedYear}.xlsx`);

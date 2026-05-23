@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { getInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem, getProductSuggestions } from '../utils/api';
 import { useAuthStore } from './authStore';
+import { useFinancialYearStore } from './financialYearStore';
 import { InventoryItem, ProductSuggestion } from '../types/index';
 
 interface InventoryState {
@@ -30,11 +31,17 @@ export const useInventoryStore = create<InventoryState>((set) => ({
       
       const inventory = await getInventory(financialYear, token);
       
-      set({ inventory, loading: false });
+      const currentFY = useFinancialYearStore.getState().selectedFY;
+      if (financialYear === currentFY) {
+        set({ inventory, loading: false });
+      }
       return inventory;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to fetch inventory';
-      set({ error: errorMessage, loading: false });
+      const currentFY = useFinancialYearStore.getState().selectedFY;
+      if (financialYear === currentFY) {
+        set({ error: errorMessage, loading: false });
+      }
       throw new Error(errorMessage);
     }
   },

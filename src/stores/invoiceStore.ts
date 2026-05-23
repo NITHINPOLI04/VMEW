@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { getInvoices, getCreditNotes, getDebitNotes, getInvoiceById, createInvoice, updateInvoice, deleteInvoice, updatePaymentStatus } from '../utils/api';
 import { useAuthStore } from './authStore';
+import { useFinancialYearStore } from './financialYearStore';
 import { InvoiceFormData, Invoice } from '../types/index';
 
 interface InvoiceState {
@@ -37,11 +38,18 @@ export const useInvoiceStore = create<InvoiceState>((set, get) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       const invoices = await getInvoices(year, token, 'invoice');
-      set({ invoices, loading: false });
+      
+      const currentFY = useFinancialYearStore.getState().selectedFY;
+      if (year === currentFY) {
+        set({ invoices, loading: false });
+      }
       return invoices;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to fetch invoices';
-      set({ error: errorMessage, loading: false });
+      const currentFY = useFinancialYearStore.getState().selectedFY;
+      if (year === currentFY) {
+        set({ error: errorMessage, loading: false });
+      }
       throw new Error(errorMessage);
     }
   },
@@ -52,11 +60,18 @@ export const useInvoiceStore = create<InvoiceState>((set, get) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       const creditNotes = await getCreditNotes(year, token);
-      set({ creditNotes, loading: false });
+      
+      const currentFY = useFinancialYearStore.getState().selectedFY;
+      if (year === currentFY) {
+        set({ creditNotes, loading: false });
+      }
       return creditNotes;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to fetch credit notes';
-      set({ error: errorMessage, loading: false });
+      const currentFY = useFinancialYearStore.getState().selectedFY;
+      if (year === currentFY) {
+        set({ error: errorMessage, loading: false });
+      }
       throw new Error(errorMessage);
     }
   },
@@ -67,11 +82,18 @@ export const useInvoiceStore = create<InvoiceState>((set, get) => ({
       const token = useAuthStore.getState().token;
       if (!token) throw new Error('Not authenticated');
       const debitNotes = await getDebitNotes(year, token);
-      set({ debitNotes, loading: false });
+      
+      const currentFY = useFinancialYearStore.getState().selectedFY;
+      if (year === currentFY) {
+        set({ debitNotes, loading: false });
+      }
       return debitNotes;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to fetch debit notes';
-      set({ error: errorMessage, loading: false });
+      const currentFY = useFinancialYearStore.getState().selectedFY;
+      if (year === currentFY) {
+        set({ error: errorMessage, loading: false });
+      }
       throw new Error(errorMessage);
     }
   },

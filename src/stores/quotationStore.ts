@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useAuthStore } from './authStore';
+import { useFinancialYearStore } from './financialYearStore';
 import { QuotationFormData, Quotation } from '../types/index';
 import { getQuotations, getQuotationById, createQuotationApi, updateQuotationApi, deleteQuotationApi } from '../utils/api';
 
@@ -27,10 +28,18 @@ export const useQuotationStore = create<QuotationState>((set) => ({
             if (!token) throw new Error('Not authenticated');
 
             const quotations = await getQuotations(year, token);
-            set({ quotations, loading: false });
+            
+            const currentFY = useFinancialYearStore.getState().selectedFY;
+            if (year === currentFY) {
+                set({ quotations, loading: false });
+            }
             return quotations;
         } catch (error: any) {
-            set({ error: error.message, loading: false });
+            const errorMessage = error.message || 'Failed to fetch quotations';
+            const currentFY = useFinancialYearStore.getState().selectedFY;
+            if (year === currentFY) {
+                set({ error: errorMessage, loading: false });
+            }
             throw error;
         }
     },

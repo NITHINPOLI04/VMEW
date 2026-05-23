@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useAuthStore } from './authStore';
+import { useFinancialYearStore } from './financialYearStore';
 import { PurchaseOrderFormData, PurchaseOrder } from '../types/index';
 import { getPurchaseOrders, getPurchaseOrderById, createPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder } from '../utils/api';
 
@@ -27,10 +28,18 @@ export const usePOStore = create<POState>((set) => ({
             if (!token) throw new Error('Not authenticated');
 
             const purchaseOrders = await getPurchaseOrders(year, token);
-            set({ purchaseOrders, loading: false });
+            
+            const currentFY = useFinancialYearStore.getState().selectedFY;
+            if (year === currentFY) {
+                set({ purchaseOrders, loading: false });
+            }
             return purchaseOrders;
         } catch (error: any) {
-            set({ error: error.message, loading: false });
+            const errorMessage = error.message || 'Failed to fetch purchase orders';
+            const currentFY = useFinancialYearStore.getState().selectedFY;
+            if (year === currentFY) {
+                set({ error: errorMessage, loading: false });
+            }
             throw error;
         }
     },
