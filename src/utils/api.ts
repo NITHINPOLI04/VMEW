@@ -74,6 +74,11 @@ export const getInvoiceById = (id: string, token: string) =>
     Authorization: `Bearer ${token}`,
   });
 
+export const getInvoiceNotes = (invoiceId: string, token: string) =>
+  apiRequest<any[]>(`/api/invoices/${invoiceId}/notes`, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
 export const createInvoice = (invoiceData: InvoiceFormData, token: string) =>
   apiRequest<Invoice>('/api/invoices', 'POST', invoiceData, {
     Authorization: `Bearer ${token}`,

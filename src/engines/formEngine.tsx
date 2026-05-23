@@ -332,6 +332,14 @@ export const FormSection: React.FC<FormSectionProps> = ({
         <h2 className="text-lg font-bold text-slate-800 tracking-tight">{section.title}</h2>
       </div>
       <div className="p-6">
+        {section.title === 'Document Details' && formData.linkedInvoiceNumber && (
+          <div className="mb-4 flex items-center gap-2.5 px-4 py-2.5 bg-blue-50/80 text-blue-700 border border-blue-100 rounded-xl text-sm font-semibold animate-in fade-in duration-300">
+            <span>Linked to:</span>
+            <span className="bg-blue-100/80 px-2.5 py-0.5 rounded text-blue-800 font-bold">
+              {formData.linkedInvoiceNumber}
+            </span>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
           {section.fields.map(field => (
             <div key={field.name} className={field.colSpan === 2 ? 'md:col-span-2' : ''}>

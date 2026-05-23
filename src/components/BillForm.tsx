@@ -237,11 +237,39 @@ const BillForm: React.FC<BillFormProps> = ({
     const numberLabel = isInvoiceLike
         ? DOCUMENT_TYPE_CONFIG[billType as BillingDocumentType].numberLabel
         : 'Invoice Number';
+    
     const sections = isInvoiceLike
-        ? invoiceSections(numberLabel)
+        ? JSON.parse(JSON.stringify(invoiceSections(numberLabel)))
         : billType === 'quotation'
-            ? quotationSections()
-            : dcSections();
+            ? JSON.parse(JSON.stringify(quotationSections()))
+            : JSON.parse(JSON.stringify(dcSections()));
+
+    if (billType === 'credit_note' || billType === 'debit_note') {
+        const docDetails = sections.find((s: any) => s.title === 'Document Details');
+        if (docDetails) {
+            const hasReason = docDetails.fields.some((f: any) => f.name === 'reason');
+            if (!hasReason) {
+                docDetails.fields = [
+                    docDetails.fields[0], // invoiceNumber
+                    {
+                        name: 'reason',
+                        label: 'Reason',
+                        type: 'select' as const,
+                        required: true,
+                        options: [
+                            { value: '', label: 'Select a reason...' },
+                            { value: 'Sales return', label: 'Sales return' },
+                            { value: 'Price correction', label: 'Price correction' },
+                            { value: 'Discount adjustment', label: 'Discount adjustment' },
+                            { value: 'Damaged goods', label: 'Damaged goods' },
+                            { value: 'Other', label: 'Other' }
+                        ]
+                    },
+                    docDetails.fields[1] // date
+                ];
+            }
+        }
+    }
 
     const hasTax = billType !== 'dc';
 

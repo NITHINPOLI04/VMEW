@@ -145,11 +145,12 @@ const Inventory: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsModalOpen(false);
+        setBuyersModalOpen(false);
         setSortOpen(false);
       }
     };
 
-    if (isModalOpen) {
+    if (isModalOpen || buyersModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -160,7 +161,7 @@ const Inventory: React.FC = () => {
       document.body.style.overflow = 'unset';
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isModalOpen]);
+  }, [isModalOpen, buyersModalOpen]);
 
   const loadInventory = async () => {
     setLoading(true);

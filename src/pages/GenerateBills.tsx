@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { FileText, Truck, FileSpreadsheet, ChevronLeft, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useDCStore } from '../stores/dcStore';
@@ -25,6 +25,7 @@ const DOC_TYPES: { value: BillType; label: string; icon: React.ElementType; acti
 
 const GenerateBills: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('edit');
   const typeParam = searchParams.get('type') || 'invoice';
@@ -33,6 +34,7 @@ const GenerateBills: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isEditing, setIsEditing] = useState(!!editId);
   const [loading, setLoading] = useState(false);
+  const hasPrefilled = useRef(false);
 
   const { createInvoice, fetchInvoice, updateInvoice } = useInvoiceStore();
   const { createDC, fetchDC, updateDC } = useDCStore();
@@ -41,6 +43,8 @@ const GenerateBills: React.FC = () => {
   const { customers, fetchCustomers, addCustomer } = useContactStore();
 
   const [formData, setFormData] = useState<any>({});
+
+  const stateData = location.state as any;
 
   // Returns the initial form data for a given bill type
   const getInitialData = (type: BillType) => {
@@ -55,11 +59,48 @@ const GenerateBills: React.FC = () => {
 
   useEffect(() => {
     if (!isEditing && !editId) {
-      setFormData(getInitialData(billType));
-      setSelectedDate(new Date());
+      if (stateData && (stateData.documentType === 'credit_note' || stateData.documentType === 'debit_note') && !hasPrefilled.current) {
+        hasPrefilled.current = true;
+        const initial = getInitialData(stateData.documentType) as any;
+        setFormData({
+          ...initial,
+          invoiceNumber: stateData.invoiceNumber || initial.invoiceNumber || '',
+          buyerName: stateData.buyerName || '',
+          buyerAddress: stateData.buyerAddress || '',
+          buyerGst: stateData.buyerGst || '',
+          buyerPan: stateData.buyerPan || '',
+          buyerMsme: stateData.buyerMsme || '',
+          vessel: stateData.vessel || '',
+          poNumber: stateData.poNumber || '',
+          dcNumber: stateData.dcNumber || '',
+          ewayBillNo: stateData.ewayBillNo || '',
+          items: stateData.items && stateData.items.length > 0 ? stateData.items : initial.items,
+          taxType: stateData.taxType || initial.taxType,
+          discountEnabled: stateData.discountEnabled ?? initial.discountEnabled,
+          discountPercentage: stateData.discountPercentage ?? initial.discountPercentage,
+          discountAmount: stateData.discountAmount ?? initial.discountAmount,
+          discountType: stateData.discountType || initial.discountType,
+          discountFixedAmount: stateData.discountFixedAmount ?? initial.discountFixedAmount,
+          subTotal: stateData.subTotal ?? initial.subTotal,
+          totalSgst: stateData.totalSgst ?? initial.totalSgst,
+          totalCgst: stateData.totalCgst ?? initial.totalCgst,
+          totalIgst: stateData.totalIgst ?? initial.totalIgst,
+          grandTotal: stateData.grandTotal ?? initial.grandTotal,
+          linkedInvoiceId: stateData.linkedInvoiceId || null,
+          linkedInvoiceNumber: stateData.linkedInvoiceNumber || '',
+          reason: stateData.reason || '',
+        });
+        if (stateData.date) {
+          setSelectedDate(new Date(stateData.date));
+        }
+        setBillType(stateData.documentType);
+      } else if (!hasPrefilled.current) {
+        setFormData(getInitialData(billType));
+        setSelectedDate(new Date());
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [billType, defaultInfo]);
+  }, [billType, defaultInfo, stateData, isEditing, editId]);
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
@@ -82,6 +123,9 @@ const GenerateBills: React.FC = () => {
           setFormData(data);
           setSelectedDate(new Date(data.date));
           setIsEditing(true);
+          if ('documentType' in data && data.documentType) {
+            setBillType(data.documentType);
+          }
           // Page state ("Edit Document" title + populated form) is confirmation enough
         } catch (error) {
           notify.error('Document not found');
@@ -250,29 +294,6 @@ const GenerateBills: React.FC = () => {
               {label}
             </button>
           ))}
-
-          {/* Visual divider before adjustment notes */}
-          <div className="flex items-center px-2">
-            <div className="w-px h-5 bg-slate-200" />
-          </div>
-
-          {/* Adjustment note types */}
-          {DOC_TYPES.filter(d => d.group === 'adjustment').map(({ value, label, icon: Icon, activeColor }) => (
-            <button
-              key={value}
-              onClick={() => setBillType(value)}
-              className={`flex items-center gap-2 py-3 px-5 text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${
-                billType === value
-                  ? activeColor
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-              }`}
-              aria-label={`Select ${label} type`}
-              aria-pressed={billType === value}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
         </div>
       )}
 
@@ -285,8 +306,8 @@ const GenerateBills: React.FC = () => {
         }`}>
           {billType === 'credit_note' ? <ArrowDownLeft className="w-4 h-4 flex-shrink-0" /> : <ArrowUpRight className="w-4 h-4 flex-shrink-0" />}
           {billType === 'credit_note'
-            ? 'Credit Note — issued to reduce the buyer\'s payable amount. Inventory is not affected.'
-            : 'Debit Note — issued to increase the buyer\'s payable amount. Inventory is not affected.'}
+            ? "Credit Note — issued to reduce the buyer's payable amount."
+            : "Debit Note — issued to increase the buyer's payable amount."}
         </div>
       )}
 

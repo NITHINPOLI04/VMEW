@@ -471,6 +471,13 @@
     background: linear-gradient(135deg, #ccfbf1, #99f6e4);
     color: #0f766e;
   }
+
+  /* Row highlight class */
+  .row-highlight {
+    border-left: 3px solid #1a56db !important;
+    background-color: #E6F1FB !important;
+    transition: all 1.5s ease-out;
+  }
 }
 
 @layer utilities {

@@ -71,6 +71,9 @@ export const getInitialInvoice = (defaultInfo: any = null) => ({
     grandTotal: 0,
     totalInWords: '',
     paymentStatus: 'Unpaid',
+    discountEnabled: false,
+    discountPercentage: 0,
+    discountAmount: 0,
     discountType: 'percentage' as const,
     discountFixedAmount: 0,
     invoiceType: 'Product' as 'Product' | 'Service',
@@ -140,6 +143,9 @@ export const getInitialQuotation = () => ({
     validity: '',
     grandTotal: 0,
     totalInWords: '',
+    discountEnabled: false,
+    discountPercentage: 0,
+    discountAmount: 0,
     discountType: 'percentage' as const,
     discountFixedAmount: 0
 });
@@ -171,6 +177,9 @@ export const getInitialPO = () => ({
     grandTotal: 0,
     totalInWords: '',
     notes: 'With reference to the above subject we have pleasure in placing our confirmatory order to supply of the below in accordance with the terms given in the quotation.',
+    discountEnabled: false,
+    discountPercentage: 0,
+    discountAmount: 0,
     discountType: 'percentage' as const,
     discountFixedAmount: 0
 });

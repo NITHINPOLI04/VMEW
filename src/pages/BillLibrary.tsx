@@ -4,8 +4,11 @@ import {
   FileText, Search, ChevronDown, Trash2, FileCheck,
   Clock, AlertTriangle, Download, Truck, FileSpreadsheet, PlusCircle,
   ReceiptText, ArrowUpDown, X, Calendar, CheckCircle2, XCircle, SlidersHorizontal, Edit,
-  ArrowDownLeft, ArrowUpRight
+  ArrowDownLeft, ArrowUpRight, MoreVertical
 } from 'lucide-react';
+import RaiseNoteModal from '../components/RaiseNoteModal';
+import { useAuthStore } from '../stores/authStore';
+import { getInvoiceNotes } from '../utils/api';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useDCStore } from '../stores/dcStore';
 import { useQuotationStore } from '../stores/quotationStore';
@@ -68,15 +71,16 @@ interface MetricCardProps {
   iconBg: string;
   iconColor: string;
   sub?: string;
+  valueClassName?: string;
 }
 
-const MetricCard: React.FC<MetricCardProps> = ({ label, value, icon: Icon, iconBg, iconColor, sub }) => (
+const MetricCard: React.FC<MetricCardProps> = ({ label, value, icon: Icon, iconBg, iconColor, sub, valueClassName }) => (
   <div className="card p-4 flex items-start gap-3 min-w-0">
     <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}>
       <Icon size={16} className={iconColor} />
     </div>
     <div className="min-w-0">
-      <p className="text-lg font-bold text-slate-900 leading-tight truncate">{value}</p>
+      <p className={`text-lg font-bold leading-tight truncate ${valueClassName || 'text-slate-900'}`}>{value}</p>
       <p className="text-xs font-medium text-slate-500 mt-0.5">{label}</p>
       {sub && <p className="text-[11px] text-slate-400 mt-0.5">{sub}</p>}
     </div>
@@ -119,6 +123,14 @@ const BillLibrary: React.FC = () => {
   const [creditNotes, setCreditNotes] = useState<Invoice[]>([]);
   const [debitNotes, setDebitNotes] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Credit/Debit note redesign states
+  const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
+  const [raiseNoteModalOpen, setRaiseNoteModalOpen] = useState(false);
+  const [selectedParentInvoice, setSelectedParentInvoice] = useState<any | null>(null);
+  const [selectedNoteType, setSelectedNoteType] = useState<'credit_note' | 'debit_note'>('credit_note');
+  const [invoiceNotes, setInvoiceNotes] = useState<Record<string, any[]>>({});
+  const [highlightedInvoiceId, setHighlightedInvoiceId] = useState<string | null>(null);
 
   // ── Primary filters (FY/Month) ──────────────────────────────────────────────
   const selectedYear = useFinancialYearStore(state => state.selectedFY);
@@ -193,6 +205,65 @@ const BillLibrary: React.FC = () => {
     if (selectedYear) { loadData(); setSelectedMonth(''); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, activeTab]);
+
+  // Fetch linked notes for visible invoices on the Tax Invoices tab
+  useEffect(() => {
+    const loadNotesForInvoices = async () => {
+      if (activeTab !== 'invoice' || invoices.length === 0) return;
+      const token = useAuthStore.getState().token;
+      if (!token) return;
+      
+      try {
+        const notesPromises = invoices.map(async (inv) => {
+          try {
+            const notes = await getInvoiceNotes(inv._id, token);
+            return { id: inv._id, notes };
+          } catch (err) {
+            console.error(`Failed to fetch notes for invoice ${inv._id}:`, err);
+            return { id: inv._id, notes: [] };
+          }
+        });
+        
+        const results = await Promise.all(notesPromises);
+        const notesMap: Record<string, any[]> = {};
+        results.forEach((res) => {
+          notesMap[res.id] = res.notes;
+        });
+        setInvoiceNotes(notesMap);
+      } catch (err) {
+        console.error('Error fetching linked notes:', err);
+      }
+    };
+    
+    loadNotesForInvoices();
+  }, [invoices, activeTab]);
+
+  // Scroll to and briefly highlight targeted row
+  useEffect(() => {
+    if (highlightedInvoiceId && !loading) {
+      const element = document.getElementById(`row-${highlightedInvoiceId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const timer = setTimeout(() => {
+          setHighlightedInvoiceId(null);
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [highlightedInvoiceId, loading, invoices, creditNotes, debitNotes]);
+
+  const handleNoteChipClick = (note: any) => {
+    const targetTab = note.documentType;
+    setActiveTab(targetTab);
+    setHighlightedInvoiceId(note._id);
+  };
+
+  const handleRefInvoiceClick = (linkedInvoiceId: string) => {
+    setActiveTab('invoice');
+    if (linkedInvoiceId) {
+      setHighlightedInvoiceId(linkedInvoiceId);
+    }
+  };
 
   // ── Click outside handlers ─────────────────────────────────────────────────
   useEffect(() => {
@@ -390,23 +461,46 @@ const BillLibrary: React.FC = () => {
     { label: 'This Month', value: quotations.filter(q => new Date(q.date).getMonth() === new Date().getMonth()).length, icon: Calendar, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', sub: new Date().toLocaleString('default', { month: 'long' }) },
   ];
 
-  const creditNoteMetrics = [
-    { label: 'Total Credit Notes', value: creditNotes.length, icon: ArrowDownLeft, iconBg: 'bg-rose-50', iconColor: 'text-rose-600', sub: `FY ${selectedYear}` },
-    { label: 'Total Value', value: fmt(creditNotes.reduce((s, i) => s + (i.grandTotal || 0), 0)), icon: ReceiptText, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', sub: 'Grand total' },
-    { label: 'This Month', value: creditNotes.filter(i => new Date(i.date).getMonth() === new Date().getMonth()).length, icon: Calendar, iconBg: 'bg-slate-50', iconColor: 'text-slate-600', sub: new Date().toLocaleString('default', { month: 'long' }) },
-  ];
+  const totalCNValue = creditNotes.reduce((s, i) => s + (i.grandTotal || 0), 0);
+  const totalDNValue = debitNotes.reduce((s, i) => s + (i.grandTotal || 0), 0);
+  
+  let netAdjFormatted = '₹0';
+  let netAdjColor = 'text-slate-900';
+  let netAdjIconBg = 'bg-slate-50';
+  let netAdjIconColor = 'text-slate-600';
+  
+  if (totalCNValue > totalDNValue) {
+    const diff = totalCNValue - totalDNValue;
+    netAdjFormatted = `-₹${diff.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    netAdjColor = 'text-rose-600';
+    netAdjIconBg = 'bg-rose-50';
+    netAdjIconColor = 'text-rose-600';
+  } else if (totalDNValue > totalCNValue) {
+    const diff = totalDNValue - totalCNValue;
+    netAdjFormatted = `₹${diff.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    netAdjColor = 'text-emerald-600';
+    netAdjIconBg = 'bg-emerald-50';
+    netAdjIconColor = 'text-emerald-600';
+  }
 
-  const debitNoteMetrics = [
-    { label: 'Total Debit Notes', value: debitNotes.length, icon: ArrowUpRight, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', sub: `FY ${selectedYear}` },
-    { label: 'Total Value', value: fmt(debitNotes.reduce((s, i) => s + (i.grandTotal || 0), 0)), icon: ReceiptText, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', sub: 'Grand total' },
-    { label: 'This Month', value: debitNotes.filter(i => new Date(i.date).getMonth() === new Date().getMonth()).length, icon: Calendar, iconBg: 'bg-slate-50', iconColor: 'text-slate-600', sub: new Date().toLocaleString('default', { month: 'long' }) },
+  const adjustmentMetrics = [
+    { label: 'Total Credit Notes', value: fmt(totalCNValue), icon: ArrowDownLeft, iconBg: 'bg-rose-50', iconColor: 'text-rose-600', sub: `${creditNotes.length} notes · FY ${selectedYear}` },
+    { label: 'Total Debit Notes', value: fmt(totalDNValue), icon: ArrowUpRight, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', sub: `${debitNotes.length} notes · FY ${selectedYear}` },
+    {
+      label: 'Net Adjustment',
+      value: netAdjFormatted,
+      icon: ReceiptText,
+      iconBg: netAdjIconBg,
+      iconColor: netAdjIconColor,
+      sub: 'credit - debit',
+      valueClassName: netAdjColor
+    }
   ];
 
   const currentMetrics = activeTab === 'invoice' ? invoiceMetrics
     : activeTab === 'dc' ? dcMetrics
     : activeTab === 'quotation' ? quotationMetrics
-    : activeTab === 'credit_note' ? creditNoteMetrics
-    : debitNoteMetrics;
+    : adjustmentMetrics;
 
   // ── Export ──────────────────────────────────────────────────────────────────
   const handleStandardExport = () => {
@@ -790,6 +884,7 @@ const BillLibrary: React.FC = () => {
                     <th className="pl-6">Number</th>
                     <th>Date</th>
                     <th>Billed To</th>
+                    {(activeTab === 'credit_note' || activeTab === 'debit_note') && <th>Ref. Invoice</th>}
                     {activeTab !== 'dc' && <th>Amount</th>}
                     {activeTab === 'invoice' && <th>Payment Status</th>}
                     <th className="text-center">Actions</th>
@@ -802,11 +897,42 @@ const BillLibrary: React.FC = () => {
                       : activeTab === 'dc' ? item.dcNumber : item.quotationNumber;
                     const linkType = linkTypeMap[activeTab];
                     return (
-                      <tr key={item._id} onClick={() => navigate(`/${linkType}-preview/${item._id}`)} className="cursor-pointer hover:bg-slate-50 transition-colors">
+                      <tr 
+                        key={item._id} 
+                        id={`row-${item._id}`}
+                        onClick={() => navigate(`/${linkType}-preview/${item._id}`)} 
+                        className={`cursor-pointer hover:bg-slate-50 transition-colors ${
+                          highlightedInvoiceId === item._id ? 'row-highlight' : ''
+                        }`}
+                      >
                         <td data-label="Number" className="md:pl-6">
-                          <Link to={`/${linkType}-preview/${item._id}`} onClick={(e) => e.stopPropagation()} className="font-semibold text-blue-600 hover:text-blue-800 hover:underline">
-                            {num}
-                          </Link>
+                          <div className="flex flex-col items-start gap-1">
+                            <Link to={`/${linkType}-preview/${item._id}`} onClick={(e) => e.stopPropagation()} className="font-semibold text-blue-600 hover:text-blue-800 hover:underline">
+                              {num}
+                            </Link>
+                            
+                            {activeTab === 'invoice' && invoiceNotes[item._id] && invoiceNotes[item._id].map((note) => {
+                              const isCredit = note.documentType === 'credit_note';
+                              const formattedAmt = (note.grandTotal || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                              return (
+                                <button
+                                  key={note._id}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleNoteChipClick(note);
+                                  }}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer whitespace-nowrap ${
+                                    isCredit
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/85'
+                                      : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100/85'
+                                  }`}
+                                >
+                                  {isCredit ? '↩' : '↗'} {note.invoiceNumber} · ₹{formattedAmt}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </td>
                         <td data-label="Date" className="text-slate-500 whitespace-nowrap">
                           {new Date(item.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -816,9 +942,45 @@ const BillLibrary: React.FC = () => {
                             {item.buyerName}
                           </span>
                         </td>
+                        {(activeTab === 'credit_note' || activeTab === 'debit_note') && (
+                          <td data-label="Ref. Invoice">
+                            {item.linkedInvoiceNumber ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRefInvoiceClick(item.linkedInvoiceId);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer"
+                              >
+                                🔗 {item.linkedInvoiceNumber}
+                              </button>
+                            ) : (
+                              <span className="text-slate-400 text-xs italic">—</span>
+                            )}
+                          </td>
+                        )}
                         {activeTab !== 'dc' && (
                           <td data-label="Amount" className="font-medium text-slate-700 whitespace-nowrap">
-                            ₹{(item.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            <div>₹{(item.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                            {activeTab === 'invoice' && invoiceNotes[item._id] && invoiceNotes[item._id].length > 0 && (() => {
+                              const notes = invoiceNotes[item._id];
+                              const cnTotal = notes.filter(n => n.documentType === 'credit_note').reduce((s, n) => s + (n.grandTotal || 0), 0);
+                              const dnTotal = notes.filter(n => n.documentType === 'debit_note').reduce((s, n) => s + (n.grandTotal || 0), 0);
+                              const netAmount = item.grandTotal - cnTotal + dnTotal;
+                              const isReduced = netAmount < item.grandTotal;
+                              const isIncreased = netAmount > item.grandTotal;
+                              
+                              if (!isReduced && !isIncreased) return null;
+                              
+                              return (
+                                <div className={`text-xs font-semibold mt-0.5 ${
+                                  isReduced ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'
+                                }`}>
+                                  Net ₹{netAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </div>
+                              );
+                            })()}
                           </td>
                         )}
                         {activeTab === 'invoice' && (
@@ -877,21 +1039,108 @@ const BillLibrary: React.FC = () => {
                           </td>
                         )}
                         <td data-label="Actions">
-                          <div className="flex items-center justify-center gap-1">
-                            <Link to={`/generate-bills?type=${activeTab}&edit=${item._id}`} onClick={(e) => e.stopPropagation()} className="text-slate-400 hover:text-emerald-600 p-1.5 rounded-md hover:bg-emerald-50 transition-colors" title="Edit">
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                             <button
-                               onClick={(e) => { e.stopPropagation(); handleDownload(item); }}
-                               className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-md hover:bg-indigo-50 transition-colors"
-                               title="Download"
-                             >
-                               <Download className="h-4 w-4" />
-                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(item._id, activeTab); }} className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors" title="Delete">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
+                          {activeTab === 'invoice' ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <Link
+                                to={`/generate-bills?type=invoice&edit=${item._id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-slate-400 hover:text-emerald-600 p-1.5 rounded-md hover:bg-emerald-50 transition-colors"
+                                title="Edit"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownload(item);
+                                }}
+                                className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-md hover:bg-indigo-50 transition-colors"
+                                title="Download"
+                              >
+                                <Download className="h-4 w-4" />
+                              </button>
+                              
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActionMenuOpenId(actionMenuOpenId === item._id ? null : item._id);
+                                  }}
+                                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-md hover:bg-slate-100 transition-colors"
+                                  title="Actions"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </button>
+                                
+                                {actionMenuOpenId === item._id && (
+                                  <>
+                                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setActionMenuOpenId(null); }} />
+                                    <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100" onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setActionMenuOpenId(null);
+                                          setSelectedParentInvoice(item);
+                                          setSelectedNoteType('credit_note');
+                                          setRaiseNoteModalOpen(true);
+                                        }}
+                                        className="w-full text-left px-4 py-2.5 flex items-center gap-2.5 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold text-slate-700 transition-colors"
+                                      >
+                                        <ArrowDownLeft size={14} className="text-rose-500" />
+                                        Raise credit note
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setActionMenuOpenId(null);
+                                          setSelectedParentInvoice(item);
+                                          setSelectedNoteType('debit_note');
+                                          setRaiseNoteModalOpen(true);
+                                        }}
+                                        className="w-full text-left px-4 py-2.5 flex items-center gap-2.5 hover:bg-orange-50 hover:text-orange-700 text-xs font-semibold text-slate-700 transition-colors"
+                                      >
+                                        <ArrowUpRight size={14} className="text-orange-500" />
+                                        Raise debit note
+                                      </button>
+                                      
+                                      <div className="border-t border-slate-100 my-1" />
+                                      
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setActionMenuOpenId(null);
+                                          handleDelete(item._id, activeTab);
+                                        }}
+                                        className="w-full text-left px-4 py-2.5 flex items-center gap-2.5 hover:bg-rose-50 text-rose-600 hover:text-rose-700 text-xs font-semibold transition-colors"
+                                      >
+                                        <Trash2 size={14} className="text-rose-400" />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1">
+                              <Link to={`/generate-bills?type=${activeTab}&edit=${item._id}`} onClick={(e) => e.stopPropagation()} className="text-slate-400 hover:text-emerald-600 p-1.5 rounded-md hover:bg-emerald-50 transition-colors" title="Edit">
+                                <Edit className="h-4 w-4" />
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleDownload(item); }}
+                                className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-md hover:bg-indigo-50 transition-colors"
+                                title="Download"
+                              >
+                                <Download className="h-4 w-4" />
+                              </button>
+                              <button type="button" onClick={(e) => { e.stopPropagation(); handleDelete(item._id, activeTab); }} className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors" title="Delete">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -975,6 +1224,17 @@ const BillLibrary: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* Raise Credit/Debit Note Modal */}
+      <RaiseNoteModal
+        isOpen={raiseNoteModalOpen}
+        onClose={() => {
+          setRaiseNoteModalOpen(false);
+          setSelectedParentInvoice(null);
+        }}
+        noteType={selectedNoteType}
+        parentInvoice={selectedParentInvoice}
+      />
 
     </div>
   );
