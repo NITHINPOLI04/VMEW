@@ -230,11 +230,11 @@ const NauticalLoader: React.FC = () => {
       `}</style>
 
       <div className="nautical-particles-container" ref={ptsRef} />
-      
+
       <div className="nautical-center">
-        <img 
-          className="nautical-logo-img" 
-          src="/VMEW.jpg" 
+        <img
+          className="nautical-logo-img"
+          src="/logo.png"
           alt="VMEW Logo"
           onError={(e) => {
             const target = e.currentTarget;
