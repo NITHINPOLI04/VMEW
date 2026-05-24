@@ -7,6 +7,7 @@ import { useTemplateStore } from '../stores/templateStore';
 import { notify } from '../utils/notify';
 import { ArrowRight, ArrowLeft } from 'lucide-react';
 import { Skeleton } from '../components/Skeleton';
+import NauticalLoader from '../components/NauticalLoader';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -24,6 +25,7 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const startTime = Date.now();
 
     try {
       if (isSignUp) {
@@ -40,13 +42,24 @@ const Login: React.FC = () => {
         fetchInventory(financialYear),
         fetchTemplateData()
       ]);
+
+      // Enforce a minimum loader display time of 2.2 seconds so the typewriter animation plays
+      const elapsedTime = Date.now() - startTime;
+      const minDuration = 2200;
+      if (elapsedTime < minDuration) {
+        await new Promise(resolve => setTimeout(resolve, minDuration - elapsedTime));
+      }
+
       navigate('/');
     } catch (error) {
       notify.error(error instanceof Error ? error.message : 'Invalid credentials');
-    } finally {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return <NauticalLoader />;
+  }
 
   return (
     <div

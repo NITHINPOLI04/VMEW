@@ -5,6 +5,7 @@ import NotificationHost from './components/Sonner';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import { useAuthStore } from './stores/authStore';
 import AppSkeleton from './components/AppSkeleton';
+import NauticalLoader from './components/NauticalLoader';
 import { useTemplateStore } from './stores/templateStore';
 import { useInvoiceStore } from './stores/invoiceStore';
 import { useInventoryStore } from './stores/inventoryStore';
@@ -89,11 +90,7 @@ function App() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-900"></div>
-      </div>
-    );
+    return <NauticalLoader />;
   }
 
   return (
