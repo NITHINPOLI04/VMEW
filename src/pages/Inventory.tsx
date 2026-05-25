@@ -411,13 +411,15 @@ const Inventory: React.FC = () => {
         <div>
           <h1 className="page-title">Inventory</h1>
         </div>
-        <button
-          onClick={openAddModal}
-          className="btn btn-primary bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-5 py-2.5 rounded-full flex items-center gap-2 font-medium"
-        >
-          <PlusCircle size={18} />
-          Add Item
-        </button>
+        {activeTab === 'Purchase' && (
+          <button
+            onClick={openAddModal}
+            className="btn btn-primary bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-5 py-2.5 rounded-full flex items-center gap-2 font-medium"
+          >
+            <PlusCircle size={18} />
+            Add Item
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-4">
@@ -535,8 +537,8 @@ const Inventory: React.FC = () => {
                   {currentItems.map((item, index) => (
                     <tr
                       key={`${item.id}-${index}`}
-                      onClick={() => openEditModal(item)}
-                      className="cursor-pointer hover:bg-slate-50 transition-colors"
+                      onClick={() => activeTab === 'Purchase' && openEditModal(item)}
+                      className={activeTab === 'Purchase' ? "cursor-pointer hover:bg-slate-50 transition-colors" : "hover:bg-slate-50/50"}
                     >
                       <td data-label="Product Name" className="md:pl-6 font-medium text-slate-900 description-cell">{item.description}</td>
                       <td data-label="HSN Code" className="text-slate-500 whitespace-nowrap">{item.hsnSacCode}</td>
@@ -551,13 +553,15 @@ const Inventory: React.FC = () => {
                       </td>
                       <td data-label="Actions">
                         <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
-                            className="text-slate-400 hover:text-emerald-600 p-1.5 rounded-md hover:bg-emerald-50 transition-colors"
-                            title="Edit"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
+                          {activeTab === 'Purchase' && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
+                              className="text-slate-400 hover:text-emerald-600 p-1.5 rounded-md hover:bg-emerald-50 transition-colors"
+                              title="Edit"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                          )}
                           {activeTab === 'Sales' && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleViewBuyers(item); }}
@@ -622,12 +626,18 @@ const Inventory: React.FC = () => {
             </div>
             <h3 className="text-base font-semibold text-slate-700 mb-1">No items found</h3>
             <p className="text-sm text-slate-400 mb-5 max-w-xs">
-              {searchQuery ? 'No items match your search.' : `No items recorded for the selected period.`}
+              {searchQuery 
+                ? 'No items match your search.' 
+                : activeTab === 'Sales' 
+                  ? 'Sold items are automatically recorded when invoices are created.' 
+                  : `No items recorded for the selected period.`}
             </p>
-            <button onClick={openAddModal} className="btn btn-primary">
-              <PlusCircle className="w-4 h-4" />
-              Add First Item
-            </button>
+            {activeTab === 'Purchase' && (
+              <button onClick={openAddModal} className="btn btn-primary">
+                <PlusCircle className="w-4 h-4" />
+                Add First Item
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -648,25 +658,6 @@ const Inventory: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="p-8 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
-              <div className="flex bg-[#F1F5F9] p-1 rounded-[10px] mb-2">
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, transactionType: 'Sales' }))}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${formData.transactionType === 'Sales' ? 'bg-white text-[#2563EB] shadow-sm' : 'text-[#64748B] hover:text-slate-800'}`}
-                >
-                  <PackageMinus size={16} />
-                  Sales
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, transactionType: 'Purchase' }))}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${formData.transactionType === 'Purchase' ? 'bg-white text-[#2563EB] shadow-sm' : 'text-[#64748B] hover:text-slate-800'}`}
-                >
-                  <PackagePlus size={16} />
-                  Purchase
-                </button>
-              </div>
-
               <div className="space-y-4">
                 <div>
                   <label className="block text-[13px] font-medium text-[#475569] mb-1.5 ml-0.5">Description</label>
