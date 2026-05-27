@@ -132,6 +132,16 @@ const InvoicePreview: React.FC = () => {
           { label: 'DC No:', value: invoice.dcNumber || '' },
         ];
 
+        const isAdjustment = invoice.documentType === 'credit_note' || invoice.documentType === 'debit_note';
+        if (isAdjustment) {
+          if (invoice.linkedInvoiceNumber) {
+            rightSideLines.push({ label: 'Ref. Invoice:', value: invoice.linkedInvoiceNumber });
+          }
+          if (invoice.reason) {
+            rightSideLines.push({ label: 'Reason:', value: invoice.reason });
+          }
+        }
+
         y = drawTwoColumnDetails(
           pdf,
           margin,
@@ -478,16 +488,33 @@ const InvoicePreview: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm font-semibold">Vessel:</p>
-                <p className="mb-2">{invoice.vessel}</p>
+                <p className="mb-2">{invoice.vessel || '—'}</p>
 
                 <p className="text-sm font-semibold">E-way Bill No:</p>
-                <p className="mb-2">{invoice.ewayBillNo}</p>
+                <p className="mb-2">{invoice.ewayBillNo || '—'}</p>
 
                 <p className="text-sm font-semibold">P.O. No:</p>
-                <p className="mb-2">{invoice.poNumber}</p>
+                <p className="mb-2">{invoice.poNumber || '—'}</p>
 
                 <p className="text-sm font-semibold">DC No:</p>
-                <p>{invoice.dcNumber}</p>
+                <p className={invoice.documentType === 'credit_note' || invoice.documentType === 'debit_note' ? 'mb-2' : ''}>{invoice.dcNumber || '—'}</p>
+
+                {(invoice.documentType === 'credit_note' || invoice.documentType === 'debit_note') && (
+                  <>
+                    {invoice.linkedInvoiceNumber && (
+                      <>
+                        <p className="text-sm font-semibold">Ref. Invoice:</p>
+                        <p className="mb-2">{invoice.linkedInvoiceNumber}</p>
+                      </>
+                    )}
+                    {invoice.reason && (
+                      <>
+                        <p className="text-sm font-semibold">Reason:</p>
+                        <p className="mb-2">{invoice.reason}</p>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>

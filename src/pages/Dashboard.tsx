@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   TrendingUp, TrendingDown, PlusCircle, Package,
@@ -20,7 +20,16 @@ const Dashboard: React.FC = () => {
   const chartRef = useRef<Chart | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const { invoices, loading: invoicesLoading, fetchInvoices, getReceivedAmount } = useInvoiceStore();
+  const {
+    invoices,
+    creditNotes,
+    debitNotes,
+    loading: invoicesLoading,
+    fetchInvoices,
+    fetchCreditNotes,
+    fetchDebitNotes,
+    getReceivedAmount,
+  } = useInvoiceStore();
   const { loading: inventoryLoading, fetchInventory } = useInventoryStore();
 
   const loading = invoicesLoading || inventoryLoading;
@@ -29,31 +38,66 @@ const Dashboard: React.FC = () => {
     const loadData = async () => {
       try {
         setError(null);
-        await Promise.all([fetchInvoices(selectedFY), fetchInventory(selectedFY)]);
+        await Promise.all([
+          fetchInvoices(selectedFY),
+          fetchCreditNotes(selectedFY),
+          fetchDebitNotes(selectedFY),
+          fetchInventory(selectedFY)
+        ]);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError('Failed to load dashboard data. Please try again later.');
       }
     };
     loadData();
-  }, [fetchInvoices, fetchInventory, selectedFY]);
+  }, [fetchInvoices, fetchCreditNotes, fetchDebitNotes, fetchInventory, selectedFY]);
 
   // ─── Computed ──────────────────────────────────────────
   const inv = useMemo(() => (Array.isArray(invoices) ? invoices : []), [invoices]);
+  const cNotes = useMemo(() => (Array.isArray(creditNotes) ? creditNotes : []), [creditNotes]);
+  const dNotes = useMemo(() => (Array.isArray(debitNotes) ? debitNotes : []), [debitNotes]);
+
+  // Compute linked notes mapping synchronously
+  const invoiceNotes = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    cNotes.forEach((cn) => {
+      if (cn.linkedInvoiceId) {
+        if (!map[cn.linkedInvoiceId]) map[cn.linkedInvoiceId] = [];
+        map[cn.linkedInvoiceId].push(cn);
+      }
+    });
+    dNotes.forEach((dn) => {
+      if (dn.linkedInvoiceId) {
+        if (!map[dn.linkedInvoiceId]) map[dn.linkedInvoiceId] = [];
+        map[dn.linkedInvoiceId].push(dn);
+      }
+    });
+    return map;
+  }, [cNotes, dNotes]);
+
+  // Net adjusted amount calculation
+  const getInvoiceNet = useCallback((i: any) => {
+    const notes = invoiceNotes[i._id] || [];
+    const cnTotal = notes.filter(n => n.documentType === 'credit_note').reduce((s, n) => s + (n.grandTotal || 0), 0);
+    const dnTotal = notes.filter(n => n.documentType === 'debit_note').reduce((s, n) => s + (n.grandTotal || 0), 0);
+    return i.grandTotal - cnTotal + dnTotal;
+  }, [invoiceNotes]);
 
   const totalPaid = useMemo(() => inv.reduce((s, i) => {
-    if (i.paymentStatus === 'Payment Complete') return s + i.grandTotal;
-    if (i.paymentStatus === 'Partially Paid') return s + Math.max(0, Math.min(getReceivedAmount(i._id) || 0, i.grandTotal));
+    const netAmt = getInvoiceNet(i);
+    if (i.paymentStatus === 'Payment Complete') return s + netAmt;
+    if (i.paymentStatus === 'Partially Paid') return s + Math.max(0, Math.min(getReceivedAmount(i._id) || i.receivedAmount || 0, netAmt));
     return s;
-  }, 0), [inv, getReceivedAmount]);
+  }, 0), [inv, getReceivedAmount, getInvoiceNet]);
 
   const totalUnpaid = useMemo(() => inv.reduce((s, i) => {
-    if (i.paymentStatus === 'Unpaid') return s + i.grandTotal;
-    if (i.paymentStatus === 'Partially Paid') return s + Math.max(0, i.grandTotal - Math.max(0, getReceivedAmount(i._id) || 0));
+    const netAmt = getInvoiceNet(i);
+    if (i.paymentStatus === 'Unpaid') return s + netAmt;
+    if (i.paymentStatus === 'Partially Paid') return s + Math.max(0, netAmt - Math.max(0, getReceivedAmount(i._id) || i.receivedAmount || 0));
     return s;
-  }, 0), [inv, getReceivedAmount]);
+  }, 0), [inv, getReceivedAmount, getInvoiceNet]);
 
-  const totalRevenue = useMemo(() => inv.reduce((s, i) => s + i.grandTotal, 0), [inv]);
+  const totalRevenue = useMemo(() => inv.reduce((s, i) => s + getInvoiceNet(i), 0), [inv, getInvoiceNet]);
 
   const { now, todayStart } = useMemo(() => {
     const d = new Date();
@@ -68,13 +112,14 @@ const Dashboard: React.FC = () => {
     let curSum = 0, prevSum = 0;
     inv.forEach(i => {
       const d = new Date(i.date);
-      if (d.getMonth() === cur && d.getFullYear() === now.getFullYear()) curSum += i.grandTotal;
-      if (d.getMonth() === prevM && d.getFullYear() === prevY) prevSum += i.grandTotal;
+      const netAmt = getInvoiceNet(i);
+      if (d.getMonth() === cur && d.getFullYear() === now.getFullYear()) curSum += netAmt;
+      if (d.getMonth() === prevM && d.getFullYear() === prevY) prevSum += netAmt;
     });
     if (prevSum === 0) return { dir: 'up' as const, pct: 0 };
     const pct = Math.round(((curSum - prevSum) / prevSum) * 100);
     return { dir: pct >= 0 ? 'up' as const : 'down' as const, pct: Math.abs(pct) };
-  }, [inv, now]);
+  }, [inv, now, getInvoiceNet]);
 
   const monthlyRevenue = useMemo(() => {
     const d = Array(12).fill(0);
@@ -82,23 +127,21 @@ const Dashboard: React.FC = () => {
       try {
         const date = i.date ? parseISO(i.date) : null;
         if (date && !isNaN(date.getTime())) {
-          // Financial year starts in April (index 3). 
-          // Adjusted month index: (actualMonth - 3 + 12) % 12
           const m = (date.getMonth() + 9) % 12; 
-          if (m >= 0 && m < 12) d[m] += i.grandTotal;
+          if (m >= 0 && m < 12) d[m] += getInvoiceNet(i);
         }
       } catch (e) {
         console.warn('Invalid date in invoice:', i.date);
       }
     });
     return d;
-  }, [inv]);
+  }, [inv, getInvoiceNet]);
 
   const weeklyRevenue = useMemo(() => {
     const w = Array(8).fill(0), ms = 7 * 24 * 60 * 60 * 1000;
-    inv.forEach(i => { const a = Math.floor((now.getTime() - new Date(i.date).getTime()) / ms); if (a >= 0 && a < 8) w[7 - a] += i.grandTotal; });
+    inv.forEach(i => { const a = Math.floor((now.getTime() - new Date(i.date).getTime()) / ms); if (a >= 0 && a < 8) w[7 - a] += getInvoiceNet(i); });
     return w;
-  }, [inv, now]);
+  }, [inv, now, getInvoiceNet]);
 
   // ─── Smart Insights ───────────────────────────────────
   const cashTotal = totalPaid + totalUnpaid;

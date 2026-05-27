@@ -44,6 +44,10 @@ export interface InvoiceFormData {
   paymentStatus: string; // 'Payment Complete' | 'Partially Paid' | 'Unpaid'
   invoiceType?: 'Product' | 'Service';
   documentType?: 'invoice' | 'credit_note' | 'debit_note';
+  linkedInvoiceId?: string | null;
+  linkedInvoiceNumber?: string;
+  reason?: string;
+  receivedAmount?: number;
   createdAt?: string;
   updatedAt?: string;
 }

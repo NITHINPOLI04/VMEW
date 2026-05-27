@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FileText, Search, ChevronDown, Trash2, FileCheck,
@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import RaiseNoteModal from '../components/RaiseNoteModal';
 import { useAuthStore } from '../stores/authStore';
-import { getInvoiceNotes } from '../utils/api';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useDCStore } from '../stores/dcStore';
 import { useQuotationStore } from '../stores/quotationStore';
@@ -129,7 +128,6 @@ const BillLibrary: React.FC = () => {
   const [raiseNoteModalOpen, setRaiseNoteModalOpen] = useState(false);
   const [selectedParentInvoice, setSelectedParentInvoice] = useState<any | null>(null);
   const [selectedNoteType, setSelectedNoteType] = useState<'credit_note' | 'debit_note'>('credit_note');
-  const [invoiceNotes, setInvoiceNotes] = useState<Record<string, any[]>>({});
   const [highlightedInvoiceId, setHighlightedInvoiceId] = useState<string | null>(null);
 
   // ── Primary filters (FY/Month) ──────────────────────────────────────────────
@@ -206,37 +204,23 @@ const BillLibrary: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, activeTab]);
 
-  // Fetch linked notes for visible invoices on the Tax Invoices tab
-  useEffect(() => {
-    const loadNotesForInvoices = async () => {
-      if (activeTab !== 'invoice' || invoices.length === 0) return;
-      const token = useAuthStore.getState().token;
-      if (!token) return;
-      
-      try {
-        const notesPromises = invoices.map(async (inv) => {
-          try {
-            const notes = await getInvoiceNotes(inv._id, token);
-            return { id: inv._id, notes };
-          } catch (err) {
-            console.error(`Failed to fetch notes for invoice ${inv._id}:`, err);
-            return { id: inv._id, notes: [] };
-          }
-        });
-        
-        const results = await Promise.all(notesPromises);
-        const notesMap: Record<string, any[]> = {};
-        results.forEach((res) => {
-          notesMap[res.id] = res.notes;
-        });
-        setInvoiceNotes(notesMap);
-      } catch (err) {
-        console.error('Error fetching linked notes:', err);
+  // Compute linked notes for invoices synchronously from loaded credit/debit notes
+  const invoiceNotes = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    creditNotes.forEach((cn) => {
+      if (cn.linkedInvoiceId) {
+        if (!map[cn.linkedInvoiceId]) map[cn.linkedInvoiceId] = [];
+        map[cn.linkedInvoiceId].push(cn);
       }
-    };
-    
-    loadNotesForInvoices();
-  }, [invoices, activeTab]);
+    });
+    debitNotes.forEach((dn) => {
+      if (dn.linkedInvoiceId) {
+        if (!map[dn.linkedInvoiceId]) map[dn.linkedInvoiceId] = [];
+        map[dn.linkedInvoiceId].push(dn);
+      }
+    });
+    return map;
+  }, [creditNotes, debitNotes]);
 
   // Scroll to and briefly highlight targeted row
   useEffect(() => {
@@ -310,21 +294,21 @@ const BillLibrary: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      if (activeTab === 'invoice') {
-        const data = await invoiceStore.fetchInvoices(selectedYear);
-        setInvoices(data);
+      if (activeTab === 'invoice' || activeTab === 'credit_note' || activeTab === 'debit_note') {
+        const [invData, cnData, dnData] = await Promise.all([
+          invoiceStore.fetchInvoices(selectedYear),
+          invoiceStore.fetchCreditNotes(selectedYear),
+          invoiceStore.fetchDebitNotes(selectedYear),
+        ]);
+        setInvoices(invData);
+        setCreditNotes(cnData);
+        setDebitNotes(dnData);
       } else if (activeTab === 'dc') {
         const data = await dcStore.fetchDCs(selectedYear);
         setDcs(data);
       } else if (activeTab === 'quotation') {
         const data = await quotationStore.fetchQuotations(selectedYear);
         setQuotations(data);
-      } else if (activeTab === 'credit_note') {
-        const data = await invoiceStore.fetchCreditNotes(selectedYear);
-        setCreditNotes(data);
-      } else if (activeTab === 'debit_note') {
-        const data = await invoiceStore.fetchDebitNotes(selectedYear);
-        setDebitNotes(data);
       }
       setCurrentPage(1);
     } catch {
@@ -440,9 +424,16 @@ const BillLibrary: React.FC = () => {
   const fmt = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
   const invoiceMetrics = (() => {
-    const paid = invoices.filter(i => i.paymentStatus === 'Payment Complete').reduce((s, i) => s + i.grandTotal, 0);
-    const unpaid = invoices.filter(i => i.paymentStatus === 'Unpaid').reduce((s, i) => s + i.grandTotal, 0);
-    const partial = invoices.filter(i => i.paymentStatus === 'Partially Paid').reduce((s, i) => s + i.grandTotal, 0);
+    const getInvoiceNetAmt = (i: Invoice) => {
+      const notes = invoiceNotes[i._id] || [];
+      const cnTotal = notes.filter(n => n.documentType === 'credit_note').reduce((s, n) => s + (n.grandTotal || 0), 0);
+      const dnTotal = notes.filter(n => n.documentType === 'debit_note').reduce((s, n) => s + (n.grandTotal || 0), 0);
+      return i.grandTotal - cnTotal + dnTotal;
+    };
+
+    const paid = invoices.filter(i => i.paymentStatus === 'Payment Complete').reduce((s, i) => s + getInvoiceNetAmt(i), 0);
+    const unpaid = invoices.filter(i => i.paymentStatus === 'Unpaid').reduce((s, i) => s + getInvoiceNetAmt(i), 0);
+    const partial = invoices.filter(i => i.paymentStatus === 'Partially Paid').reduce((s, i) => s + getInvoiceNetAmt(i), 0);
     return [
       { label: 'Paid Amount', value: fmt(paid), icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', sub: `${invoices.filter(i => i.paymentStatus === 'Payment Complete').length} invoices` },
       { label: 'Unpaid Amount', value: fmt(unpaid), icon: XCircle, iconBg: 'bg-rose-50', iconColor: 'text-rose-500', sub: `${invoices.filter(i => i.paymentStatus === 'Unpaid').length} invoices` },
@@ -942,24 +933,27 @@ const BillLibrary: React.FC = () => {
                             {item.buyerName}
                           </span>
                         </td>
-                        {(activeTab === 'credit_note' || activeTab === 'debit_note') && (
-                          <td data-label="Ref. Invoice">
-                            {item.linkedInvoiceNumber ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRefInvoiceClick(item.linkedInvoiceId);
-                                }}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer"
-                              >
-                                🔗 {item.linkedInvoiceNumber}
-                              </button>
-                            ) : (
-                              <span className="text-slate-400 text-xs italic">—</span>
-                            )}
-                          </td>
-                        )}
+                        {(activeTab === 'credit_note' || activeTab === 'debit_note') && (() => {
+                          const linkedInvNumber = item.linkedInvoiceNumber || invoices.find((inv: any) => inv._id === item.linkedInvoiceId)?.invoiceNumber;
+                          return (
+                            <td data-label="Ref. Invoice">
+                              {linkedInvNumber ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRefInvoiceClick(item.linkedInvoiceId);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer"
+                                >
+                                  🔗 {linkedInvNumber}
+                                </button>
+                              ) : (
+                                <span className="text-slate-400 text-xs italic">—</span>
+                              )}
+                            </td>
+                          );
+                        })()}
                         {activeTab !== 'dc' && (
                           <td data-label="Amount" className="font-medium text-slate-700 whitespace-nowrap">
                             <div>₹{(item.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
