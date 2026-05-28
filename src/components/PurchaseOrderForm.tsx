@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { PlusCircle, Eye, Zap, RefreshCw, ShoppingBag } from 'lucide-react';
+import { PlusCircle, Eye, Zap, RefreshCw, ShoppingBag, FileText } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { notify } from '../utils/notify';
 import { usePOStore } from '../stores/poStore';
@@ -7,6 +7,8 @@ import { useContactStore } from '../stores/contactStore';
 import { convertToWords } from '../utils/numberToWords';
 import { getInitialPO } from '../config/documentConfigs';
 import { usePreviewStore } from '../stores/previewStore';
+import { useDraftsStore } from '../stores/draftsStore';
+import { useAuthStore } from '../stores/authStore';
 import { FormSections, poSections } from '../engines/formEngine';
 import {
     ItemRowControls,
@@ -26,8 +28,9 @@ interface PurchaseOrderFormProps {
 
 const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, editId }) => {
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const effectiveEditId = editId || searchParams.get('edit');
+    const draftIdParam = searchParams.get('draftId');
     const { createPO, updatePO, fetchPO } = usePOStore();
     const { suppliers, fetchSuppliers, addSupplier } = useContactStore();
 
@@ -46,6 +49,17 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
     const [productSearchResults, setProductSearchResults] = useState<ProductSuggestion[]>([]);
     const productDropdownRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
 
+    // Drafts store hooks
+    const saveDraft = useDraftsStore(state => state.saveDraft);
+    const deleteDraft = useDraftsStore(state => state.deleteDraft);
+    const currentDraftKey = useDraftsStore(state => state.currentDraftKey);
+    const setCurrentDraftKey = useDraftsStore(state => state.setCurrentDraftKey);
+    const setLastSaved = useDraftsStore(state => state.setLastSaved);
+    const setSaveStatus = useDraftsStore(state => state.setSaveStatus);
+
+    const hasRestoredDraft = useRef<string | null>(null);
+    const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+
     const [formData, setFormData] = useState<any>(getInitialPO());
 
     useEffect(() => {
@@ -57,6 +71,17 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
             fetchProductSuggestions(selectedFY);
         }
     }, [fetchProductSuggestions, selectedFY]);
+
+    // Clean up draft store state on unmount
+    useEffect(() => {
+        return () => {
+            setLastSaved(null);
+            setSaveStatus('idle');
+            setCurrentDraftKey(null);
+        };
+    }, [setLastSaved, setSaveStatus, setCurrentDraftKey]);
+
+
 
     useEffect(() => {
         const loadPOForEdit = async () => {
@@ -98,6 +123,9 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                         });
                         setSelectedDate(new Date(data.date));
                         setIsEditing(true);
+                        setCurrentDraftKey(null);
+                        setLastSaved(null);
+                        setSaveStatus('idle');
                     }
                 } catch (error) {
                     notify.error('Failed to load PO for editing');
@@ -105,10 +133,107 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
                 } finally {
                     setLoading(false);
                 }
+            } else {
+                // If not editing, check for drafts
+                let draftToLoad: any = null;
+                let loadedKey: string | null = null;
+
+                if (draftIdParam) {
+                    const raw = localStorage.getItem(draftIdParam);
+                    if (raw) {
+                        draftToLoad = JSON.parse(raw);
+                        loadedKey = draftIdParam;
+                    }
+                } else {
+                    // Find most recent draft for po
+                    const userId = useAuthStore.getState().user?.userId || 'guest';
+                    const typeKeyPrefix = `vmew_draft_${userId}_po_`;
+                    const matchingKeys: { key: string; ts: number }[] = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i);
+                        if (k && k.startsWith(typeKeyPrefix)) {
+                            const ts = parseInt(k.slice(typeKeyPrefix.length), 10);
+                            if (!isNaN(ts)) {
+                                matchingKeys.push({ key: k, ts });
+                            }
+                        }
+                    }
+                    if (matchingKeys.length > 0) {
+                        matchingKeys.sort((a, b) => b.ts - a.ts);
+                        const mostRecentKey = matchingKeys[0].key;
+                        const raw = localStorage.getItem(mostRecentKey);
+                        if (raw) {
+                            draftToLoad = JSON.parse(raw);
+                            loadedKey = mostRecentKey;
+                        }
+                    }
+                }
+
+                if (draftToLoad && loadedKey) {
+                    setFormData(draftToLoad);
+                    if (draftToLoad.date) {
+                        setSelectedDate(new Date(draftToLoad.date));
+                    }
+                    setCurrentDraftKey(loadedKey);
+                    const ts = parseInt(loadedKey.split('_').pop() || '', 10) || Date.now();
+                    setLastSaved(ts);
+                    setSaveStatus('saved');
+                    setIsEditing(false);
+
+                    if (hasRestoredDraft.current !== loadedKey) {
+                        hasRestoredDraft.current = loadedKey;
+                        setShowRestoreBanner(true);
+                    }
+                } else {
+                    setFormData(getInitialPO());
+                    setSelectedDate(new Date());
+                    setCurrentDraftKey(null);
+                    setLastSaved(null);
+                    setSaveStatus('idle');
+                    setIsEditing(false);
+                    setShowRestoreBanner(false);
+                }
             }
         };
         loadPOForEdit();
-    }, [effectiveEditId, fetchPO]);
+    }, [effectiveEditId, fetchPO, draftIdParam, setCurrentDraftKey, setLastSaved, setSaveStatus]);
+
+    // Debounced auto-save effect for PO
+    useEffect(() => {
+        if (effectiveEditId || !formData || Object.keys(formData).length === 0) {
+            return;
+        }
+
+        // Check if the form has actual content before saving a draft
+        const isFormDirty = () => {
+            const hasSupplierName = !!formData.supplierName?.trim();
+            const hasPoNumber = !!formData.poNumber?.trim();
+            const hasItemDescription = formData.items?.some((i: any) => !!i.description?.trim());
+            return hasSupplierName || hasPoNumber || hasItemDescription;
+        };
+
+        if (!isFormDirty()) {
+            return;
+        }
+
+        setSaveStatus('saving');
+        const delayDebounceFn = setTimeout(() => {
+            const dataToSave = {
+                ...formData,
+                date: selectedDate.toISOString(),
+            };
+
+            const key = saveDraft('po', dataToSave, currentDraftKey);
+            if (!currentDraftKey) {
+                setCurrentDraftKey(key);
+            }
+
+            setLastSaved(Date.now());
+            setSaveStatus('saved');
+        }, 1000);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [formData, selectedDate, effectiveEditId, currentDraftKey, saveDraft, setCurrentDraftKey, setLastSaved, setSaveStatus]);
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -324,6 +449,10 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
             } else {
                 const result: any = await createPO(finalData);
                 if (result && result._id) {
+                    if (currentDraftKey) {
+                        deleteDraft(currentDraftKey);
+                        setCurrentDraftKey(null);
+                    }
                     notify.success('PO created');
                     if (onSaveSuccess) {
                         onSaveSuccess();
@@ -350,7 +479,49 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
     };
 
     return (
-        <form onSubmit={handleSubmit} className="relative">
+        <form onSubmit={handleSubmit} className="relative space-y-6">
+            {/* Restored Draft Interactive Banner */}
+            {!isEditing && showRestoreBanner && currentDraftKey && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-2xl flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-blue-600 animate-bounce" />
+                        <span className="text-sm font-semibold">Restored unsaved draft session.</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (currentDraftKey) {
+                                    deleteDraft(currentDraftKey);
+                                    setCurrentDraftKey(null);
+                                }
+                                setFormData(getInitialPO());
+                                setSelectedDate(new Date());
+                                setShowRestoreBanner(false);
+                                setLastSaved(null);
+                                setSaveStatus('idle');
+                                if (searchParams.has('draftId')) {
+                                    const newParams = new URLSearchParams(searchParams);
+                                    newParams.delete('draftId');
+                                    setSearchParams(newParams);
+                                }
+                                notify.success('Draft cleared. Started fresh.');
+                            }}
+                            className="text-xs font-bold bg-white text-blue-600 px-3 py-1.5 rounded-xl border border-blue-200 hover:bg-blue-50 transition-colors shadow-sm"
+                        >
+                            Start Fresh
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowRestoreBanner(false)}
+                            className="text-xs font-bold text-slate-500 hover:text-slate-700 px-2 py-1.5 transition-colors"
+                        >
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col lg:flex-row gap-8 items-start">
 
                 {/* ── Left Side: Form Sections ── */}

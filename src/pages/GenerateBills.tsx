@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { FileText, Truck, FileSpreadsheet, ChevronLeft, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { useInvoiceStore } from '../stores/invoiceStore';
@@ -12,6 +12,8 @@ import { notify } from '../utils/notify';
 import { getInitialInvoice, getInitialDC, getInitialQuotation, getInitialCreditNote, getInitialDebitNote } from '../config/documentConfigs';
 import { convertToWords } from '../utils/numberToWords';
 import { usePreviewStore } from '../stores/previewStore';
+import { useDraftsStore } from '../stores/draftsStore';
+import { useAuthStore } from '../stores/authStore';
 
 type BillType = 'invoice' | 'dc' | 'quotation' | 'credit_note' | 'debit_note';
 
@@ -26,15 +28,17 @@ const DOC_TYPES: { value: BillType; label: string; icon: React.ElementType; acti
 const GenerateBills: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const editId = searchParams.get('edit');
   const typeParam = searchParams.get('type') || 'invoice';
+  const draftIdParam = searchParams.get('draftId');
 
   const [billType, setBillType] = useState<BillType>(typeParam as BillType);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isEditing, setIsEditing] = useState(!!editId);
   const [loading, setLoading] = useState(false);
   const hasPrefilled = useRef(false);
+  const hasRestoredDraft = useRef<string | null>(null);
 
   const { createInvoice, fetchInvoice, updateInvoice } = useInvoiceStore();
   const { createDC, fetchDC, updateDC } = useDCStore();
@@ -42,12 +46,24 @@ const GenerateBills: React.FC = () => {
   const { defaultInfo } = useTemplateStore();
   const { customers, fetchCustomers, addCustomer } = useContactStore();
 
+  // Drafts store hooks
+  const saveDraft = useDraftsStore(state => state.saveDraft);
+  const deleteDraft = useDraftsStore(state => state.deleteDraft);
+  const currentDraftKey = useDraftsStore(state => state.currentDraftKey);
+  const setCurrentDraftKey = useDraftsStore(state => state.setCurrentDraftKey);
+
+  // Auto-save UI state
+  const [lastSaved, setLastSaved] = useState<number | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [timeAgoText, setTimeAgoText] = useState('just now');
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+
   const [formData, setFormData] = useState<any>({});
 
   const stateData = location.state as any;
 
   // Returns the initial form data for a given bill type
-  const getInitialData = (type: BillType) => {
+  const getInitialData = useCallback((type: BillType) => {
     switch (type) {
       case 'invoice':     return getInitialInvoice(defaultInfo);
       case 'dc':          return getInitialDC();
@@ -55,7 +71,9 @@ const GenerateBills: React.FC = () => {
       case 'credit_note': return getInitialCreditNote(defaultInfo);
       case 'debit_note':  return getInitialDebitNote(defaultInfo);
     }
-  };
+  }, [defaultInfo]);
+
+
 
   useEffect(() => {
     if (!isEditing && !editId) {
@@ -95,12 +113,129 @@ const GenerateBills: React.FC = () => {
         }
         setBillType(stateData.documentType);
       } else if (!hasPrefilled.current) {
-        setFormData(getInitialData(billType));
-        setSelectedDate(new Date());
+        // Check for drafts to restore
+        let draftToLoad: any = null;
+        let loadedKey: string | null = null;
+
+        if (draftIdParam) {
+          const raw = localStorage.getItem(draftIdParam);
+          if (raw) {
+            draftToLoad = JSON.parse(raw);
+            loadedKey = draftIdParam;
+          }
+        } else {
+          // Find most recent draft for this billType
+          const userId = useAuthStore.getState().user?.userId || 'guest';
+          const typeKeyPrefix = `vmew_draft_${userId}_${billType}_`;
+          const matchingKeys: { key: string; ts: number }[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith(typeKeyPrefix)) {
+              const ts = parseInt(k.slice(typeKeyPrefix.length), 10);
+              if (!isNaN(ts)) {
+                matchingKeys.push({ key: k, ts });
+              }
+            }
+          }
+          if (matchingKeys.length > 0) {
+            matchingKeys.sort((a, b) => b.ts - a.ts);
+            const mostRecentKey = matchingKeys[0].key;
+            const raw = localStorage.getItem(mostRecentKey);
+            if (raw) {
+              draftToLoad = JSON.parse(raw);
+              loadedKey = mostRecentKey;
+            }
+          }
+        }
+
+        if (draftToLoad && loadedKey) {
+          setFormData(draftToLoad);
+          if (draftToLoad.date) {
+            setSelectedDate(new Date(draftToLoad.date));
+          }
+          setCurrentDraftKey(loadedKey);
+          setLastSaved(parseInt(loadedKey.split('_').pop() || '', 10) || Date.now());
+          setSaveStatus('saved');
+          
+          if (hasRestoredDraft.current !== loadedKey) {
+            hasRestoredDraft.current = loadedKey;
+            setShowRestoreBanner(true);
+          }
+        } else {
+          setFormData(getInitialData(billType));
+          setSelectedDate(new Date());
+          setCurrentDraftKey(null);
+          setLastSaved(null);
+          setSaveStatus('idle');
+          setShowRestoreBanner(false);
+        }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [billType, defaultInfo, stateData, isEditing, editId]);
+  }, [billType, defaultInfo, stateData, isEditing, editId, draftIdParam]);
+
+  // Debounced auto-save hook
+  useEffect(() => {
+    if (isEditing || !formData || Object.keys(formData).length === 0) {
+      return;
+    }
+
+    // Check if the form has actual content before saving a draft
+    const isFormDirty = () => {
+      const hasBuyerName = !!formData.buyerName?.trim();
+      const hasDocNumber = !!(formData.invoiceNumber?.trim() || formData.dcNumber?.trim() || formData.quotationNumber?.trim());
+      const hasItemDescription = formData.items?.some((i: any) => !!i.description?.trim());
+      return hasBuyerName || hasDocNumber || hasItemDescription;
+    };
+
+    if (!isFormDirty()) {
+      return;
+    }
+
+    setSaveStatus('saving');
+    const delayDebounceFn = setTimeout(() => {
+      const dataToSave = {
+        ...formData,
+        date: selectedDate.toISOString(),
+      };
+      
+      const key = saveDraft(billType, dataToSave, currentDraftKey);
+      if (!currentDraftKey) {
+        setCurrentDraftKey(key);
+      }
+      
+      setLastSaved(Date.now());
+      setSaveStatus('saved');
+    }, 1000);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [formData, selectedDate, billType, isEditing, currentDraftKey, saveDraft, setCurrentDraftKey]);
+
+  // Relative timestamp tracker
+  useEffect(() => {
+    if (!lastSaved) return;
+    
+    const update = () => {
+      const diff = Date.now() - lastSaved;
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) {
+        setTimeAgoText('just now');
+      } else if (mins < 60) {
+        setTimeAgoText(`${mins} min ago`);
+      } else {
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) {
+          setTimeAgoText(`${hours} min ago`); // keeps the format compatible or "saved 2 min ago"
+        } else {
+          setTimeAgoText('some time ago');
+        }
+      }
+    };
+    
+    update();
+    const interval = setInterval(update, 30000);
+    return () => clearInterval(interval);
+  }, [lastSaved]);
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
@@ -199,6 +334,10 @@ const GenerateBills: React.FC = () => {
         }
 
         if (result && result._id) {
+          if (currentDraftKey) {
+            deleteDraft(currentDraftKey);
+            setCurrentDraftKey(null);
+          }
           notify.success(`${DOC_TYPES.find(d => d.value === billType)?.label || 'Document'} created`);
 
           // Show stock warnings (invoices only)
@@ -256,7 +395,7 @@ const GenerateBills: React.FC = () => {
   return (
     <div className="space-y-4 pb-0 bg-slate-50/80 min-h-screen">
       {/* Page Header */}
-      <div className="page-header">
+      <div className="page-header flex justify-between items-center pb-2">
         <div className="flex items-center gap-3">
           {isEditing && (
             <button
@@ -268,11 +407,77 @@ const GenerateBills: React.FC = () => {
               <ChevronLeft className="w-5 h-5" />
             </button>
           )}
-          <h1 className="page-title">
-            {isEditing ? 'Edit Document' : 'Generate New Bill'}
-          </h1>
+          <div>
+            <h1 className="page-title">
+              {isEditing ? 'Edit Document' : 'Generate New Bill'}
+            </h1>
+            {!isEditing && lastSaved && (
+              <p className="text-xs text-slate-500 mt-1 font-medium animate-in fade-in duration-200">
+                {DOC_TYPES.find(d => d.value === billType)?.label || 'Tax Invoice'} · Draft saved {timeAgoText}
+              </p>
+            )}
+            {!isEditing && !lastSaved && (
+              <p className="text-xs text-slate-500 mt-1 font-medium">
+                {DOC_TYPES.find(d => d.value === billType)?.label || 'Tax Invoice'}
+              </p>
+            )}
+          </div>
         </div>
+
+        {/* Auto-saved Pill */}
+        {!isEditing && saveStatus !== 'idle' && (
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-300 ${
+            saveStatus === 'saving'
+              ? 'bg-amber-50 text-amber-700 border-amber-200'
+              : 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${
+              saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+            }`}></span>
+            {saveStatus === 'saving' ? 'Saving...' : 'Auto-saved'}
+          </div>
+        )}
       </div>
+
+      {/* Restored Draft Interactive Banner */}
+      {!isEditing && showRestoreBanner && currentDraftKey && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-2xl flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-blue-600 animate-bounce" />
+            <span className="text-sm font-semibold">Restored unsaved draft session.</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (currentDraftKey) {
+                  deleteDraft(currentDraftKey);
+                  setCurrentDraftKey(null);
+                }
+                setFormData(getInitialData(billType));
+                setSelectedDate(new Date());
+                setShowRestoreBanner(false);
+                setLastSaved(null);
+                setSaveStatus('idle');
+                if (searchParams.has('draftId')) {
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete('draftId');
+                  setSearchParams(newParams);
+                }
+                notify.success('Draft cleared. Started fresh.');
+              }}
+              className="text-xs font-bold bg-white text-blue-600 px-3 py-1.5 rounded-xl border border-blue-200 hover:bg-blue-50 transition-colors shadow-sm"
+            >
+              Start Fresh
+            </button>
+            <button
+              onClick={() => setShowRestoreBanner(false)}
+              className="text-xs font-bold text-slate-500 hover:text-slate-700 px-2 py-1.5 transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Document Type Tabs */}
       {!isEditing && (
@@ -281,7 +486,19 @@ const GenerateBills: React.FC = () => {
           {DOC_TYPES.filter(d => d.group === 'core').map(({ value, label, icon: Icon, activeColor }) => (
             <button
               key={value}
-              onClick={() => setBillType(value)}
+              onClick={() => {
+                setBillType(value);
+                setCurrentDraftKey(null);
+                hasRestoredDraft.current = null;
+                setLastSaved(null);
+                setSaveStatus('idle');
+                setShowRestoreBanner(false);
+                if (searchParams.has('draftId')) {
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete('draftId');
+                  setSearchParams(newParams);
+                }
+              }}
               className={`flex items-center gap-2 py-3 px-5 text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${
                 billType === value
                   ? activeColor

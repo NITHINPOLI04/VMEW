@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import DraftsPanel from './DraftsPanel';
 import { Menu } from 'lucide-react';
 
 const Layout: React.FC = () => {
@@ -32,6 +33,9 @@ const Layout: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* Drafts Sliding Panel */}
+      <DraftsPanel />
     </div>
   );
 };

@@ -10,9 +10,11 @@ import {
   ShoppingBag,
   Building2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  FileText
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { useDraftsStore } from '../stores/draftsStore';
 
 interface SidebarProps {
   mobileMenuOpen?: boolean;
@@ -41,7 +43,11 @@ const navItems = [
 const Sidebar: React.FC<SidebarProps> = ({ mobileMenuOpen, setMobileMenuOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
+  
+  const drafts = useDraftsStore(state => state.drafts);
+  const loadDrafts = useDraftsStore(state => state.loadDrafts);
+  const openPanel = useDraftsStore(state => state.openPanel);
 
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
 
@@ -52,6 +58,11 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileMenuOpen, setMobileMenuOpen }) 
       setExpandedMenu(activeParent.to);
     }
   }, [location.pathname]);
+
+  // Load drafts on mount and when user changes
+  useEffect(() => {
+    loadDrafts();
+  }, [loadDrafts, user?.userId]);
 
   const handleLogout = async () => {
     await logout();
@@ -177,7 +188,22 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileMenuOpen, setMobileMenuOpen }) 
       </nav>
 
       {/* Footer / Logout */}
-      <div className="px-6 py-6 border-t border-transparent mt-auto">
+      <div className="px-6 py-6 border-t border-[#E2E8F0] mt-auto space-y-1.5">
+        <button
+          onClick={openPanel}
+          className="flex items-center justify-between w-full text-left text-[#334155] hover:bg-[#EDF3FB] hover:text-[#2563EB] transition-colors group px-3 py-2.5 rounded-xl"
+        >
+          <div className="flex items-center gap-3.5">
+            <FileText size={20} strokeWidth={2} className="text-[#334155] group-hover:text-[#2563EB] transition-colors" />
+            <span className="text-[15px] font-semibold">Drafts</span>
+          </div>
+          {drafts.length > 0 && (
+            <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-in zoom-in duration-200">
+              {drafts.length}
+            </span>
+          )}
+        </button>
+        
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 w-full text-left text-[#334155] hover:bg-[#EDF3FB] hover:text-[#2563EB] transition-colors group px-3 py-2.5 rounded-xl"
