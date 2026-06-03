@@ -6,6 +6,7 @@ import { usePOStore } from '../stores/poStore';
 import { useContactStore } from '../stores/contactStore';
 import { convertToWords } from '../utils/numberToWords';
 import { getInitialPO } from '../config/documentConfigs';
+import { getNextDocumentNumber } from '../utils/autoIncrement';
 import { usePreviewStore } from '../stores/previewStore';
 import { useDraftsStore } from '../stores/draftsStore';
 import { useAuthStore } from '../stores/authStore';
@@ -31,7 +32,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
     const [searchParams, setSearchParams] = useSearchParams();
     const effectiveEditId = editId || searchParams.get('edit');
     const draftIdParam = searchParams.get('draftId');
-    const { createPO, updatePO, fetchPO } = usePOStore();
+    const { purchaseOrders, createPO, updatePO, fetchPO, fetchPOs } = usePOStore();
     const { suppliers, fetchSuppliers, addSupplier } = useContactStore();
 
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -65,6 +66,51 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
     useEffect(() => {
         fetchSuppliers();
     }, [fetchSuppliers]);
+
+    // Fetch purchase orders for selected year to compute next PO number
+    useEffect(() => {
+        if (!isEditing && selectedFY) {
+            fetchPOs(selectedFY).catch(err => console.error(err));
+        }
+    }, [selectedFY, isEditing, fetchPOs]);
+
+    // Auto-increment PO number on year change or data load
+    useEffect(() => {
+        if (isEditing || !selectedFY || !formData) {
+            return;
+        }
+
+        const currentVal = formData.poNumber;
+
+        // We should auto-increment if empty, or if it is a standard pattern with a different year
+        const isStandardPattern = /^\d+\/VMEW\/\d{2}-\d{2}$/.test(currentVal || '');
+        const formattedFY = selectedFY.split('-').map(part => part.slice(-2)).join('-');
+        const expectedSuffix = `/VMEW/${formattedFY}`;
+        const hasDifferentYear = isStandardPattern && !currentVal.endsWith(expectedSuffix);
+
+        // If the field is currently set to the default fallback "01" (e.g. calculated before
+        // the PO store was fully loaded) but we now have actual POs to compute from,
+        // we should update it to the correct sequential number.
+        const defaultNum = `01/VMEW/${formattedFY}`;
+        const nextNum = getNextDocumentNumber(purchaseOrders, 'poNumber', selectedFY);
+        const isFallbackValue = isStandardPattern && currentVal === defaultNum && nextNum !== defaultNum;
+        const shouldUpdate = !currentVal || hasDifferentYear || isFallbackValue;
+
+        if (shouldUpdate) {
+            setFormData((prev: any) => {
+                const prevVal = prev ? prev.poNumber : '';
+                const prevIsStandard = /^\d+\/VMEW\/\d{2}-\d{2}$/.test(prevVal || '');
+                const prevHasDifferentYear = prevIsStandard && !prevVal.endsWith(expectedSuffix);
+                const prevNextNum = getNextDocumentNumber(purchaseOrders, 'poNumber', selectedFY);
+                const prevIsFallbackValue = prevIsStandard && prevVal === defaultNum && prevNextNum !== defaultNum;
+
+                if (!prevVal || prevHasDifferentYear || prevIsFallbackValue) {
+                    return { ...prev, poNumber: prevNextNum };
+                }
+                return prev;
+            });
+        }
+    }, [selectedFY, isEditing, purchaseOrders, formData]);
 
     useEffect(() => {
         if (selectedFY) {
@@ -207,9 +253,8 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ onSaveSuccess, ed
         // Check if the form has actual content before saving a draft
         const isFormDirty = () => {
             const hasSupplierName = !!formData.supplierName?.trim();
-            const hasPoNumber = !!formData.poNumber?.trim();
             const hasItemDescription = formData.items?.some((i: any) => !!i.description?.trim());
-            return hasSupplierName || hasPoNumber || hasItemDescription;
+            return hasSupplierName || hasItemDescription;
         };
 
         if (!isFormDirty()) {

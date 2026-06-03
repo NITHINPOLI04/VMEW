@@ -14,6 +14,8 @@ import { convertToWords } from '../utils/numberToWords';
 import { usePreviewStore } from '../stores/previewStore';
 import { useDraftsStore } from '../stores/draftsStore';
 import { useAuthStore } from '../stores/authStore';
+import { useFinancialYearStore } from '../stores/financialYearStore';
+import { getNextDocumentNumber } from '../utils/autoIncrement';
 
 type BillType = 'invoice' | 'dc' | 'quotation' | 'credit_note' | 'debit_note';
 
@@ -40,9 +42,10 @@ const GenerateBills: React.FC = () => {
   const hasPrefilled = useRef(false);
   const hasRestoredDraft = useRef<string | null>(null);
 
-  const { createInvoice, fetchInvoice, updateInvoice } = useInvoiceStore();
-  const { createDC, fetchDC, updateDC } = useDCStore();
-  const { createQuotation, fetchQuotation, updateQuotation } = useQuotationStore();
+  const { invoices, creditNotes, debitNotes, createInvoice, fetchInvoice, updateInvoice, fetchInvoices, fetchCreditNotes, fetchDebitNotes } = useInvoiceStore();
+  const { deliveryChallans, createDC, fetchDC, updateDC, fetchDCs } = useDCStore();
+  const { quotations, createQuotation, fetchQuotation, updateQuotation, fetchQuotations } = useQuotationStore();
+  const selectedFY = useFinancialYearStore((state) => state.selectedFY);
   const { defaultInfo } = useTemplateStore();
   const { customers, fetchCustomers, addCustomer } = useContactStore();
 
@@ -183,9 +186,8 @@ const GenerateBills: React.FC = () => {
     // Check if the form has actual content before saving a draft
     const isFormDirty = () => {
       const hasBuyerName = !!formData.buyerName?.trim();
-      const hasDocNumber = !!(formData.invoiceNumber?.trim() || formData.dcNumber?.trim() || formData.quotationNumber?.trim());
       const hasItemDescription = formData.items?.some((i: any) => !!i.description?.trim());
-      return hasBuyerName || hasDocNumber || hasItemDescription;
+      return hasBuyerName || hasItemDescription;
     };
 
     if (!isFormDirty()) {
@@ -238,6 +240,70 @@ const GenerateBills: React.FC = () => {
   }, [lastSaved]);
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
+
+  // Fetch documents for the selected year to compute next doc number
+  useEffect(() => {
+    if (!isEditing && selectedFY) {
+      if (billType === 'invoice') {
+        fetchInvoices(selectedFY).catch(err => console.error(err));
+      } else if (billType === 'credit_note') {
+        fetchCreditNotes(selectedFY).catch(err => console.error(err));
+      } else if (billType === 'debit_note') {
+        fetchDebitNotes(selectedFY).catch(err => console.error(err));
+      } else if (billType === 'dc') {
+        fetchDCs(selectedFY).catch(err => console.error(err));
+      } else if (billType === 'quotation') {
+        fetchQuotations(selectedFY).catch(err => console.error(err));
+      }
+    }
+  }, [billType, selectedFY, isEditing, fetchInvoices, fetchCreditNotes, fetchDebitNotes, fetchDCs, fetchQuotations]);
+
+  // Auto-increment document number on type/year change or data load
+  useEffect(() => {
+    if (isEditing || !selectedFY || !formData || Object.keys(formData).length === 0) {
+      return;
+    }
+
+    const numberKey = billType === 'dc' ? 'dcNumber' : billType === 'quotation' ? 'quotationNumber' : 'invoiceNumber';
+    const currentVal = formData[numberKey];
+
+    // We should auto-increment if the field is empty, OR if it has a standard format number
+    // but with a different financial year suffix (meaning they changed the financial year dropdown).
+    const isStandardPattern = /^\d+\/VMEW\/\d{2}-\d{2}$/.test(currentVal || '');
+    const formattedFY = selectedFY.split('-').map(part => part.slice(-2)).join('-');
+    const expectedSuffix = `/VMEW/${formattedFY}`;
+    const hasDifferentYear = isStandardPattern && !currentVal.endsWith(expectedSuffix);
+
+    // If the field is currently set to the default fallback "01" (e.g. calculated before
+    // the document store was fully loaded) but we now have actual documents to compute from,
+    // we should update it to the correct sequential number.
+    const defaultNum = `01/VMEW/${formattedFY}`;
+    let docs: any[] = [];
+    if (billType === 'invoice') docs = invoices;
+    else if (billType === 'credit_note') docs = creditNotes;
+    else if (billType === 'debit_note') docs = debitNotes;
+    else if (billType === 'dc') docs = deliveryChallans;
+    else if (billType === 'quotation') docs = quotations;
+
+    const nextNum = getNextDocumentNumber(docs, numberKey, selectedFY);
+    const isFallbackValue = isStandardPattern && currentVal === defaultNum && nextNum !== defaultNum;
+    const shouldUpdate = !currentVal || hasDifferentYear || isFallbackValue;
+
+    if (shouldUpdate) {
+      setFormData((prev: any) => {
+        const prevVal = prev ? prev[numberKey] : '';
+        const prevIsStandard = /^\d+\/VMEW\/\d{2}-\d{2}$/.test(prevVal || '');
+        const prevHasDifferentYear = prevIsStandard && !prevVal.endsWith(expectedSuffix);
+        const prevNextNum = getNextDocumentNumber(docs, numberKey, selectedFY);
+        const prevIsFallbackValue = prevIsStandard && prevVal === defaultNum && prevNextNum !== defaultNum;
+
+        if (!prevVal || prevHasDifferentYear || prevIsFallbackValue) {
+          return { ...prev, [numberKey]: prevNextNum };
+        }
+        return prev;
+      });
+    }
+  }, [billType, selectedFY, isEditing, invoices, creditNotes, debitNotes, deliveryChallans, quotations, formData]);
 
   useEffect(() => {
     const loadEntityForEdit = async () => {
