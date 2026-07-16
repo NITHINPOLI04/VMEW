@@ -31,3 +31,7 @@ eslint.json
 
 # Agent config
 .agent/
+
+
+# Graphify
+graphify-out/
