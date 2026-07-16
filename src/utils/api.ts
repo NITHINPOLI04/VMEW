@@ -1,4 +1,4 @@
-import { Invoice, InvoiceFormData, DeliveryChallan, DeliveryChallanFormData, Quotation, QuotationFormData, InventoryItem, ProductSuggestion, Letterhead, DefaultInfo, Supplier, Customer, PurchaseOrder, PurchaseOrderFormData } from '../types/index';
+import { Invoice, InvoiceFormData, DeliveryChallan, DeliveryChallanFormData, Quotation, QuotationFormData, InventoryItem, ProductSuggestion, Letterhead, DefaultInfo, Supplier, Customer, PurchaseOrder, PurchaseOrderFormData, HsnSummaryRow, HsnSummaryTotals, HsnDetailRow } from '../types/index';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -279,3 +279,16 @@ export const deletePurchaseOrder = (id: string, token: string) =>
   apiRequest<void>('/api/po/' + id, 'DELETE', undefined, {
     Authorization: `Bearer ${token}`,
   });
+
+// HSN Summary Calculator APIs
+export const getHsnSummary = (year: string, from: string, to: string, token: string) =>
+  apiRequest<{ summary: HsnSummaryRow[]; totals: HsnSummaryTotals }>(
+    `/api/invoices/hsn-summary?year=${year}&from=${from}&to=${to}`, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const getHsnDetail = (year: string, from: string, to: string, token: string) =>
+  apiRequest<{ rows: HsnDetailRow[] }>(
+    `/api/invoices/hsn-detail?year=${year}&from=${from}&to=${to}`, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });

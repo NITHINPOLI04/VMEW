@@ -11,7 +11,8 @@ import {
   Building2,
   ChevronDown,
   ChevronUp,
-  FileText
+  FileText,
+  Wrench
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useDraftsStore } from '../stores/draftsStore';
@@ -37,6 +38,7 @@ const navItems = [
   },
   { to: '/inventory', icon: Package, label: 'Inventory' },
   { to: '/companies', icon: Building2, label: 'Companies' },
+  { to: '/tools', icon: Wrench, label: 'Tools' },
   { to: '/template-setup', icon: Settings, label: 'Template Setup' },
 ];
 

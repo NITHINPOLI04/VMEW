@@ -28,6 +28,8 @@ import PurchaseOrderWorkspace from './pages/PurchaseOrderWorkspace';
 import PurchaseOrderLibrary from './pages/PurchaseOrderLibrary';
 import PurchaseOrderForm from './components/PurchaseOrderForm';
 import PurchaseOrderPreview from './pages/PurchaseOrderPreview';
+import HsnCalculator from './pages/HsnCalculator';
+import Tools from './pages/Tools';
 
 // Components
 import Layout from './components/Layout';
@@ -112,6 +114,8 @@ function App() {
               </Route>
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/companies" element={<Companies />} />
+              <Route path="/tools" element={<Tools />} />
+              <Route path="/tools/hsn-calculator" element={<HsnCalculator />} />
               <Route path="/template-setup" element={<TemplateSetup />} />
               <Route path="/invoice-preview/:id" element={<InvoicePreview />} />
               <Route path="/dc-preview/:id" element={<DCPreview />} />

@@ -264,3 +264,48 @@ export interface PurchaseOrder extends PurchaseOrderFormData {
   createdAt: string;
   updatedAt: string;
 }
+
+// HSN Summary Calculator Types
+export interface HsnSummaryRow {
+  hsnSacCode: string;
+  description: string;
+  unit: string;
+  taxType: string;
+  totalQty: number;
+  totalTaxableAmt: number;
+  totalSgstAmt: number;
+  totalCgstAmt: number;
+  totalIgstAmt: number;
+  totalValue: number;
+  invoiceCount: number;
+}
+
+export interface HsnSummaryTotals {
+  totalTaxableAmt: number;
+  totalSgstAmt: number;
+  totalCgstAmt: number;
+  totalIgstAmt: number;
+  totalValue: number;
+  distinctHsnCount: number;
+  invoiceCount: number;
+}
+
+export interface HsnDetailRow {
+  invoiceNumber: string;
+  date: string;
+  buyerName: string;
+  buyerGst: string;
+  taxType: string;
+  hsnSacCode: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  rate: number;
+  taxableAmount: number;
+  sgstPercentage: number;
+  sgstAmount: number;
+  cgstPercentage: number;
+  cgstAmount: number;
+  igstPercentage: number;
+  igstAmount: number;
+}

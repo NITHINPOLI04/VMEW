@@ -154,3 +154,59 @@ export const exportGroupedExcel = (flattenedItems: any[], sheetName: string, fil
 
   formatAndExportSheet(finalExportData, sheetName, fileName);
 };
+
+/**
+ * Export HSN Summary as CSV (GSTR-1 Table 12 format)
+ * Columns match the GST portal exactly, including Cess Amount (always 0 for VMEW).
+ */
+export const exportHsnSummaryCsv = (
+  summaryData: { hsnSacCode: string; description: string; unit: string; totalQty: number; totalValue: number; totalTaxableAmt: number; totalIgstAmt: number; totalCgstAmt: number; totalSgstAmt: number }[],
+  periodLabel: string,
+  fileName: string
+) => {
+  const headers = [
+    'HSN/SAC Code',
+    'Description',
+    'UQC',
+    'Total Quantity',
+    'Total Value',
+    'Taxable Value',
+    'Integrated Tax Amount',
+    'Central Tax Amount',
+    'State/UT Tax Amount',
+    'Cess Amount',
+  ];
+
+  const escapeCell = (val: string | number): string => {
+    const str = String(val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const csvRows = [headers.map(escapeCell).join(',')];
+
+  summaryData.forEach(row => {
+    csvRows.push([
+      escapeCell(row.hsnSacCode),
+      escapeCell(row.description),
+      escapeCell(row.unit),
+      escapeCell(row.totalQty),
+      escapeCell(row.totalTaxableAmt + row.totalIgstAmt + row.totalCgstAmt + row.totalSgstAmt),
+      escapeCell(row.totalTaxableAmt),
+      escapeCell(row.totalIgstAmt),
+      escapeCell(row.totalCgstAmt),
+      escapeCell(row.totalSgstAmt),
+      escapeCell(0), // Cess is always 0
+    ].join(','));
+  });
+
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+};
