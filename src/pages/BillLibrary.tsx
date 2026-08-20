@@ -30,7 +30,7 @@ import { MetricSkeleton } from '../components/Skeleton';
 import { exportStandardExcel, exportGroupedExcel } from '../utils/excelExport';
 
 type TabType = 'invoice' | 'dc' | 'quotation' | 'credit_note' | 'debit_note';
-type SortKey = 'newest' | 'oldest' | 'amount-high' | 'amount-low';
+type SortKey = 'inv-desc' | 'inv-asc' | 'newest' | 'oldest' | 'amount-high' | 'amount-low';
 
 const TABS: { key: TabType; label: string; icon: React.ElementType; color: string; group: 'core' | 'adjustment' }[] = [
   { key: 'invoice',     label: 'Tax Invoices',      icon: FileText,       color: 'blue',    group: 'core' },
@@ -59,8 +59,10 @@ const months = [
 ];
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: 'newest', label: 'Newest First' },
-  { value: 'oldest', label: 'Oldest First' },
+  { value: 'inv-desc', label: 'Invoice No: High → Low' },
+  { value: 'inv-asc', label: 'Invoice No: Low → High' },
+  { value: 'newest', label: 'Date: Newest First' },
+  { value: 'oldest', label: 'Date: Oldest First' },
   { value: 'amount-high', label: 'Amount: High → Low' },
   { value: 'amount-low', label: 'Amount: Low → High' },
 ];
@@ -153,7 +155,7 @@ const BillLibrary: React.FC = () => {
 
   // ── Search & Sort ──────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('newest');
+  const [sortKey, setSortKey] = useState<SortKey>('inv-desc');
   const [sortOpen, setSortOpen] = useState(false);
 
   const [exportOpen, setExportOpen] = useState(false);
@@ -459,6 +461,13 @@ const BillLibrary: React.FC = () => {
         return matchesSearch && matchesMonth && matchesCustomer && matchesStatus && matchesFrom && matchesTo;
       })
       .sort((a, b) => {
+        // Extract leading number from invoice/doc number for numeric sorting
+        const extractNum = (item: any) => {
+          const num = (item.invoiceNumber || item.dcNumber || item.quotationNumber || '').match(/\d+/);
+          return num ? parseInt(num[0], 10) : 0;
+        };
+        if (sortKey === 'inv-desc') return extractNum(b) - extractNum(a);
+        if (sortKey === 'inv-asc') return extractNum(a) - extractNum(b);
         if (sortKey === 'newest') return new Date(b.date).getTime() - new Date(a.date).getTime();
         if (sortKey === 'oldest') return new Date(a.date).getTime() - new Date(b.date).getTime();
         if (sortKey === 'amount-high') return (b.grandTotal || 0) - (a.grandTotal || 0);
