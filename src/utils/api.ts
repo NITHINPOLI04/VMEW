@@ -1,4 +1,4 @@
-import { Invoice, InvoiceFormData, DeliveryChallan, DeliveryChallanFormData, Quotation, QuotationFormData, InventoryItem, ProductSuggestion, Letterhead, DefaultInfo, Supplier, Customer, PurchaseOrder, PurchaseOrderFormData, HsnSummaryRow, HsnSummaryTotals, HsnDetailRow } from '../types/index';
+import { Invoice, InvoiceFormData, PaymentEntry, DeliveryChallan, DeliveryChallanFormData, Quotation, QuotationFormData, InventoryItem, ProductSuggestion, Letterhead, DefaultInfo, Supplier, Customer, PurchaseOrder, PurchaseOrderFormData, HsnSummaryRow, HsnSummaryTotals, HsnDetailRow } from '../types/index';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -89,13 +89,24 @@ export const updateInvoice = (id: string, invoiceData: InvoiceFormData, token: s
     Authorization: `Bearer ${token}`,
   });
 
-export const updatePaymentStatus = (id: string, status: string, token: string) =>
-  apiRequest<Invoice>('/api/invoices/' + id + '/payment-status', 'PATCH', { status }, {
+export const updatePaymentStatus = (id: string, status: string, token: string, receivedAmount?: number) =>
+  apiRequest<Invoice>('/api/invoices/' + id + '/payment-status', 'PATCH', { status, receivedAmount }, {
     Authorization: `Bearer ${token}`,
   });
 
 export const deleteInvoice = (id: string, token: string) =>
   apiRequest<void>('/api/invoices/' + id, 'DELETE', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+// Payment entry APIs
+export const addPaymentEntry = (invoiceId: string, entry: Omit<PaymentEntry, '_id' | 'totalPermanentDeductions' | 'totalRecoverableDeductions' | 'netAmount'>, token: string) =>
+  apiRequest<{ invoice: Invoice; revenueRecognised: number }>('/api/invoices/' + invoiceId + '/payments', 'POST', entry, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const deletePaymentEntry = (invoiceId: string, paymentId: string, token: string) =>
+  apiRequest<{ invoice: Invoice }>('/api/invoices/' + invoiceId + '/payments/' + paymentId, 'DELETE', undefined, {
     Authorization: `Bearer ${token}`,
   });
 

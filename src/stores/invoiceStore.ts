@@ -8,7 +8,6 @@ interface InvoiceState {
   invoices: Invoice[];
   creditNotes: Invoice[];
   debitNotes: Invoice[];
-  receivedAmounts: { [key: string]: number };
   loading: boolean;
   error: string | null;
   fetchInvoices: (year: string) => Promise<Invoice[]>;
@@ -19,8 +18,6 @@ interface InvoiceState {
   updateInvoice: (id: string, invoice: InvoiceFormData) => Promise<void>;
   deleteInvoice: (id: string) => Promise<void>;
   updateInvoicePaymentStatus: (id: string, status: string) => Promise<void>;
-  setReceivedAmount: (id: string, amount: number) => void;
-  getReceivedAmount: (id: string) => number | undefined;
   clearInvoices: () => void;
 }
 
@@ -28,7 +25,6 @@ export const useInvoiceStore = create<InvoiceState>((set, get) => ({
   invoices: [],
   creditNotes: [],
   debitNotes: [],
-  receivedAmounts: {},
   loading: false,
   error: null,
 
@@ -169,7 +165,6 @@ export const useInvoiceStore = create<InvoiceState>((set, get) => ({
         invoices: remover(state.invoices),
         creditNotes: remover(state.creditNotes),
         debitNotes: remover(state.debitNotes),
-        receivedAmounts: Object.fromEntries(Object.entries(state.receivedAmounts).filter(([key]) => key !== id)),
         loading: false,
       }));
     } catch (error: any) {
@@ -189,11 +184,6 @@ export const useInvoiceStore = create<InvoiceState>((set, get) => ({
         invoices: state.invoices.map((invoice) => invoice._id === id ? updatedInvoice : invoice),
         loading: false,
       }));
-      if (status !== 'Partially Paid') {
-        set((state) => ({
-          receivedAmounts: { ...state.receivedAmounts, [id]: 0 },
-        }));
-      }
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to update payment status';
       set({ error: errorMessage, loading: false });
@@ -201,17 +191,7 @@ export const useInvoiceStore = create<InvoiceState>((set, get) => ({
     }
   },
 
-  setReceivedAmount: (id: string, amount: number) => {
-    set((state) => ({
-      receivedAmounts: { ...state.receivedAmounts, [id]: amount },
-    }));
-  },
-
-  getReceivedAmount: (id: string) => {
-    return get().receivedAmounts[id];
-  },
-
   clearInvoices: () => {
-    set({ invoices: [], creditNotes: [], debitNotes: [], receivedAmounts: {}, error: null });
+    set({ invoices: [], creditNotes: [], debitNotes: [], error: null });
   },
 }));

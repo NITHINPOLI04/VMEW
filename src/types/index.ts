@@ -15,6 +15,34 @@ export interface InvoiceItem {
   igstAmount: number;
 }
 
+export interface PaymentEntry {
+  _id: string;
+  paymentDate: string;
+  grossAmount: number;
+  mode: 'NEFT' | 'RTGS' | 'Cheque' | 'Cash' | 'UPI';
+  utrNumber: string;
+  notes: string;
+
+  // Permanent deductions
+  ldRecovery: number;
+  itTds: number;
+  otherPermanent: number;
+  otherPermanentNote: string;
+
+  // Recoverable deductions
+  gstTds: number;
+  gstRetention: number;
+  securityDeposit: number;
+  bankGuarantee: number;
+  otherRecoverable: number;
+  otherRecoverableNote: string;
+
+  // Computed
+  totalPermanentDeductions: number;
+  totalRecoverableDeductions: number;
+  netAmount: number;
+}
+
 export interface InvoiceFormData {
   _id?: string;
   invoiceNumber: string;
@@ -47,6 +75,7 @@ export interface InvoiceFormData {
   linkedInvoiceId?: string | null;
   linkedInvoiceNumber?: string;
   reason?: string;
+  payments?: PaymentEntry[];
   receivedAmount?: number;
   createdAt?: string;
   updatedAt?: string;

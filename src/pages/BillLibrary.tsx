@@ -7,6 +7,8 @@ import {
   ArrowDownLeft, ArrowUpRight, MoreVertical
 } from 'lucide-react';
 import RaiseNoteModal from '../components/RaiseNoteModal';
+import PaymentLogPanel from '../components/PaymentLogPanel';
+import PaymentLedgerPanel from '../components/PaymentLedgerPanel';
 import { useAuthStore } from '../stores/authStore';
 import { useInvoiceStore } from '../stores/invoiceStore';
 import { useDCStore } from '../stores/dcStore';
@@ -14,6 +16,7 @@ import { useQuotationStore } from '../stores/quotationStore';
 import { useContactStore } from '../stores/contactStore';
 import { useFinancialYearStore } from '../stores/financialYearStore';
 import { Invoice, DeliveryChallan, Quotation } from '../types';
+import { updatePaymentStatus } from '../utils/api';
 import { DOCUMENT_TYPE_CONFIG, BillingDocumentType } from '../config/documentConfigs';
 import { notify } from '../utils/notify';
 import { useConfirm } from '../components/ConfirmDialog';
@@ -169,7 +172,15 @@ const BillLibrary: React.FC = () => {
   const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null);
   const [dropdownRefEl, setDropdownRefEl] = useState<Element | null>(null);
   const [popperEl, setPopperEl] = useState<HTMLDivElement | null>(null);
-  const [partialPayPopupId, setPartialPayPopupId] = useState<string | null>(null);
+
+  // ── Payment panel state ────────────────────────────────────────────────────
+  const [paymentPanelOpen, setPaymentPanelOpen] = useState(false);
+  const [paymentPanelInvoice, setPaymentPanelInvoice] = useState<Invoice | null>(null);
+  const [paymentPanelMode, setPaymentPanelMode] = useState<'partial' | 'full'>('partial');
+  const [ledgerOpen, setLedgerOpen] = useState(false);
+  const [ledgerInvoice, setLedgerInvoice] = useState<Invoice | null>(null);
+  const [unpaidConfirmOpen, setUnpaidConfirmOpen] = useState(false);
+  const [unpaidConfirmInvoice, setUnpaidConfirmInvoice] = useState<Invoice | null>(null);
 
   const { styles: popperStyles, attributes: popperAttrs } = usePopper(dropdownRefEl, popperEl, {
     placement: 'bottom-start',
@@ -278,17 +289,10 @@ const BillLibrary: React.FC = () => {
       if (dropdownOpenId && popperEl && !popperEl.contains(e.target as Node)) {
         setDropdownOpenId(null);
       }
-      
-      if (partialPayPopupId) {
-        const target = e.target as Element;
-        if (!target.closest('.partial-pay-popup-container')) {
-           setPartialPayPopupId(null);
-        }
-      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [dropdownOpenId, popperEl, partialPayPopupId]);
+  }, [dropdownOpenId, popperEl]);
 
   // ── Data loading ────────────────────────────────────────────────────────────
   const loadData = async () => {
@@ -342,15 +346,64 @@ const BillLibrary: React.FC = () => {
     });
   };
 
-  // ── Payment status change ───────────────────────────────────────────────────
-  const handlePaymentStatusChange = async (id: string, status: string) => {
+  // ── Payment status change — Three-state routing ────────────────────────────
+  const handlePaymentStatusChange = async (invoiceId: string, newStatus: string) => {
     if (activeTab !== 'invoice') return;
+    setDropdownOpenId(null);
+
+    const inv = invoices.find(i => i._id === invoiceId);
+    if (!inv) return;
+
+    if (newStatus === 'Partially Paid') {
+      setPaymentPanelInvoice(inv);
+      setPaymentPanelMode('partial');
+      setPaymentPanelOpen(true);
+      return;
+    }
+
+    if (newStatus === 'Payment Complete') {
+      if (inv.payments && inv.payments.length > 0) {
+        setLedgerInvoice(inv);
+        setLedgerOpen(true);
+      } else {
+        setPaymentPanelInvoice(inv);
+        setPaymentPanelMode('full');
+        setPaymentPanelOpen(true);
+      }
+      return;
+    }
+
+    if (newStatus === 'Unpaid') {
+      if (inv.payments && inv.payments.length > 0) {
+        setUnpaidConfirmInvoice(inv);
+        setUnpaidConfirmOpen(true);
+      } else {
+        try {
+          const token = useAuthStore.getState().token;
+          if (!token) return;
+          await updatePaymentStatus(inv._id, 'Unpaid', token);
+          setInvoices(prev => prev.map(i => i._id === inv._id ? { ...i, paymentStatus: 'Unpaid', payments: [], receivedAmount: 0 } : i));
+          notify.success('Payment status updated');
+        } catch { notify.error('Failed to update payment status'); }
+      }
+    }
+  };
+
+  const handleUnpaidConfirm = async () => {
+    if (!unpaidConfirmInvoice) return;
     try {
-      await invoiceStore.updateInvoicePaymentStatus(id, status);
-      setInvoices(inv => inv.map(i => i._id === id ? { ...i, paymentStatus: status } : i));
-      notify.success('Payment status updated');
-      setDropdownOpenId(null);
-    } catch { notify.error('Failed to update payment status'); }
+      const token = useAuthStore.getState().token;
+      if (!token) return;
+      await updatePaymentStatus(unpaidConfirmInvoice._id, 'Unpaid', token);
+      setInvoices(prev => prev.map(i => i._id === unpaidConfirmInvoice._id ? { ...i, paymentStatus: 'Unpaid', payments: [], receivedAmount: 0 } : i));
+      notify.success('All payments cleared');
+    } catch { notify.error('Failed to clear payments'); }
+    setUnpaidConfirmOpen(false);
+    setUnpaidConfirmInvoice(null);
+  };
+
+  const handlePaymentSaved = (updatedInvoice: Invoice) => {
+    setInvoices(prev => prev.map(i => i._id === updatedInvoice._id ? updatedInvoice : i));
   };
 
   const handleDownload = (item: any) => {
@@ -979,62 +1032,49 @@ const BillLibrary: React.FC = () => {
                         )}
                         {activeTab === 'invoice' && (
                           <td data-label="Payment Status">
-                            <div className="flex items-center gap-2">
-                              <div className="relative inline-block">
-                                <StatusBadge
-                                  status={item.paymentStatus}
-                                  showCaret
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDropdownRefEl(e.currentTarget);
-                                    setDropdownOpenId(dropdownOpenId === item._id ? null : item._id);
-                                  }}
-                                />
-                              </div>
-                              {item.paymentStatus === 'Partially Paid' && (
-                                <div className="relative partial-pay-popup-container">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPartialPayPopupId(partialPayPopupId === item._id ? null : item._id);
-                                    }}
-                                    className="text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 p-1.5 rounded-full transition-colors flex-shrink-0"
-                                    title="Pending Payment Details"
-                                  >
-                                    <Clock className="w-4 h-4" />
-                                  </button>
-                                  
-                                  {partialPayPopupId === item._id && (
-                                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 bg-white border border-slate-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-4 w-64" onClick={e => e.stopPropagation()}>
-                                      <h4 className="text-sm font-medium text-slate-800 mb-3 border-b border-slate-100 pb-2">Pending Payment Details</h4>
-                                      <div className="mb-3">
-                                        <label className="text-xs font-medium text-slate-500 mb-1.5 block">Amount Received (₹)</label>
-                                        <input
-                                          type="number"
-                                          value={invoiceStore.getReceivedAmount(item._id) || ''}
-                                          onChange={(e) => {
-                                            const rawVal = Number(e.target.value);
-                                            const clamped = Math.max(0, Math.min(item.grandTotal || 0, rawVal));
-                                            invoiceStore.setReceivedAmount(item._id, clamped);
-                                          }}
-                                          min={0}
-                                          max={item.grandTotal}
-                                          className="w-full border border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-800 transition-shadow outline-none"
-                                        />
-                                      </div>
-                                      <p className="text-sm text-slate-700">
-                                        Balance Amount: <span className="font-semibold text-slate-900">₹{Math.max(0, (item.grandTotal || 0) - Math.max(0, invoiceStore.getReceivedAmount(item._id) || 0)).toFixed(2)}</span>
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                            <div className="relative inline-block">
+                              <StatusBadge
+                                status={item.paymentStatus}
+                                showCaret
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDropdownRefEl(e.currentTarget);
+                                  setDropdownOpenId(dropdownOpenId === item._id ? null : item._id);
+                                }}
+                              />
                             </div>
                           </td>
                         )}
                         <td data-label="Actions">
                           {activeTab === 'invoice' ? (
                             <div className="flex items-center justify-center gap-1">
+                              {/* Payment Log/Ledger Action */}
+                              {item.paymentStatus === 'Payment Complete' && item.payments && item.payments.length > 0 ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setLedgerInvoice(item);
+                                    setLedgerOpen(true);
+                                  }}
+                                  className="text-slate-400 hover:text-emerald-600 p-1.5 rounded-md hover:bg-emerald-50 transition-colors flex-shrink-0"
+                                  title="View payment ledger"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPaymentPanelInvoice(item);
+                                    setPaymentPanelMode(!item.payments || item.payments.length === 0 ? 'full' : 'partial');
+                                    setPaymentPanelOpen(true);
+                                  }}
+                                  className="text-slate-400 hover:text-blue-600 p-1.5 rounded-md hover:bg-blue-50 transition-colors flex-shrink-0"
+                                  title={!item.payments || item.payments.length === 0 ? "Add payment" : "View payment log"}
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </button>
+                              )}
                               <Link
                                 to={`/generate-bills?type=invoice&edit=${item._id}`}
                                 onClick={(e) => e.stopPropagation()}
@@ -1229,6 +1269,52 @@ const BillLibrary: React.FC = () => {
         noteType={selectedNoteType}
         parentInvoice={selectedParentInvoice}
       />
+
+      {/* Payment Log Panel (slide-in) */}
+      <PaymentLogPanel
+        isOpen={paymentPanelOpen}
+        onClose={() => { setPaymentPanelOpen(false); setPaymentPanelInvoice(null); }}
+        invoice={paymentPanelInvoice}
+        mode={paymentPanelMode}
+        onSaved={handlePaymentSaved}
+      />
+
+      {/* Payment Ledger Panel (slide-in, read-only) */}
+      <PaymentLedgerPanel
+        isOpen={ledgerOpen}
+        onClose={() => { setLedgerOpen(false); setLedgerInvoice(null); }}
+        invoice={ledgerInvoice}
+      />
+
+      {/* Unpaid Confirmation Dialog */}
+      {unpaidConfirmOpen && unpaidConfirmInvoice && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => { setUnpaidConfirmOpen(false); setUnpaidConfirmInvoice(null); }} />
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Clear all payment records?</h3>
+            <p className="text-sm text-slate-600 leading-relaxed mb-6">
+              This will permanently delete all <strong>{unpaidConfirmInvoice.payments?.length || 0}</strong> payment entries recorded for this invoice.
+              The invoice will be marked as Unpaid and revenue will be adjusted accordingly.
+              <br /><br />
+              <span className="text-rose-600 font-semibold">This cannot be undone.</span>
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => { setUnpaidConfirmOpen(false); setUnpaidConfirmInvoice(null); }}
+                className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUnpaidConfirm}
+                className="px-5 py-2.5 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors shadow-sm"
+              >
+                Yes, clear payments
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

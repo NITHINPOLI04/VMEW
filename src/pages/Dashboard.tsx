@@ -28,7 +28,6 @@ const Dashboard: React.FC = () => {
     fetchInvoices,
     fetchCreditNotes,
     fetchDebitNotes,
-    getReceivedAmount,
   } = useInvoiceStore();
   const { loading: inventoryLoading, fetchInventory } = useInventoryStore();
 
@@ -83,19 +82,20 @@ const Dashboard: React.FC = () => {
     return i.grandTotal - cnTotal + dnTotal;
   }, [invoiceNotes]);
 
+  // Revenue = sum of all payments[].netAmount (actual money received minus deductions)
+  const getPaymentsTotal = useCallback((i: any) => {
+    return (i.payments || []).reduce((s: number, p: any) => s + (p.netAmount || 0), 0);
+  }, []);
+
   const totalPaid = useMemo(() => inv.reduce((s, i) => {
-    const netAmt = getInvoiceNet(i);
-    if (i.paymentStatus === 'Payment Complete') return s + netAmt;
-    if (i.paymentStatus === 'Partially Paid') return s + Math.max(0, Math.min(getReceivedAmount(i._id) || i.receivedAmount || 0, netAmt));
-    return s;
-  }, 0), [inv, getReceivedAmount, getInvoiceNet]);
+    return s + getPaymentsTotal(i);
+  }, 0), [inv, getPaymentsTotal]);
 
   const totalUnpaid = useMemo(() => inv.reduce((s, i) => {
     const netAmt = getInvoiceNet(i);
-    if (i.paymentStatus === 'Unpaid') return s + netAmt;
-    if (i.paymentStatus === 'Partially Paid') return s + Math.max(0, netAmt - Math.max(0, getReceivedAmount(i._id) || i.receivedAmount || 0));
-    return s;
-  }, 0), [inv, getReceivedAmount, getInvoiceNet]);
+    const received = getPaymentsTotal(i);
+    return s + Math.max(0, netAmt - received);
+  }, 0), [inv, getInvoiceNet, getPaymentsTotal]);
 
   const totalRevenue = useMemo(() => inv.reduce((s, i) => s + getInvoiceNet(i), 0), [inv, getInvoiceNet]);
 
