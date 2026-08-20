@@ -484,13 +484,28 @@ const BillLibrary: React.FC = () => {
       return i.grandTotal - cnTotal + dnTotal;
     };
 
-    const paid = invoices.filter(i => i.paymentStatus === 'Payment Complete').reduce((s, i) => s + getInvoiceNetAmt(i), 0);
-    const unpaid = invoices.filter(i => i.paymentStatus === 'Unpaid').reduce((s, i) => s + getInvoiceNetAmt(i), 0);
-    const partial = invoices.filter(i => i.paymentStatus === 'Partially Paid').reduce((s, i) => s + getInvoiceNetAmt(i), 0);
+    // Revenue = sum of all payments[].netAmount (actual money received)
+    const getPaymentsTotal = (i: Invoice) => {
+      return (i.payments || []).reduce((s: number, p: any) => s + (p.netAmount || 0), 0);
+    };
+
+    const paid = invoices.reduce((s, i) => s + getPaymentsTotal(i), 0);
+    const unpaid = invoices.reduce((s, i) => {
+      const invoiceNet = getInvoiceNetAmt(i);
+      const received = getPaymentsTotal(i);
+      return s + Math.max(0, invoiceNet - received);
+    }, 0);
+    const partialInvoices = invoices.filter(i => i.paymentStatus === 'Partially Paid');
+    const partial = partialInvoices.reduce((s, i) => {
+      const invoiceNet = getInvoiceNetAmt(i);
+      const received = getPaymentsTotal(i);
+      return s + Math.max(0, invoiceNet - received);
+    }, 0);
+
     return [
       { label: 'Paid Amount', value: fmt(paid), icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', sub: `${invoices.filter(i => i.paymentStatus === 'Payment Complete').length} invoices` },
       { label: 'Unpaid Amount', value: fmt(unpaid), icon: XCircle, iconBg: 'bg-rose-50', iconColor: 'text-rose-500', sub: `${invoices.filter(i => i.paymentStatus === 'Unpaid').length} invoices` },
-      { label: 'Partially Paid', value: fmt(partial), icon: Clock, iconBg: 'bg-amber-50', iconColor: 'text-amber-500', sub: `${invoices.filter(i => i.paymentStatus === 'Partially Paid').length} invoices` },
+      { label: 'Partially Paid', value: fmt(partial), icon: Clock, iconBg: 'bg-amber-50', iconColor: 'text-amber-500', sub: `${partialInvoices.length} invoices` },
       { label: 'Total Invoices', value: invoices.length, icon: ReceiptText, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', sub: `FY ${selectedYear}` },
     ];
   })();
