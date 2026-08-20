@@ -892,12 +892,12 @@ const BillLibrary: React.FC = () => {
                 <ChevronDown size={11} className="opacity-60" />
               </button>
               {sortOpen && (
-                <div ref={sortRef} className="dropdown-panel right-0 top-full mt-2 w-48">
+                <div ref={sortRef} className="dropdown-panel right-0 top-full mt-2 w-52">
                   {SORT_OPTIONS.map(opt => (
                     <button
                       key={opt.value}
                       onClick={() => { setSortKey(opt.value); setSortOpen(false); setCurrentPage(1); }}
-                      className={`dropdown-item ${sortKey === opt.value ? 'dropdown-item-active font-semibold' : ''}`}
+                      className={`dropdown-item !text-xs !py-2 ${sortKey === opt.value ? 'dropdown-item-active font-semibold' : ''}`}
                     >
                       {sortKey === opt.value && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 flex-shrink-0" />}
                       {opt.label}
