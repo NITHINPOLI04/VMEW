@@ -555,9 +555,6 @@ export const generatePaymentReceiptPDF = async (
   setLabel(pdf, 'AUTHORISED SIGNATORY', BODY_MARGIN, y, 7, TEXT_SOFT, 'normal');
   y += 4;
   setLabel(pdf, companyName, BODY_MARGIN, y, 8.5, TEXT_DARK, 'bold');
-  y += 4;
-  const initials = companyName.split(' ').filter(w => w.length > 0).map(w => w[0]).join('');
-  setLabel(pdf, `For ${initials}`, BODY_MARGIN, y, 8, BLUE, 'bold');
 
   // Right — Revenue recognised
   pdf.setFontSize(7);
