@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, CheckCircle2, FileText, Download } from 'lucide-react';
 import { Invoice } from '../types';
 import { generatePaymentReceiptPDF } from '../engines/paymentReceiptPDF';
+import { useTemplateStore } from '../stores/templateStore';
 
 interface PaymentLedgerPanelProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ const fmt = (n: number) => `₹${n.toLocaleString('en-IN', { minimumFractionDigi
 
 const PaymentLedgerPanel: React.FC<PaymentLedgerPanelProps> = ({ isOpen, onClose, invoice }) => {
   const [activeTab, setActiveTab] = useState<'summary' | 'entries'>('summary');
+  const { letterhead, defaultInfo } = useTemplateStore();
 
   // Body scroll lock + Escape
   useEffect(() => {
@@ -38,7 +40,7 @@ const PaymentLedgerPanel: React.FC<PaymentLedgerPanelProps> = ({ isOpen, onClose
   const handleDownloadReceipt = async () => {
     if (!invoice) return;
     try {
-      await generatePaymentReceiptPDF(invoice);
+      await generatePaymentReceiptPDF(invoice, letterhead, defaultInfo);
     } catch {
       // Silently fail — notification will be shown by PDF generator
     }

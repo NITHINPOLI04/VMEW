@@ -84,6 +84,12 @@ export const quotationSections = (): SectionDef[] => [
       { name: 'validity', label: 'Validity', type: 'text' },
     ],
   },
+  {
+    title: 'Note',
+    fields: [
+      { name: 'note', label: 'Note', type: 'textarea', colSpan: 2, rows: 3 },
+    ],
+  },
 ];
 
 export const dcSections = (): SectionDef[] => [

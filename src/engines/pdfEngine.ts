@@ -443,15 +443,16 @@ export const calcBankTermsHeight = (
 ): number => {
   const rightBoxBottomWidth = contentWidth * 0.48;
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
+  pdf.setFontSize(7);
   let totalTermsLines = 0;
-  terms.forEach(term => {
-    const lines = pdf.splitTextToSize(term, rightBoxBottomWidth - 8);
+  terms.forEach((term, index) => {
+    const termText = `${index + 1}. ${term}`;
+    const lines = pdf.splitTextToSize(termText, rightBoxBottomWidth - 8);
     totalTermsLines += lines.length;
   });
-  const bankBoxHeight = bankDetails.length * 4 + 6;
-  const termsBoxHeight = (totalTermsLines + terms.length) * 3 + 6;
-  return Math.max(bankBoxHeight, termsBoxHeight, 20);
+  const bankBoxHeight = bankDetails.length * 4.5 + 14;
+  const termsBoxHeight = totalTermsLines * 3.8 + 14;
+  return Math.max(bankBoxHeight, termsBoxHeight, 30);
 };
 
 export const drawBankAndTerms = (
@@ -478,18 +479,18 @@ export const drawBankAndTerms = (
   pdf.text('Bank Details', margin + 4, bottomY + 6);
 
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
+  pdf.setFontSize(7.5);
   pdf.setTextColor(15, 23, 42);
-  let bankY = bottomY + 12;
+  let bankY = bottomY + 11.5;
   bankDetails.forEach(({ label, value }) => {
-    if (bankY < bottomY + maxBoxHeight - 2) {
+    if (bankY <= bottomY + maxBoxHeight - 2) {
       const lX = margin + 4;
       const vX = lX + pdf.getTextWidth(label) + 1;
       pdf.setFont('helvetica', 'bold');
       pdf.text(label, lX, bankY);
       pdf.setFont('helvetica', 'normal');
       pdf.text(value, vX, bankY);
-      bankY += 5;
+      bankY += 4.5;
     }
   });
 
@@ -513,19 +514,76 @@ export const drawBankAndTerms = (
   pdf.text('Terms & Conditions', rightBoxBottomX + 4, bottomY + 6);
 
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
+  pdf.setFontSize(7);
   pdf.setTextColor(15, 23, 42);
-  let termY = bottomY + 12;
+  let termY = bottomY + 11.5;
   terms.forEach((term, index) => {
     const termText = `${index + 1}. ${term}`;
     const termLines = pdf.splitTextToSize(termText, rightBoxBottomWidth - 8);
     termLines.forEach((line: string) => {
-      if (termY < bottomY + maxBoxHeight - 2) {
+      if (termY <= bottomY + maxBoxHeight - 2) {
         pdf.text(line, rightBoxBottomX + 4, termY);
-        termY += 4;
+        termY += 3.8;
       }
     });
   });
+};
+
+// ─── Note Box ─────────────────────────────────────────────────────────────────
+
+/**
+ * Draws a full-width "Note" box below the bank/terms section.
+ * Only call this when `note` is a non-empty string.
+ * Returns the Y position directly below the box.
+ */
+export const drawNoteBox = (
+  pdf: jsPDF,
+  margin: number,
+  contentWidth: number,
+  y: number,
+  note: string
+): number => {
+  if (!note || !note.trim()) return y;
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  const noteLines = pdf.splitTextToSize(note.trim(), contentWidth - 8);
+  const boxHeight = Math.max(noteLines.length * 4 + 12, 18);
+
+  pdf.setDrawColor(200, 200, 200);
+  pdf.setFillColor(250, 250, 250);
+  pdf.roundedRect(margin, y, contentWidth, boxHeight, 3, 3, 'FD');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10);
+  pdf.setTextColor(30, 64, 175);
+  pdf.text('Note', margin + 4, y + 6);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.setTextColor(15, 23, 42);
+  let noteY = y + 12;
+  noteLines.forEach((line: string) => {
+    pdf.text(line, margin + 4, noteY);
+    noteY += 4;
+  });
+
+  return y + boxHeight + 4;
+};
+
+/**
+ * Calculates the height required for the note box (for page overflow checks).
+ */
+export const calcNoteBoxHeight = (
+  pdf: jsPDF,
+  note: string,
+  contentWidth: number
+): number => {
+  if (!note || !note.trim()) return 0;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  const noteLines = pdf.splitTextToSize(note.trim(), contentWidth - 8);
+  return Math.max(noteLines.length * 4 + 12, 18) + 4;
 };
 
 // ─── Page Numbers ─────────────────────────────────────────────────────────────

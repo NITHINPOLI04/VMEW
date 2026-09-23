@@ -21,6 +21,8 @@ import {
     drawAmountInWords,
     calcBankTermsHeight,
     drawBankAndTerms,
+    drawNoteBox,
+    calcNoteBoxHeight,
     drawPageNumbers,
     buildBankDetails,
 } from '../engines/pdfEngine';
@@ -207,7 +209,8 @@ const QuotationPreview: React.FC = () => {
             );
             const amountWordsHeight = amountWordsLines.length * 5 + 15;
             const maxBoxHeight = calcBankTermsHeight(pdf, bankDetails, quotationTerms, contentWidth);
-            const totalFooterHeight = totalsBoxHeight + amountWordsHeight + maxBoxHeight + 5;
+            const noteBoxHeight = calcNoteBoxHeight(pdf, quotationData.note || '', contentWidth);
+            const totalFooterHeight = totalsBoxHeight + amountWordsHeight + maxBoxHeight + noteBoxHeight + 5;
 
             if (finalY + totalFooterHeight > pageHeight - 15) {
                 pdf.addPage();
@@ -228,6 +231,11 @@ const QuotationPreview: React.FC = () => {
             );
 
             drawBankAndTerms(pdf, margin, contentWidth, bottomY, maxBoxHeight, bankDetails, quotationTerms, qrImg);
+
+            const afterBankTermsY = bottomY + maxBoxHeight + 4;
+            if (quotationData.note && quotationData.note.trim()) {
+                drawNoteBox(pdf, margin, contentWidth, afterBankTermsY, quotationData.note);
+            }
 
             drawPageNumbers(pdf, pageWidth, pageHeight, margin);
 
@@ -490,6 +498,13 @@ const QuotationPreview: React.FC = () => {
                             )}
                         </div>
                     </div>
+
+                    {quotationData.note && quotationData.note.trim() && (
+                        <div className="mb-8 border border-slate-200 rounded-md p-4 bg-slate-50">
+                            <h4 className="font-bold text-slate-800 mb-2 border-b border-slate-200 pb-2">Note</h4>
+                            <p className="text-sm text-slate-600 whitespace-pre-wrap">{quotationData.note}</p>
+                        </div>
+                    )}
 
                     <div className="flex justify-between items-end mt-12 pt-8 border-t border-slate-200">
                         <div></div>

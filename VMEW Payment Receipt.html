@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Payment Receipt — 41/VMEW/26-27</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --navy:#1B2D4F;
+    --teal:#1D9E75;
+    --blue:#185FA5;
+    --light-blue:#E6F1FB;
+    --light-teal:#E1F5EE;
+    --text-dark:#0F172A;
+    --text-mid:#334155;
+    --text-soft:#64748B;
+    --border:#E2E8F0;
+    --bg:#F8FAFC;
+  }
+
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#EEF2F7;
+    min-height:100vh;
+    padding:2rem 1rem;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:1.25rem;
+  }
+
+  /* Print controls */
+  .controls{
+    display:flex;gap:10px;align-items:center;
+    width:100%;max-width:794px;justify-content:flex-end;
+  }
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500;
+    cursor:pointer;border:none;font-family:inherit;transition:opacity .15s;
+  }
+  .btn:hover{opacity:.88}
+  .btn-primary{background:var(--navy);color:#fff}
+  .btn-outline{background:#fff;color:var(--navy);border:1px solid var(--border)}
+  .btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* Receipt page */
+  .receipt{
+    width:100%;max-width:794px;
+    background:#fff;
+    box-shadow:0 4px 24px rgba(0,0,0,.10);
+    border-radius:4px;
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* Watermark */
+  .watermark{
+    position:absolute;
+    top:50%;left:50%;
+    transform:translate(-50%,-50%) rotate(-35deg);
+    font-size:88px;font-weight:800;
+    color:var(--teal);opacity:.04;
+    letter-spacing:.1em;pointer-events:none;
+    white-space:nowrap;z-index:0;user-select:none;
+    font-family:'Inter',system-ui,sans-serif;
+  }
+
+  /* Header */
+  .header{
+    background:var(--navy);
+    padding:28px 36px 24px;
+    display:flex;align-items:flex-start;justify-content:space-between;
+    position:relative;z-index:1;
+  }
+  .header-left{display:flex;flex-direction:column;gap:0}
+  .logo-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .logo-box{
+    width:44px;height:44px;border-radius:10px;
+    background:rgba(255,255,255,.12);
+    border:1.5px solid rgba(255,255,255,.2);
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .logo-box svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+  .company-name{font-size:17px;font-weight:700;color:#fff;letter-spacing:.01em;line-height:1.2}
+  .company-gst{font-size:11px;color:rgba(255,255,255,.55);margin-top:1px;font-weight:400}
+  .company-meta{font-size:10px;color:rgba(255,255,255,.45);margin-top:6px;line-height:1.7}
+
+  .header-right{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .doc-type{font-size:20px;font-weight:700;color:#fff;letter-spacing:.04em}
+  .receipt-num{font-size:11px;color:rgba(255,255,255,.55);margin-top:2px}
+  .status-stamp{
+    display:inline-flex;align-items:center;gap:5px;
+    background:rgba(29,158,117,.2);
+    border:1.5px solid var(--teal);
+    color:var(--teal);
+    font-size:11px;font-weight:600;
+    padding:4px 12px;border-radius:20px;
+    letter-spacing:.06em;text-transform:uppercase;margin-top:4px;
+  }
+  .status-stamp.partial{
+    background:rgba(186,117,23,.15);
+    border-color:#BA7517;color:#BA7517;
+  }
+
+  /* Teal accent line */
+  .accent-bar{height:4px;background:linear-gradient(90deg,var(--teal),var(--blue));position:relative;z-index:1}
+
+  /* Body */
+  .body{padding:28px 36px;position:relative;z-index:1}
+
+  /* Invoice ref section */
+  .ref-grid{
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:0;
+    border:1px solid var(--border);border-radius:8px;overflow:hidden;
+    margin-bottom:24px;
+  }
+  .ref-col{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+  .ref-col:first-child{border-right:1px solid var(--border)}
+  .ref-col-title{font-size:10px;font-weight:600;color:var(--text-soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  .ref-row{display:flex;flex-direction:column;gap:1px}
+  .ref-label{font-size:10px;color:var(--text-soft)}
+  .ref-val{font-size:12.5px;font-weight:500;color:var(--text-dark)}
+
+  /* Summary section */
+  .section-title{
+    font-size:11px;font-weight:600;color:var(--navy);
+    text-transform:uppercase;letter-spacing:.07em;
+    padding-bottom:8px;border-bottom:1.5px solid var(--navy);
+    margin-bottom:14px;display:flex;align-items:center;gap:8px;
+  }
+  .section-title::after{content:'';flex:1;height:1px}
+
+  .summary-box{
+    background:var(--bg);border:1px solid var(--border);
+    border-radius:8px;overflow:hidden;margin-bottom:24px;
+  }
+  .sum-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;
+  }
+  .sum-row:last-child{border-bottom:none}
+  .sum-row.highlight{background:var(--light-teal);font-weight:600;font-size:14px}
+  .sum-row.deduction{background:#FFF5F5}
+  .sum-label{color:var(--text-mid);display:flex;align-items:center;gap:8px}
+  .sum-val{color:var(--text-dark);font-variant-numeric:tabular-nums;font-weight:500}
+  .sum-val.green{color:var(--teal);font-weight:700}
+  .sum-val.red{color:#DC2626}
+  .ded-badge{font-size:9px;background:#FCEBEB;color:#DC2626;padding:1px 7px;border-radius:20px;font-weight:500}
+  .recov-badge{font-size:9px;background:#FFF3CD;color:#856404;padding:1px 7px;border-radius:20px;font-weight:500}
+
+  /* Payment entries */
+  .entry-card{
+    border:1px solid var(--border);border-radius:8px;
+    overflow:hidden;margin-bottom:24px;
+  }
+  .entry-header{
+    background:var(--navy);padding:10px 16px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .entry-num{font-size:12px;font-weight:600;color:#fff}
+  .entry-meta{font-size:11px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:10px}
+  .entry-meta-sep{color:rgba(255,255,255,.3)}
+  .entry-body{display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:#fff}
+  .entry-field{
+    padding:12px 16px;border-right:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+  }
+  .entry-field:nth-child(3n){border-right:none}
+  .entry-field:nth-last-child(-n+3){border-bottom:none}
+  .ef-label{font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+  .ef-val{font-size:13px;font-weight:500;color:var(--text-dark);font-variant-numeric:tabular-nums}
+  .ef-val.green{color:var(--teal)}
+  .ef-val.red{color:#DC2626}
+  .ef-val.mono{font-size:11px;font-family:'Courier New',monospace;color:var(--blue)}
+  .ef-sub{font-size:10px;color:var(--text-soft);margin-top:2px}
+
+  /* Divider */
+  .divider{border:none;border-top:1px solid var(--border);margin:0 0 24px}
+
+  /* Signature row */
+  .sig-row{
+    display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;
+  }
+  .sig-box{
+    border-top:1.5px solid var(--navy);padding-top:8px;
+    display:flex;flex-direction:column;gap:3px;
+  }
+  .sig-label{font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.06em}
+  .sig-name{font-size:12px;font-weight:600;color:var(--text-dark);margin-top:4px}
+  .sig-role{font-size:11px;color:var(--text-soft)}
+  .sig-for{font-size:11px;font-weight:600;color:var(--blue)}
+
+  /* Note */
+  .receipt-note{
+    background:var(--light-blue);border:1px solid #BFDBFE;border-radius:6px;
+    padding:10px 14px;font-size:11px;color:var(--blue);
+    display:flex;align-items:flex-start;gap:8px;line-height:1.6;
+  }
+  .receipt-note svg{flex-shrink:0;margin-top:1px;width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* Footer */
+  .footer{
+    background:var(--bg);border-top:1px solid var(--border);
+    padding:12px 36px;display:flex;justify-content:space-between;align-items:center;
+    position:relative;z-index:1;
+  }
+  .footer-left{font-size:10px;color:var(--text-soft)}
+  .footer-right{font-size:10px;color:var(--text-soft);text-align:right}
+  .footer-brand{font-size:11px;font-weight:600;color:var(--navy)}
+
+  /* Print styles */
+  @media print{
+    body{background:#fff;padding:0}
+    .controls{display:none}
+    .receipt{box-shadow:none;border-radius:0;max-width:100%}
+    .watermark{opacity:.06}
+    @page{size:A4;margin:0}
+  }
+</style>
+</head>
+<body>
+
+<!-- Controls -->
+<div class="controls">
+  <button class="btn btn-outline" onclick="window.print()">
+    <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    Print
+  </button>
+</div>
+
+<!-- Receipt document -->
+<div class="receipt">
+
+  <div class="watermark">RECEIVED</div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-row">
+        <div class="logo-box">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/><circle cx="17" cy="5" r="2"/><path d="M17 7c2 1 3 2 3 4"/></svg>
+        </div>
+        <div>
+          <div class="company-name">Venkateswara Marine Electrical Works</div>
+          <div class="company-gst">GST No: 37AGIPP2674H2Z0 &nbsp;·&nbsp; PAN: AGIPP2674H</div>
+        </div>
+      </div>
+      <div class="company-meta">
+        D.No.9-23-3/6, CBM Compound, Flat No. 203, Kamal Enclaves, Visakhapatnam - 03<br/>
+        Workshop: Plot No.2E, Industrial Cluster, Pudi, Rambilli (M), Visakhapatnam - 11<br/>
+        Email: vmew10n@gmail.com &nbsp;·&nbsp; Cell: 9848523264
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="doc-type">PAYMENT RECEIPT</div>
+      <div class="receipt-num">Receipt No: PR-41/VMEW/26-27</div>
+      <div class="receipt-num">Generated: 01 September 2026</div>
+      <div class="status-stamp partial">
+        <svg width="10" height="10" viewBox="0 0 24 24" style="stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Partially Paid
+      </div>
+    </div>
+  </div>
+
+  <div class="accent-bar"></div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <!-- Invoice Reference -->
+    <div class="ref-grid">
+      <div class="ref-col">
+        <div class="ref-col-title">Invoice Reference</div>
+        <div class="ref-row"><div class="ref-label">Invoice Number</div><div class="ref-val">41/VMEW/26-27</div></div>
+        <div class="ref-row"><div class="ref-label">Invoice Date</div><div class="ref-val">31 August 2026</div></div>
+        <div class="ref-row"><div class="ref-label">Invoice Total</div><div class="ref-val">₹16,992.00</div></div>
+      </div>
+      <div class="ref-col">
+        <div class="ref-col-title">Buyer Details</div>
+        <div class="ref-row"><div class="ref-label">Company</div><div class="ref-val">M/S SK Marine and Energy Consultants</div></div>
+        <div class="ref-row"><div class="ref-label">GST Number</div><div class="ref-val" style="font-family:'Courier New',monospace;font-size:12px">27AGUPY3330M1ZJ</div></div>
+        <div class="ref-row"><div class="ref-label">Receipt Date</div><div class="ref-val">01 September 2026</div></div>
+      </div>
+    </div>
+
+    <!-- Payment Summary -->
+    <div class="section-title">Payment Summary</div>
+    <div class="summary-box">
+      <div class="sum-row">
+        <span class="sum-label">Invoice Total</span>
+        <span class="sum-val">₹16,992.00</span>
+      </div>
+      <div class="sum-row">
+        <span class="sum-label">Gross Amount Received</span>
+        <span class="sum-val">₹16,992.00</span>
+      </div>
+      <div class="sum-row deduction">
+        <span class="sum-label">
+          IT-TDS Deduction
+          <span class="ded-badge">Permanent</span>
+        </span>
+        <span class="sum-val red">−₹144.00</span>
+      </div>
+      <div class="sum-row">
+        <span class="sum-label">Total Deductions</span>
+        <span class="sum-val red">−₹144.00</span>
+      </div>
+      <div class="sum-row highlight">
+        <span class="sum-label">Net Amount Received</span>
+        <span class="sum-val green">₹16,848.00</span>
+      </div>
+      <div class="sum-row">
+        <span class="sum-label">Balance Due</span>
+        <span class="sum-val" style="color:#BA7517;font-weight:600">₹144.00</span>
+      </div>
+    </div>
+
+    <!-- Payment Entries -->
+    <div class="section-title">Payment Entries (1)</div>
+    <div class="entry-card">
+      <div class="entry-header">
+        <div class="entry-num">Payment Entry 1 of 1</div>
+        <div class="entry-meta">
+          <span>01 September 2026</span>
+          <span class="entry-meta-sep">·</span>
+          <span>NEFT Transfer</span>
+        </div>
+      </div>
+      <div class="entry-body">
+        <div class="entry-field">
+          <div class="ef-label">Gross Amount</div>
+          <div class="ef-val">₹16,992.00</div>
+        </div>
+        <div class="entry-field">
+          <div class="ef-label">IT-TDS Deducted</div>
+          <div class="ef-val red">−₹144.00</div>
+          <div class="ef-sub">Permanent deduction</div>
+        </div>
+        <div class="entry-field">
+          <div class="ef-label">Net Received</div>
+          <div class="ef-val green">₹16,848.00</div>
+        </div>
+        <div class="entry-field" style="border-bottom:none">
+          <div class="ef-label">UTR Number</div>
+          <div class="ef-val mono">IDFB6244M5537798</div>
+        </div>
+        <div class="entry-field" style="border-bottom:none">
+          <div class="ef-label">Payment Mode</div>
+          <div class="ef-val">NEFT</div>
+        </div>
+        <div class="entry-field" style="border-bottom:none">
+          <div class="ef-label">Payment Date</div>
+          <div class="ef-val">01 September 2026</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Note -->
+    <div class="receipt-note" style="margin-bottom:24px">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      This receipt confirms partial payment of ₹16,848.00 against Invoice 41/VMEW/26-27. A balance of ₹144.00 remains due (IT-TDS deduction). This is a system-generated document — no physical signature is required for validity.
+    </div>
+
+    <hr class="divider"/>
+
+    <!-- Signature -->
+    <div class="sig-row">
+      <div>
+        <div style="font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Received by</div>
+        <div style="height:32px"></div>
+        <div class="sig-box">
+          <div class="sig-label">Authorised Signatory</div>
+          <div class="sig-name">Venkateswara Marine Electrical Works</div>
+          <div class="sig-for" style="margin-top:3px">For VMEW</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Revenue Recognised</div>
+        <div style="font-size:28px;font-weight:700;color:var(--teal);font-variant-numeric:tabular-nums;margin-bottom:6px">₹16,848.00</div>
+        <div style="font-size:11px;color:var(--text-soft)">Sixteen thousand eight hundred<br/>forty-eight rupees only</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-left">
+      <div class="footer-brand">VMEW Billing</div>
+      <div style="margin-top:2px">This is a computer-generated receipt</div>
+    </div>
+    <div class="footer-right">
+      <div>Receipt: PR-41/VMEW/26-27</div>
+      <div style="margin-top:2px">MSME No: UDYAM-AP-10-000719</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

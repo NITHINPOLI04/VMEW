@@ -147,7 +147,8 @@ export const getInitialQuotation = () => ({
     discountPercentage: 0,
     discountAmount: 0,
     discountType: 'percentage' as const,
-    discountFixedAmount: 0
+    discountFixedAmount: 0,
+    note: ''
 });
 
 export const getInitialPO = () => ({

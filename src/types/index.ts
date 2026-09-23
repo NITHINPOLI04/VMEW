@@ -163,6 +163,7 @@ export interface QuotationFormData {
   totalIgst?: number;
   grandTotal: number;
   totalInWords: string;
+  note?: string;
   createdAt?: string;
   updatedAt?: string;
 }
