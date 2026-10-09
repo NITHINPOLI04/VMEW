@@ -184,3 +184,21 @@ export const getInitialPO = () => ({
     discountType: 'percentage' as const,
     discountFixedAmount: 0
 });
+
+export const getInitialPurchaseReport = () => ({
+    partyInvoiceNumber: '',
+    date: new Date().toISOString(),
+    partyName: '',
+    partyAddress: '',
+    partyGst: '',
+    taxType: 'sgstcgst',
+    taxableValue: 0,
+    sgstPercentage: 9,
+    sgstAmount: 0,
+    cgstPercentage: 9,
+    cgstAmount: 0,
+    igstPercentage: 18,
+    igstAmount: 0,
+    totalAmount: 0,
+    notes: '',
+});

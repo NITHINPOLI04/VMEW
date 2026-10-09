@@ -12,6 +12,7 @@ import { useInventoryStore } from './stores/inventoryStore';
 import { useDCStore } from './stores/dcStore';
 import { useQuotationStore } from './stores/quotationStore';
 import { usePOStore } from './stores/poStore';
+import { usePurchaseReportStore } from './stores/purchaseReportStore';
 
 // Pages
 import Login from './pages/Login';
@@ -30,6 +31,8 @@ import PurchaseOrderForm from './components/PurchaseOrderForm';
 import PurchaseOrderPreview from './pages/PurchaseOrderPreview';
 import HsnCalculator from './pages/HsnCalculator';
 import Tools from './pages/Tools';
+import PurchaseReportLibrary from './pages/PurchaseReportLibrary';
+import PurchaseReportForm from './pages/PurchaseReportForm';
 
 // Components
 import Layout from './components/Layout';
@@ -45,6 +48,7 @@ function App() {
   const { clearDCs } = useDCStore();
   const { clearQuotations } = useQuotationStore();
   const { clearPOs } = usePOStore();
+  const { clearReports } = usePurchaseReportStore();
 
   // Initialize auth
   useEffect(() => {
@@ -67,8 +71,9 @@ function App() {
       clearDCs();
       clearQuotations();
       clearPOs();
+      clearReports();
     }
-  }, [isAuthenticated, clearInvoices, clearInventory, clearTemplates, clearDCs, clearQuotations, clearPOs]);
+  }, [isAuthenticated, clearInvoices, clearInventory, clearTemplates, clearDCs, clearQuotations, clearPOs, clearReports]);
 
   // Network status detection
   useEffect(() => {
@@ -116,6 +121,9 @@ function App() {
               <Route path="/companies" element={<Companies />} />
               <Route path="/tools" element={<Tools />} />
               <Route path="/tools/hsn-calculator" element={<HsnCalculator />} />
+              <Route path="/tools/purchase-report" element={<PurchaseReportLibrary />} />
+              <Route path="/tools/purchase-report/new" element={<PurchaseReportForm />} />
+              <Route path="/tools/purchase-report/edit/:id" element={<PurchaseReportForm />} />
               <Route path="/template-setup" element={<TemplateSetup />} />
               <Route path="/invoice-preview/:id" element={<InvoicePreview />} />
               <Route path="/dc-preview/:id" element={<DCPreview />} />

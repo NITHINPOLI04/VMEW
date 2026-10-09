@@ -339,3 +339,44 @@ export interface HsnDetailRow {
   igstPercentage: number;
   igstAmount: number;
 }
+
+// Purchase Report Types
+export interface PurchasePaymentEntry {
+  _id: string;
+  paymentDate: string;
+  amount: number;
+  mode: 'NEFT' | 'RTGS' | 'Cheque' | 'Cash' | 'UPI';
+  referenceNumber: string;
+  notes: string;
+}
+
+export interface PurchaseReportFormData {
+  _id?: string;
+  partyInvoiceNumber: string;
+  date: string;
+  partyName: string;
+  partyAddress: string;
+  partyGst: string;
+  taxType: string; // 'sgstcgst' | 'igst'
+  taxableValue: number;
+  sgstPercentage?: number;
+  cgstPercentage?: number;
+  igstPercentage?: number;
+  igstAmount: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  totalAmount: number;
+  notes: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PurchaseReport extends PurchaseReportFormData {
+  _id: string;
+  financialYear: string;
+  paymentStatus: string; // 'Payment Complete' | 'Advance Paid' | 'Unpaid'
+  payments: PurchasePaymentEntry[];
+  receivedAmount: number;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -1,4 +1,4 @@
-import { Invoice, InvoiceFormData, PaymentEntry, DeliveryChallan, DeliveryChallanFormData, Quotation, QuotationFormData, InventoryItem, ProductSuggestion, Letterhead, DefaultInfo, Supplier, Customer, PurchaseOrder, PurchaseOrderFormData, HsnSummaryRow, HsnSummaryTotals, HsnDetailRow } from '../types/index';
+import { Invoice, InvoiceFormData, PaymentEntry, DeliveryChallan, DeliveryChallanFormData, Quotation, QuotationFormData, InventoryItem, ProductSuggestion, Letterhead, DefaultInfo, Supplier, Customer, PurchaseOrder, PurchaseOrderFormData, HsnSummaryRow, HsnSummaryTotals, HsnDetailRow, PurchaseReport, PurchaseReportFormData } from '../types/index';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -301,5 +301,47 @@ export const getHsnSummary = (year: string, from: string, to: string, token: str
 export const getHsnDetail = (year: string, from: string, to: string, token: string) =>
   apiRequest<{ rows: HsnDetailRow[] }>(
     `/api/invoices/hsn-detail?year=${year}&from=${from}&to=${to}`, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+// ─── Purchase Report APIs ──────────────────────────────────────────────────────
+
+export const getPurchaseReports = (year: string, token: string) =>
+  apiRequest<PurchaseReport[]>('/api/purchase-reports/' + year, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const getPurchaseReportById = (id: string, token: string) =>
+  apiRequest<PurchaseReport>('/api/purchase-reports/id/' + id, 'GET', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const createPurchaseReport = (data: PurchaseReportFormData, token: string) =>
+  apiRequest<PurchaseReport>('/api/purchase-reports', 'POST', data, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const updatePurchaseReport = (id: string, data: PurchaseReportFormData, token: string) =>
+  apiRequest<PurchaseReport>('/api/purchase-reports/' + id, 'PUT', data, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const deletePurchaseReport = (id: string, token: string) =>
+  apiRequest<void>('/api/purchase-reports/' + id, 'DELETE', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const updatePurchaseReportPaymentStatus = (id: string, status: string, token: string) =>
+  apiRequest<{ report: PurchaseReport }>('/api/purchase-reports/' + id + '/payment-status', 'PUT', { status }, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const addPurchaseReportPayment = (id: string, entry: { paymentDate: string; amount: number; mode: string; referenceNumber: string; notes: string }, token: string) =>
+  apiRequest<{ report: PurchaseReport }>('/api/purchase-reports/' + id + '/payments', 'POST', entry, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const deletePurchaseReportPayment = (reportId: string, paymentId: string, token: string) =>
+  apiRequest<{ report: PurchaseReport }>('/api/purchase-reports/' + reportId + '/payments/' + paymentId, 'DELETE', undefined, {
     Authorization: `Bearer ${token}`,
   });

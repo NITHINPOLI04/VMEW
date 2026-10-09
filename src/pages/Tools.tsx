@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calculator, Wrench, ArrowRight } from 'lucide-react';
+import { Calculator, ClipboardList, Wrench, ArrowRight } from 'lucide-react';
 
 interface ToolCard {
   id: string;
@@ -32,21 +32,20 @@ const TOOLS: ToolCard[] = [
     borderHover: 'hover:border-blue-300',
     shadowHover: 'hover:shadow-[0_8px_30px_rgba(37,99,235,0.12)]',
   },
-  // Future tools — just add a new entry with a unique gradient:
-  // {
-  //   id: 'e-way-bill',
-  //   label: 'E-Way Bill Generator',
-  //   description: 'Generate and manage e-way bills for goods transport.',
-  //   icon: Truck,
-  //   iconBg: 'bg-white/70',
-  //   iconColor: 'text-emerald-600',
-  //   path: '/tools/e-way-bill',
-  //   tag: 'Transport',
-  //   tagColor: 'bg-white/50 text-emerald-700 border-emerald-200/60',
-  //   gradient: 'bg-gradient-to-br from-emerald-50 via-teal-50/50 to-cyan-50',
-  //   borderHover: 'hover:border-emerald-300',
-  //   shadowHover: 'hover:shadow-[0_8px_30px_rgba(16,185,129,0.12)]',
-  // },
+  {
+    id: 'purchase-report',
+    label: 'Purchase Report',
+    description: 'Track supplier invoices with GST breakdowns, payment status, and export to Excel.',
+    icon: ClipboardList,
+    iconBg: 'bg-white/70',
+    iconColor: 'text-teal-600',
+    path: '/tools/purchase-report',
+    tag: 'Reporting',
+    tagColor: 'bg-white/50 text-teal-700 border-teal-200/60',
+    gradient: 'bg-gradient-to-br from-teal-50 via-emerald-50/50 to-cyan-50',
+    borderHover: 'hover:border-teal-300',
+    shadowHover: 'hover:shadow-[0_8px_30px_rgba(20,184,166,0.12)]',
+  },
 ];
 
 const Tools: React.FC = () => {
