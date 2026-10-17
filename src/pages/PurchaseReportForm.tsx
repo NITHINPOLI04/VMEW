@@ -7,6 +7,7 @@ import { useFinancialYearStore } from '../stores/financialYearStore';
 import { getInitialPurchaseReport } from '../config/documentConfigs';
 import { notify } from '../utils/notify';
 import { TaxFieldsRow } from '../engines/tableEngine';
+import { roundGrandTotal } from '../utils/calcEngine';
 import CustomDatePicker from '../components/CustomDatePicker';
 import FormSkeleton from '../components/FormSkeleton';
 
@@ -19,7 +20,7 @@ const PurchaseReportForm: React.FC = () => {
   const isEditing = !!editId;
 
   const { createReport, updateReport, fetchReport } = usePurchaseReportStore();
-  const { suppliers, fetchSuppliers } = useContactStore();
+  const { suppliers, fetchSuppliers, addSupplier } = useContactStore();
   const selectedFY = useFinancialYearStore(s => s.selectedFY);
 
   const [formData, setFormData] = useState<any>(getInitialPurchaseReport());
@@ -170,13 +171,29 @@ const PurchaseReportForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.partyInvoiceNumber?.trim()) { notify.error('Party Invoice Number is required'); return; }
     if (!formData.partyName?.trim()) { notify.error('Party Name is required'); return; }
+    if (!formData.partyInvoiceNumber?.trim()) { notify.error('Party Invoice Number is required'); return; }
     if (!formData.taxableValue || formData.taxableValue <= 0) { notify.error('Taxable Value must be greater than 0'); return; }
 
     setLoading(true);
     try {
-      const finalData = { ...formData, date: selectedDate.toISOString() };
+      // Auto-save new party to suppliers list
+      const partyNameTrimmed = formData.partyName.trim();
+      const existsInSuppliers = suppliers.some(
+        (s: any) => s.name.toLowerCase() === partyNameTrimmed.toLowerCase()
+      );
+      if (!existsInSuppliers && partyNameTrimmed) {
+        try {
+          await addSupplier({
+            name: partyNameTrimmed,
+            address: formData.partyAddress || '',
+            gstNo: formData.partyGst || '',
+          });
+        } catch (_) { /* non-critical: ignore if supplier save fails */ }
+      }
+
+      const roundedTotal = roundGrandTotal(formData.totalAmount);
+      const finalData = { ...formData, date: selectedDate.toISOString(), totalAmount: roundedTotal };
 
       if (isEditing && editId) {
         await updateReport(editId, finalData);
@@ -423,10 +440,26 @@ const PurchaseReportForm: React.FC = () => {
               </div>
 
               {/* Total Amount Display */}
-              <div className="mt-6 pt-5 border-t border-slate-100">
+              <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
+                {/* Round Off (automatic — same threshold logic as bills) */}
+                {(() => {
+                  const rounded = roundGrandTotal(formData.totalAmount);
+                  const delta = rounded - formData.totalAmount;
+                  return delta !== 0 ? (
+                    <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                      <span className="text-sm font-semibold text-slate-600">Round Off</span>
+                      <span className={`text-xs font-bold ${delta >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {delta >= 0 ? '+' : ''}{delta.toFixed(2)}
+                      </span>
+                    </div>
+                  ) : null;
+                })()}
+
                 <div className="flex items-center justify-between bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-xl px-5 py-4 border border-slate-200/80">
                   <span className="text-sm font-bold text-slate-600">Total Amount</span>
-                  <span className="text-xl font-bold text-slate-900">{fmtAmount(formData.totalAmount)}</span>
+                  <span className="text-xl font-bold text-slate-900">
+                    {fmtAmount(roundGrandTotal(formData.totalAmount))}
+                  </span>
                 </div>
               </div>
             </div>

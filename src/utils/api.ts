@@ -344,4 +344,14 @@ export const addPurchaseReportPayment = (id: string, entry: { paymentDate: strin
 export const deletePurchaseReportPayment = (reportId: string, paymentId: string, token: string) =>
   apiRequest<{ report: PurchaseReport }>('/api/purchase-reports/' + reportId + '/payments/' + paymentId, 'DELETE', undefined, {
     Authorization: `Bearer ${token}`,
-  });
+  });
+
+export const togglePurchaseReportGstStatus = (id: string, token: string) =>
+  apiRequest<{ report: PurchaseReport }>('/api/purchase-reports/' + id + '/gst-status', 'PATCH', undefined, {
+    Authorization: `Bearer ${token}`,
+  });
+
+export const bulkMarkGstStatus = (financialYear: string, month: number, year: number, token: string) =>
+  apiRequest<{ modifiedCount: number; reports: PurchaseReport[] }>('/api/purchase-reports/bulk/gst-status', 'PATCH', { financialYear, month, year }, {
+    Authorization: `Bearer ${token}`,
+  });

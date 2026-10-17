@@ -4,7 +4,7 @@ import {
   Search, Trash2, ClipboardList, PlusCircle, Edit, Download,
   Calendar, CheckCircle2, ReceiptText, ArrowUpDown, ChevronDown, ChevronLeft,
   FileCheck, Clock, AlertTriangle, IndianRupee, X, Plus,
-  FileText,
+  FileText, ShieldCheck, Loader2, SlidersHorizontal,
 } from 'lucide-react';
 import { usePurchaseReportStore } from '../stores/purchaseReportStore';
 import { useFinancialYearStore } from '../stores/financialYearStore';
@@ -19,6 +19,8 @@ import {
   updatePurchaseReportPaymentStatus,
   addPurchaseReportPayment,
   deletePurchaseReportPayment,
+  togglePurchaseReportGstStatus,
+  bulkMarkGstStatus,
 } from '../utils/api';
 import { useAuthStore } from '../stores/authStore';
 import { createPortal } from 'react-dom';
@@ -447,6 +449,17 @@ const PurchaseReportLibrary: React.FC = () => {
   const [unpaidConfirmOpen, setUnpaidConfirmOpen] = useState(false);
   const [unpaidConfirmReport, setUnpaidConfirmReport] = useState<PurchaseReport | null>(null);
 
+  // GST filing status
+  type GstFilter = 'all' | 'filed' | 'not-filed';
+  const [gstFilter, setGstFilter] = useState<GstFilter>('all');
+  const [togglingGstId, setTogglingGstId] = useState<string | null>(null);
+  const [bulkFiling, setBulkFiling] = useState(false);
+
+  // Filter panel (like BillLibrary)
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const filterPanelRef = useRef<HTMLDivElement>(null);
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
+
   const fmt = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
   const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortKey)?.label ?? 'Sort';
 
@@ -456,10 +469,12 @@ const PurchaseReportLibrary: React.FC = () => {
       const target = e.target as Node;
       if (sortRef.current && sortBtnRef.current && !sortRef.current.contains(target) && !sortBtnRef.current.contains(target)) setSortOpen(false);
       if (exportRef.current && exportBtnRef.current && !exportRef.current.contains(target) && !exportBtnRef.current.contains(target)) setExportOpen(false);
+      if (filterPanelOpen && filterBtnRef.current && filterPanelRef.current &&
+        !filterBtnRef.current.contains(target) && !filterPanelRef.current.contains(target)) setFilterPanelOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [sortOpen, exportOpen]);
+  }, [sortOpen, exportOpen, filterPanelOpen]);
 
   // Financial years
   useEffect(() => {
@@ -571,6 +586,38 @@ const PurchaseReportLibrary: React.FC = () => {
     setUnpaidConfirmReport(null);
   };
 
+  // ─── GST Filing Handlers ──────────────────────────────────────────────────────
+  const handleToggleGstStatus = async (id: string) => {
+    setTogglingGstId(id);
+    // Optimistic update
+    setReports(prev => prev.map(r => r._id === id ? { ...r, gstFiled: !r.gstFiled, gstFiledDate: !r.gstFiled ? new Date().toISOString() : null } : r));
+    try {
+      const result = await togglePurchaseReportGstStatus(id, token || '');
+      setReports(prev => prev.map(r => r._id === id ? result.report : r));
+    } catch {
+      // Revert on error
+      setReports(prev => prev.map(r => r._id === id ? { ...r, gstFiled: !r.gstFiled, gstFiledDate: r.gstFiled ? new Date().toISOString() : null } : r));
+      notify.error('Failed to update GST status');
+    } finally { setTogglingGstId(null); }
+  };
+
+  const handleBulkMarkFiled = async () => {
+    if (!selectedMonth || selectedMonth === '') return;
+    const monthIdx = parseInt(selectedMonth);
+    const [fyStart] = selectedYear.split('-').map(Number);
+    const calendarYear = monthIdx >= 3 ? fyStart : fyStart + 1;
+    const monthName = months.find(m => m.value === selectedMonth)?.label || '';
+
+    setBulkFiling(true);
+    try {
+      const result = await bulkMarkGstStatus(selectedYear, monthIdx, calendarYear, token || '');
+      setReports(result.reports);
+      notify.success(`${result.modifiedCount} entries in ${monthName} ${calendarYear} marked as GST filed`);
+    } catch {
+      notify.error('Failed to bulk mark GST status');
+    } finally { setBulkFiling(false); }
+  };
+
   const handlePaymentSaved = (updated: PurchaseReport) => {
     setReports(prev => prev.map(r => r._id === updated._id ? updated : r));
     setPaymentPanelReport(updated);
@@ -582,11 +629,14 @@ const PurchaseReportLibrary: React.FC = () => {
   const unpaidValue = reports.filter(r => r.paymentStatus === 'Unpaid').reduce((s, r) => s + (r.totalAmount || 0), 0);
   const advanceValue = reports.filter(r => r.paymentStatus === 'Advance Paid').reduce((s, r) => s + (r.totalAmount || 0), 0);
 
+  const gstNotFiledCount = reports.filter(r => !r.gstFiled).length;
+
   const metrics: MetricCardProps[] = [
     { label: 'Total Reports', value: reports.length, icon: ReceiptText, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', sub: `FY ${selectedYear}` },
     { label: 'Total Paid', value: fmt(paidValue), icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', sub: `${reports.filter(r => r.paymentStatus === 'Payment Complete').length} reports` },
     { label: 'Total Unpaid', value: fmt(unpaidValue), icon: AlertTriangle, iconBg: 'bg-rose-50', iconColor: 'text-rose-600', sub: `${reports.filter(r => r.paymentStatus === 'Unpaid').length} reports` },
     { label: 'Advance Paid', value: fmt(advanceValue), icon: Clock, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', sub: `${reports.filter(r => r.paymentStatus === 'Advance Paid').length} reports` },
+    { label: 'GST Not Filed', value: gstNotFiledCount, icon: ShieldCheck, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', sub: `${reports.filter(r => r.gstFiled).length} filed` },
   ];
 
   // Filter + Sort
@@ -597,7 +647,8 @@ const PurchaseReportLibrary: React.FC = () => {
       (item.partyGst || '').toLowerCase().includes(searchQuery.toLowerCase());
     const itemMonth = new Date(item.date).getMonth().toString();
     const matchesMonth = selectedMonth === '' || itemMonth === selectedMonth;
-    return matchesSearch && matchesMonth;
+    const matchesGst = gstFilter === 'all' || (gstFilter === 'filed' ? item.gstFiled : !item.gstFiled);
+    return matchesSearch && matchesMonth && matchesGst;
   }).sort((a, b) => {
     switch (sortKey) {
       case 'newest': return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -620,6 +671,8 @@ const PurchaseReportLibrary: React.FC = () => {
       'CGST': r.taxType === 'igst' ? 0 : r.cgstAmount,
       'SGST': r.taxType === 'igst' ? 0 : r.sgstAmount,
       'Total Amount': r.totalAmount,
+      'GST Status': r.gstFiled ? 'Filed' : 'Not Filed',
+      'GST Filed Date': r.gstFiledDate ? new Date(r.gstFiledDate).toLocaleDateString('en-IN') : '',
       'Payment Status': r.paymentStatus || 'Unpaid',
       'Payment Method': r.payments?.[r.payments.length - 1]?.mode || '',
       'Reference No.': r.payments?.[r.payments.length - 1]?.referenceNumber || '',
@@ -677,11 +730,11 @@ const PurchaseReportLibrary: React.FC = () => {
 
       {/* Metric Cards */}
       {loading ? (
-        <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <MetricSkeleton key={i} />)}
+        <div className="grid gap-3 grid-cols-2 xl:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => <MetricSkeleton key={i} />)}
         </div>
       ) : (
-        <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 xl:grid-cols-5">
           {metrics.map(m => <MetricCard key={m.label} {...m} />)}
         </div>
       )}
@@ -703,6 +756,71 @@ const PurchaseReportLibrary: React.FC = () => {
             />
           </div>
           <div className="ml-auto flex items-center gap-2">
+            {/* Active filter tag */}
+            {gstFilter !== 'all' && (
+              <button onClick={() => { setGstFilter('all'); setCurrentPage(1); }} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100 transition-colors">
+                <X size={11} /> Clear filter
+              </button>
+            )}
+
+            {/* Filter button (like BillLibrary) */}
+            <div className="relative">
+              <button
+                ref={filterBtnRef}
+                onClick={() => setFilterPanelOpen(o => !o)}
+                className={`btn btn-secondary btn-sm gap-1.5 ${filterPanelOpen || gstFilter !== 'all' ? 'border-blue-400 text-blue-600 bg-blue-50' : ''}`}
+              >
+                <SlidersHorizontal size={13} />
+                Filter
+                {gstFilter !== 'all' && (
+                  <span className="ml-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">1</span>
+                )}
+              </button>
+
+              {/* Filter Dropdown Panel */}
+              {filterPanelOpen && (
+                <div ref={filterPanelRef} className="absolute right-0 top-full mt-2 w-[280px] bg-white rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 p-5 z-40 flex flex-col gap-4">
+                  {/* GST Filing Status */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">GST Filing Status</label>
+                    <CustomSelect
+                      value={gstFilter}
+                      options={[
+                        { value: 'all', label: 'All Statuses' },
+                        { value: 'filed', label: 'Filed' },
+                        { value: 'not-filed', label: 'Not Filed' },
+                      ]}
+                      onChange={(v) => { setGstFilter(v as GstFilter); setCurrentPage(1); }}
+                      buttonClassName="rounded-full py-2.5 pl-4 pr-3 text-sm border-slate-200 text-slate-700"
+                    />
+                  </div>
+
+                  {/* Bulk Mark Filed — only if month selected */}
+                  {selectedMonth !== '' && (() => {
+                    const monthIdx = parseInt(selectedMonth);
+                    const [fyStart] = selectedYear.split('-').map(Number);
+                    const calendarYear = monthIdx >= 3 ? fyStart : fyStart + 1;
+                    const monthName = months.find(m => m.value === selectedMonth)?.label || '';
+                    const unfiled = reports.filter(r => {
+                      const d = new Date(r.date);
+                      return d.getMonth().toString() === selectedMonth && !r.gstFiled;
+                    });
+                    if (unfiled.length === 0) return null;
+                    return (
+                      <button
+                        onClick={() => { handleBulkMarkFiled(); setFilterPanelOpen(false); }}
+                        disabled={bulkFiling}
+                        className="w-full py-2.5 text-xs font-bold rounded-full bg-[#0F172A] text-white hover:bg-[#1E293B] transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        {bulkFiling ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />}
+                        Mark {monthName} {calendarYear} as filed
+                      </button>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+
             {/* Sort */}
             <div className="relative">
               <button ref={sortBtnRef} onClick={() => setSortOpen(o => !o)}
@@ -744,30 +862,27 @@ const PurchaseReportLibrary: React.FC = () => {
 
         {/* Table */}
         {loading ? (
-          <TableSkeleton columns={9} rows={10} hasTabs={false} />
+          <TableSkeleton columns={8} rows={10} hasTabs={false} />
         ) : currentItems.length > 0 ? (
           <div className="overflow-hidden rounded-b-[24px]">
             <div className="overflow-x-auto custom-scrollbar">
               <table className="saas-table min-w-full">
                 <thead>
                   <tr>
-                    <th className="pl-6">Party Invoice No.</th>
+                    <th className="pl-6">Invoice No.</th>
                     <th>Date</th>
                     <th>Party Name</th>
-                    <th>Party GST</th>
-                    <th>Taxable Value</th>
-                    <th>IGST</th>
-                    <th>CGST</th>
-                    <th>SGST</th>
+                    <th>Tax</th>
                     <th>Total Amount</th>
-                    <th>Payment Status</th>
+                    <th>Payment</th>
+                    <th>GST</th>
                     <th className="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentItems.map((item) => (
                     <tr key={item._id} className="hover:bg-slate-50 transition-colors">
-                      <td data-label="Party Invoice No." className="md:pl-6">
+                      <td data-label="Invoice No." className="md:pl-6">
                         <span className="font-semibold text-blue-600">{item.partyInvoiceNumber}</span>
                       </td>
                       <td data-label="Date" className="text-slate-500 whitespace-nowrap">
@@ -775,26 +890,26 @@ const PurchaseReportLibrary: React.FC = () => {
                       </td>
                       <td data-label="Party Name">
                         <span className="text-slate-700 max-w-[180px] truncate block" title={item.partyName}>{item.partyName}</span>
+                        {item.partyGst && <span className="text-slate-400 font-mono text-[11px] block mt-0.5">{item.partyGst}</span>}
                       </td>
-                      <td data-label="Party GST">
-                        <span className="text-slate-500 font-mono text-xs">{item.partyGst || '—'}</span>
+                      <td data-label="Tax" className="text-slate-600 whitespace-nowrap">
+                        {item.taxType === 'igst' ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] text-slate-400 font-semibold">IGST</span>
+                            <span>₹{(item.igstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-0.5">
+                            <span><span className="text-slate-400 text-[10px] font-semibold mr-1">C</span>₹{(item.cgstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            <span><span className="text-slate-400 text-[10px] font-semibold mr-1">S</span>₹{(item.sgstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        )}
                       </td>
-                      <td data-label="Taxable Value" className="text-slate-700 whitespace-nowrap">
-                        ₹{(item.taxableValue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      <td data-label="Total Amount" className="whitespace-nowrap">
+                        <span className="font-semibold text-slate-800">₹{(item.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        <span className="text-slate-400 text-[10px] block mt-0.5">Taxable: ₹{(item.taxableValue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </td>
-                      <td data-label="IGST" className="text-slate-600 whitespace-nowrap">
-                        {item.taxType === 'igst' ? `₹${(item.igstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
-                      </td>
-                      <td data-label="CGST" className="text-slate-600 whitespace-nowrap">
-                        {item.taxType !== 'igst' ? `₹${(item.cgstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
-                      </td>
-                      <td data-label="SGST" className="text-slate-600 whitespace-nowrap">
-                        {item.taxType !== 'igst' ? `₹${(item.sgstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '—'}
-                      </td>
-                      <td data-label="Total Amount" className="font-semibold text-slate-800 whitespace-nowrap">
-                        ₹{(item.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td data-label="Payment Status">
+                      <td data-label="Payment">
                         <div className="relative inline-block">
                           <StatusBadge
                             status={item.paymentStatus || 'Unpaid'}
@@ -806,6 +921,27 @@ const PurchaseReportLibrary: React.FC = () => {
                             }}
                           />
                         </div>
+                      </td>
+                      <td data-label="GST">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleGstStatus(item._id); }}
+                          disabled={togglingGstId === item._id}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
+                            item.gstFiled
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-200/50'
+                              : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-200/50'
+                          } ${togglingGstId === item._id ? 'opacity-50 cursor-wait' : ''}`}
+                          title={item.gstFiled ? `Filed on ${item.gstFiledDate ? new Date(item.gstFiledDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}` : 'Click to mark as filed'}
+                        >
+                          {togglingGstId === item._id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : item.gstFiled ? (
+                            <ShieldCheck className="h-3 w-3" />
+                          ) : (
+                            <AlertTriangle className="h-3 w-3" />
+                          )}
+                          {item.gstFiled ? 'Filed' : 'Not Filed'}
+                        </button>
                       </td>
                       <td data-label="Actions">
                         <div className="flex items-center justify-center gap-1">

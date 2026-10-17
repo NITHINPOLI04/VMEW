@@ -377,6 +377,8 @@ export interface PurchaseReport extends PurchaseReportFormData {
   paymentStatus: string; // 'Payment Complete' | 'Advance Paid' | 'Unpaid'
   payments: PurchasePaymentEntry[];
   receivedAmount: number;
+  gstFiled: boolean;
+  gstFiledDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
